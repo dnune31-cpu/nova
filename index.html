@@ -313,6 +313,19 @@ main::-webkit-scrollbar{width:8px}main::-webkit-scrollbar-thumb{background:rgba(
 /* ignite thinking galaxy */
 .ai canvas.igdot{width:36px;height:36px;flex:none;margin:3px -13px 0 -13px}
 .think.ig::before{display:none}
+/* quality of life */
+.atools{display:flex;gap:6px;margin-top:10px;opacity:0;transition:opacity .2s}
+.msg.ai:hover .atools,.atools:focus-within,.atools:has(.cont:not([hidden])){opacity:1}
+@media (hover:none){.atools{opacity:1}}
+.atool{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--muted);border-radius:999px;font:inherit;font-size:12px;padding:4px 11px;cursor:pointer}
+.atool:hover{color:var(--star);border-color:rgba(255,255,255,.22)}
+.atool.cont{background:var(--gold);color:#1a1405;border-color:transparent;font-weight:600}
+.atool.cont:hover{background:#ffdca6;color:#1a1405}
+.ai pre{position:relative}
+.ccopy{position:absolute;top:6px;right:6px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:var(--muted);border-radius:8px;font:inherit;font-size:11px;padding:2px 8px;cursor:pointer;opacity:0;transition:opacity .2s}
+.ai pre:hover .ccopy,.ccopy:focus-visible{opacity:1}
+@media (hover:none){.ccopy{opacity:1}}
+.ccopy:hover{color:var(--star)}
 </style>
 </head>
 <body>
@@ -803,7 +816,7 @@ function add(role, msg, opts = {}) {
     el.className = "msg ai" + (opts.err ? " err" : "");
     el.innerHTML = `<span class="dot"></span><div class="body"></div>`;
     const body = el.querySelector(".body");
-    body.innerHTML = opts.err ? DOMPurify.sanitize(msg) : renderMath(msg);
+    body.innerHTML = opts.err ? DOMPurify.sanitize(msg) : renderMath(msg); el.dataset.raw = opts.err ? "" : msg;
     if (opts.model) { const w = document.createElement("div"); w.className = "model"; w.textContent = NAMES[opts.model] || opts.model; body.appendChild(w); }
   }
   log.appendChild(el);
@@ -1360,6 +1373,70 @@ function igniteLoader(el, model) {
     stop() { stopped = true; },
   };
 }
+
+/* ---------- quality of life ---------- */
+(() => {
+  const CUT = "I ran out of room here";
+  function copyText(t, btn) {
+    const done = () => { const o = btn.textContent; btn.textContent = "Copied"; setTimeout(() => btn.textContent = o, 1200); };
+    const fallback = () => {
+      const ta = document.createElement("textarea"); ta.value = t; document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); done(); } catch {}
+      ta.remove();
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done, fallback); else fallback();
+  }
+
+  // copy + continue buttons under each answer, copy buttons on code blocks
+  function decorate(el) {
+    if (el.dataset.qol || !el.dataset.raw) return;
+    el.dataset.qol = "1";
+    const body = el.querySelector(".body");
+    const raw = el.dataset.raw.replace(/\n*\*?\(I ran out of room[^\n]*$/, "").trim();
+    for (const pre of body.querySelectorAll("pre")) {
+      const b = document.createElement("button"); b.type = "button"; b.className = "ccopy"; b.textContent = "Copy";
+      b.onclick = () => copyText((pre.querySelector("code") || pre).innerText.replace(/Copy$/, ""), b);
+      pre.appendChild(b);
+    }
+    const bar = document.createElement("div"); bar.className = "atools";
+    const c = document.createElement("button"); c.type = "button"; c.className = "atool"; c.textContent = "Copy";
+    c.onclick = () => copyText(raw, c);
+    bar.appendChild(c);
+    if (el.dataset.raw.includes(CUT)) {
+      const k = document.createElement("button"); k.type = "button"; k.className = "atool cont"; k.textContent = "Continue";
+      k.onclick = () => { if (busy) return; q.value = "continue"; form.requestSubmit(); };
+      bar.appendChild(k);
+    }
+    body.appendChild(bar);
+  }
+  // only the newest answer keeps its Continue button
+  function refreshContinue() {
+    const all = log.querySelectorAll(".msg.ai"), last = all[all.length - 1];
+    for (const b of log.querySelectorAll(".atool.cont")) b.hidden = !last || !last.contains(b);
+  }
+  new MutationObserver(ms => {
+    for (const m of ms) for (const n of m.addedNodes) if (n.nodeType === 1 && n.matches(".msg.ai")) decorate(n);
+    refreshContinue();
+  }).observe(log, {childList: true});
+
+  // keep an unsent message if the page reloads
+  const DK = "nova-draft";
+  try { const d = localStorage.getItem(DK); if (d && !q.value) { q.value = d; grow(); } } catch {}
+  q.addEventListener("input", () => { try { q.value.trim() ? localStorage.setItem(DK, q.value) : localStorage.removeItem(DK); } catch {} });
+  form.addEventListener("submit", () => { if (busy) { try { localStorage.removeItem(DK); } catch {} } });
+
+  // browser tab shows the current chat's name
+  const setTitle = () => { const t = $("chatTitle").textContent.trim(); document.title = t ? t + " · Nova" : "Nova · study helper"; };
+  new MutationObserver(setTitle).observe($("chatTitle"), {childList: true, characterData: true, subtree: true});
+
+  // press "/" anywhere to jump to the message box
+  document.addEventListener("keydown", e => {
+    if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.target.closest && e.target.closest("input,textarea,select,[contenteditable]")) return;
+    if ($("appView").hidden || $("chatView").hidden) return;
+    e.preventDefault(); q.focus();
+  });
+})();
 
 /* ---------- start ---------- */
 (async () => {
