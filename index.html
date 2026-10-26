@@ -14,31 +14,90 @@
 <style>
 :root{
   --space:#05060f; --star:#eef1ff; --gold:#ffcf8a; --blue:#8fb3ff; --muted:#8a90b0;
-  --line:rgba(238,241,255,.12); --panel:rgba(12,14,32,.72);
+  --line:rgba(238,241,255,.12); --panel:rgba(12,14,32,.72); --solid:#0b0d1f; --red:#ff9d9d;
   color-scheme:dark;
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{height:100%;margin:0}
 body{background:var(--space);color:var(--star);font-family:"Sora",system-ui,sans-serif;font-weight:300;font-size:16px;line-height:1.65;
   padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+button{font-family:inherit}
 #sky{position:fixed;inset:0;width:100%;height:100%;z-index:0}
-.app{position:relative;z-index:1;height:100%;display:flex;flex-direction:column;max-width:760px;margin:0 auto;padding:0 18px}
-header{display:flex;align-items:center;gap:12px;padding:18px 0 14px;border-bottom:1px solid var(--line)}
-header canvas{width:36px;height:36px}
-header h1{font-size:18px;font-weight:600;margin:0;letter-spacing:.3px}
-header span{color:var(--muted);font-size:14px}
-#new{margin-left:auto;background:none;border:1px solid var(--line);color:var(--muted);font:inherit;font-size:13px;padding:6px 12px;border-radius:999px;cursor:pointer}
-#new:hover{color:var(--star);border-color:rgba(238,241,255,.3)}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+
+/* auth */
+#authView{position:relative;z-index:1;min-height:100%;display:flex;align-items:center;justify-content:center;padding:24px}
+.card{width:100%;max-width:380px;background:rgba(11,13,31,.88);border:1px solid var(--line);border-radius:22px;padding:28px 26px 22px}
+.card canvas{width:96px;height:96px;display:block;margin:-6px 0 6px -8px}
+.card h1{font-size:24px;font-weight:600;margin:0 0 4px;line-height:1.25}
+.card .sub{color:var(--muted);margin:0 0 18px;font-size:14px}
+.tabs{display:flex;gap:4px;background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:16px}
+.tabs button{flex:1;background:none;border:0;color:var(--muted);font-size:14px;padding:7px;border-radius:9px;cursor:pointer}
+.tabs button[aria-selected=true]{background:rgba(255,207,138,.14);color:var(--gold)}
+.field{display:block;margin-bottom:12px}
+.field span{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
+.field input{width:100%;background:rgba(0,0,0,.35);border:1px solid var(--line);border-radius:11px;color:var(--star);font:inherit;font-size:15px;padding:10px 12px;outline:0}
+.field input:focus{border-color:rgba(255,207,138,.55)}
+.primary{width:100%;background:var(--gold);color:#1a1405;border:0;border-radius:12px;font-size:15px;font-weight:600;padding:11px;cursor:pointer;margin-top:4px}
+.primary:disabled{opacity:.5;cursor:default}
+.aerr{color:var(--red);font-size:13px;margin:0 0 10px}
+.aerr:empty{display:none}
+.afoot{display:flex;justify-content:flex-end;margin-top:14px}
+.linkbtn{background:none;border:0;color:var(--muted);font-size:13px;cursor:pointer;padding:2px 0}
+.linkbtn:hover{color:var(--star)}
+
+/* app shell */
+#appView{position:relative;z-index:1;height:100%;display:flex}
+.rail{flex:none;width:60px;height:100%;display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 0;background:rgba(9,11,26,.92);border-right:1px solid var(--line);z-index:6}
+.rbtn{width:40px;height:40px;border-radius:12px;border:0;background:none;color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.rbtn svg{width:21px;height:21px}
+.rbtn:hover,.rbtn[aria-expanded=true],.rbtn.on{color:var(--gold);background:rgba(255,255,255,.06)}
+.rbtn.new{color:#1a1405;background:var(--gold);margin-bottom:6px}
+.rbtn.new:hover{color:#1a1405;background:#ffdca6}
+.rail .gap{flex:1}
+.avatar{width:34px;height:34px;border-radius:50%;background:rgba(143,179,255,.2);border:1px solid rgba(143,179,255,.45);color:var(--star);font-size:14px;font-weight:600;cursor:pointer}
+#panel{position:absolute;left:60px;top:0;bottom:0;width:290px;max-width:calc(100% - 60px);background:var(--solid);border-right:1px solid var(--line);z-index:5;display:flex;flex-direction:column;padding:16px 10px 12px}
+#panel h2{font-size:15px;font-weight:600;margin:0 6px 10px}
+#chatList{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:2px}
+.citem{display:flex;align-items:center;border-radius:10px}
+.citem:hover,.citem.on{background:rgba(255,255,255,.05)}
+.citem.on .ctitle{color:var(--gold)}
+.copen{flex:1;min-width:0;background:none;border:0;color:var(--star);text-align:left;padding:8px 8px;cursor:pointer}
+.ctitle{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ctime{display:block;font-size:12px;color:var(--muted)}
+.cdel{flex:none;background:none;border:0;color:var(--muted);width:30px;height:30px;border-radius:8px;cursor:pointer;opacity:0}
+.citem:hover .cdel,.cdel:focus-visible{opacity:1}
+.cdel:hover{color:var(--red)}
+.cempty{color:var(--muted);font-size:14px;padding:6px 8px}
+#menu{position:absolute;left:68px;bottom:14px;width:240px;background:var(--solid);border:1px solid var(--line);border-radius:14px;padding:12px;z-index:7}
+#menu .who{font-weight:600}
+#menu .mail{color:var(--muted);font-size:13px;word-break:break-all;margin-bottom:10px}
+#menu button{width:100%;text-align:left;background:none;border:1px solid var(--line);color:var(--star);border-radius:10px;padding:8px 10px;font-size:14px;cursor:pointer}
+#menu button:hover{border-color:rgba(255,157,157,.5);color:var(--red)}
+.stage{flex:1;min-width:0;height:100%;overflow:hidden}
+
+/* chat */
+.app{height:100%;display:flex;flex-direction:column;max-width:780px;margin:0 auto;padding:0 18px}
+header.top{display:flex;align-items:center;gap:12px;padding:16px 0 12px;border-bottom:1px solid var(--line);min-width:0}
+header.top canvas{width:34px;height:34px;flex:none}
+header.top h1{font-size:18px;font-weight:600;margin:0}
+#chatTitle{color:var(--muted);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 main{flex:1;overflow-y:auto;padding:24px 0}
-.empty{display:flex;flex-direction:column;align-items:flex-start;gap:14px;margin-top:6vh}
+.empty{display:flex;flex-direction:column;align-items:flex-start;gap:14px;margin-top:5vh}
 .empty canvas{width:120px;height:120px}
 .empty h2{font-size:28px;font-weight:600;margin:0;line-height:1.2}
 .empty p{margin:0;color:var(--muted);max-width:46ch}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
-.chip{background:var(--panel);border:1px solid var(--line);color:var(--star);font:inherit;font-size:14px;padding:8px 14px;border-radius:999px;cursor:pointer}
+.chip{background:var(--panel);border:1px solid var(--line);color:var(--star);font-size:14px;padding:8px 14px;border-radius:999px;cursor:pointer}
 .chip:hover{border-color:var(--gold);color:var(--gold)}
 .msg{margin:0 0 22px}
 .user{display:flex;justify-content:flex-end}
+.user .stack{display:flex;flex-direction:column;align-items:flex-end;gap:6px;max-width:80%}
+.user .txt{background:rgba(143,179,255,.16);border:1px solid rgba(143,179,255,.35);padding:10px 14px;border-radius:16px 16px 4px 16px;white-space:pre-wrap;word-wrap:break-word}
+.user .pics{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
+.user .pics img{width:110px;height:110px;object-fit:cover;border-radius:10px;border:1px solid var(--line)}
+.user .tag{font-size:13px;color:var(--blue);border:1px solid rgba(143,179,255,.3);border-radius:8px;padding:3px 8px;word-break:break-all}
 .ai{display:flex;gap:12px}
 .ai .dot{flex:none;width:8px;height:8px;margin-top:10px;border-radius:50%;background:var(--gold)}
 .ai .body{min-width:0;flex:1}
@@ -48,11 +107,12 @@ main{flex:1;overflow-y:auto;padding:24px 0}
 .ai :not(pre)>code{background:rgba(255,255,255,.08);padding:1px 5px;border-radius:4px}
 .ai strong{font-weight:600;color:var(--gold)}
 .ai .katex-display{overflow-x:auto;overflow-y:hidden;padding:4px 0}
-.ai.err .body{color:#ff9d9d}
+.ai.err .body{color:var(--red)}
+.ai .model{font-size:12px;color:var(--muted);margin-top:6px}
 .think{color:var(--muted);font-size:14px}
-form{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:10px 10px 8px 14px;margin:0 0 18px}
-form:focus-within{border-color:rgba(255,207,138,.5)}
-.top{display:flex;gap:8px;align-items:flex-end}
+form#f{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:10px 10px 8px 14px;margin:0 0 18px}
+form#f:focus-within{border-color:rgba(255,207,138,.5)}
+.row{display:flex;gap:8px;align-items:flex-end}
 textarea{flex:1;background:none;border:0;outline:0;color:var(--star);font:inherit;resize:none;max-height:180px;padding:6px 0}
 textarea::placeholder{color:var(--muted)}
 #send{flex:none;width:38px;height:38px;border-radius:50%;border:0;background:var(--gold);color:#1a1405;font-size:18px;cursor:pointer}
@@ -61,63 +121,142 @@ textarea::placeholder{color:var(--muted)}
 .tool{background:none;border:0;color:var(--muted);width:34px;height:34px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .tool:hover,.tool[aria-pressed=true]{color:var(--gold);background:rgba(255,255,255,.05)}
 .tool svg{width:19px;height:19px}
-#model{margin-left:auto;background:rgba(255,255,255,.04);color:var(--star);border:1px solid var(--line);border-radius:999px;font:inherit;font-size:13px;padding:6px 10px;cursor:pointer}
+#model{margin-left:auto;background:rgba(255,255,255,.04);color:var(--star);border:1px solid var(--line);border-radius:999px;font:inherit;font-size:13px;padding:6px 10px;cursor:pointer;max-width:60%}
 #model option{background:#0c0e20}
 .tray{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
 .tray:empty{display:none}
-.att{position:relative;display:flex;align-items:center;gap:6px;background:rgba(143,179,255,.1);border:1px solid rgba(143,179,255,.3);border-radius:10px;font-size:13px;max-width:220px}
+.att{position:relative;display:flex;align-items:center;background:rgba(143,179,255,.1);border:1px solid rgba(143,179,255,.3);border-radius:10px;font-size:13px;max-width:220px}
 .att img{width:52px;height:52px;object-fit:cover;border-radius:9px;display:block}
 .att span{padding:6px 26px 6px 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .att button{position:absolute;top:-7px;right:-7px;width:20px;height:20px;border-radius:50%;border:0;background:#2a2f4d;color:var(--star);font-size:12px;cursor:pointer;line-height:1}
 .linkrow{display:flex;gap:8px;margin-bottom:8px}
 .linkrow input{flex:1;background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:10px;color:var(--star);font:inherit;font-size:14px;padding:7px 10px;outline:0}
-.linkrow input:focus{border-color:rgba(255,207,138,.5)}
-.linkrow button{background:none;border:1px solid var(--line);color:var(--star);font:inherit;font-size:13px;border-radius:10px;padding:0 12px;cursor:pointer}
-.ferr{color:#ff9d9d;font-size:13px;margin:0 0 8px}
+.linkrow button{background:none;border:1px solid var(--line);color:var(--star);font-size:13px;border-radius:10px;padding:0 12px;cursor:pointer}
+.ferr{color:var(--red);font-size:13px;margin:0 0 8px}
 .ferr:empty{display:none}
-.user .stack{display:flex;flex-direction:column;align-items:flex-end;gap:6px;max-width:80%}
-.user .stack>div.txt{background:rgba(143,179,255,.16);border:1px solid rgba(143,179,255,.35);padding:10px 14px;border-radius:16px 16px 4px 16px;white-space:pre-wrap;word-wrap:break-word}
-.user .pics{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
-.user .pics img{width:110px;height:110px;object-fit:cover;border-radius:10px;border:1px solid var(--line)}
-.user .chip{font-size:13px;color:var(--blue);border:1px solid rgba(143,179,255,.3);border-radius:8px;padding:3px 8px;word-break:break-all}
-.ai .who{font-size:12px;color:var(--muted);margin-top:6px}
-:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
-@media (max-width:520px){.empty h2{font-size:23px}.user .stack{max-width:90%}}
+
+/* admin */
+#adminView{height:100%;overflow-y:auto;padding:22px 24px 40px}
+.ahead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+.ahead h2{font-size:24px;font-weight:600;margin:0 auto 0 0}
+.ghost{background:none;border:1px solid var(--line);color:var(--star);border-radius:999px;padding:7px 14px;font-size:13px;cursor:pointer}
+.ghost:hover{border-color:rgba(238,241,255,.35)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:22px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.stat b{display:block;font-size:24px;font-weight:600;color:var(--gold)}
+.stat span{font-size:13px;color:var(--muted)}
+.sect{font-size:16px;font-weight:600;margin:0 0 10px}
+.twrap{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:rgba(11,13,31,.8);margin-bottom:26px}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:760px}
+th{text-align:left;font-weight:400;color:var(--muted);font-size:12px;padding:10px 12px;border-bottom:1px solid var(--line)}
+td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+td .nm{font-weight:600}
+td .em{color:var(--muted);font-size:12px;word-break:break-all}
+.mods{display:flex;gap:10px;flex-wrap:wrap}
+.mods label{display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer}
+.mods input{accent-color:#ffcf8a}
+.pill{border-radius:999px;padding:4px 10px;font-size:12px;border:1px solid var(--line);background:none;color:var(--star);cursor:pointer}
+.pill.ok{color:#9be3b8;border-color:rgba(155,227,184,.4)}
+.pill.no{color:var(--red);border-color:rgba(255,157,157,.4)}
+.saved{font-size:12px;color:var(--muted)}
+.loglist{border:1px solid var(--line);border-radius:14px;background:rgba(11,13,31,.8)}
+.logrow{display:flex;gap:12px;padding:9px 14px;border-bottom:1px solid var(--line);font-size:14px}
+.logrow:last-child{border-bottom:0}
+.logrow .t{color:var(--muted);margin-left:auto;white-space:nowrap}
+.logrow .k{color:var(--gold);white-space:nowrap}
+.adminerr{color:var(--red)}
+
+@media (max-width:600px){
+  .rail{width:52px}.rbtn{width:36px;height:36px}
+  #panel{left:52px;max-width:calc(100% - 52px)}#menu{left:58px}
+  .app{padding:0 12px}.empty h2{font-size:23px}.user .stack{max-width:90%}
+  #adminView{padding:18px 14px 30px}
+}
 </style>
 </head>
 <body>
 <canvas id="sky"></canvas>
-<div class="app">
-  <header>
-    <canvas id="avatar" width="72" height="72" aria-hidden="true"></canvas>
-    <div><h1>Nova</h1><span>study helper</span></div>
-    <button id="new" type="button">New chat</button>
-  </header>
-  <main id="log" aria-live="polite"></main>
-  <form id="f">
-    <p class="ferr" id="ferr" role="alert"></p>
-    <div class="linkrow" id="linkrow" hidden>
-      <input id="linkin" type="url" placeholder="https://example.com/article" aria-label="Link to add">
-      <button type="button" id="linkadd">Add link</button>
+
+<section id="authView" hidden>
+  <div class="card">
+    <canvas id="authSwirl" width="192" height="192" aria-hidden="true"></canvas>
+    <h1 id="authTitle">Welcome to Nova</h1>
+    <p class="sub" id="authSub">Your study helper. Log in or create an account to start.</p>
+    <div class="tabs" role="tablist" id="tabs">
+      <button type="button" role="tab" data-mode="login" aria-selected="true">Log in</button>
+      <button type="button" role="tab" data-mode="register" aria-selected="false">Create account</button>
     </div>
-    <div class="tray" id="tray"></div>
-    <div class="top">
-      <textarea id="q" rows="1" placeholder="Ask a question or paste a problem" aria-label="Message Nova"></textarea>
-      <button id="send" type="submit" aria-label="Send">↑</button>
+    <form id="authForm" novalidate>
+      <label class="field" id="nameField" hidden><span>Name</span><input id="aName" autocomplete="name" maxlength="40"></label>
+      <label class="field"><span>Email</span><input id="aEmail" type="email" autocomplete="email" required></label>
+      <label class="field"><span>Password</span><input id="aPass" type="password" autocomplete="current-password" required></label>
+      <p class="aerr" id="aErr" role="alert"></p>
+      <button class="primary" id="aSubmit" type="submit">Log in</button>
+    </form>
+    <div class="afoot"><button class="linkbtn" type="button" id="adminLink">Admin</button></div>
+  </div>
+</section>
+
+<div id="appView" hidden>
+  <nav class="rail" aria-label="Nova">
+    <button class="rbtn new" id="rNew" title="New chat" aria-label="New chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+    <button class="rbtn" id="rChats" title="Your chats" aria-label="Your chats" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12z"/><path d="M8.5 10.5h7M8.5 13.5h4.5"/></svg></button>
+    <div class="gap"></div>
+    <button class="rbtn" id="rAdmin" title="Admin" aria-label="Admin" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6z"/><rect x="9" y="11" width="6" height="5" rx="1"/><path d="M10 11V9.5a2 2 0 0 1 4 0V11"/></svg></button>
+    <button class="avatar" id="rMe" aria-label="Account" aria-expanded="false">?</button>
+  </nav>
+
+  <aside id="panel" hidden aria-label="Your chats">
+    <h2>Your chats</h2>
+    <div id="chatList"></div>
+  </aside>
+
+  <div id="menu" hidden>
+    <div class="who" id="meName"></div>
+    <div class="mail" id="meEmail"></div>
+    <button type="button" id="logout">Log out</button>
+  </div>
+
+  <div class="stage">
+    <div class="app" id="chatView">
+      <header class="top">
+        <canvas id="headSwirl" width="68" height="68" aria-hidden="true"></canvas>
+        <h1>Nova</h1>
+        <span id="chatTitle"></span>
+      </header>
+      <main id="log" aria-live="polite"></main>
+      <form id="f">
+        <p class="ferr" id="ferr" role="alert"></p>
+        <div class="linkrow" id="linkrow" hidden>
+          <input id="linkin" type="url" placeholder="https://example.com/article" aria-label="Link to add">
+          <button type="button" id="linkadd">Add link</button>
+        </div>
+        <div class="tray" id="tray"></div>
+        <div class="row">
+          <textarea id="q" rows="1" placeholder="Ask a question or paste a problem" aria-label="Message Nova"></textarea>
+          <button id="send" type="submit" aria-label="Send">↑</button>
+        </div>
+        <div class="tools">
+          <button class="tool" type="button" id="bPhoto" title="Add photos" aria-label="Add photos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m21 16-5-5-8 8"/></svg></button>
+          <button class="tool" type="button" id="bFile" title="Add a file (PDF or text)" aria-label="Add a file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg></button>
+          <button class="tool" type="button" id="bLink" title="Add a link" aria-label="Add a link" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg></button>
+          <select id="model" aria-label="Model"></select>
+        </div>
+        <input type="file" id="pickPhoto" accept="image/*" multiple hidden>
+        <input type="file" id="pickFile" accept=".pdf,.txt,.md,.csv,.json,.js,.py,.java,.html,.css,.c,.cpp" multiple hidden>
+      </form>
     </div>
-    <div class="tools">
-      <button class="tool" type="button" id="bPhoto" title="Add photos" aria-label="Add photos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m21 16-5-5-8 8"/></svg></button>
-      <button class="tool" type="button" id="bFile" title="Add a file (PDF or text)" aria-label="Add a file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg></button>
-      <button class="tool" type="button" id="bLink" title="Add a link" aria-label="Add a link" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg></button>
-      <select id="model" aria-label="Model">
-        <option value="haiku">Haiku (fast, cheapest)</option>
-        <option value="sonnet">Sonnet (smarter)</option>
-        <option value="opus">Opus (smartest, priciest)</option>
-      </select>
-    </div>
-    <input type="file" id="pickPhoto" accept="image/*" multiple hidden>
-    <input type="file" id="pickFile" accept=".pdf,.txt,.md,.csv,.json,.js,.py,.java,.html,.css,.c,.cpp" multiple hidden>
-  </form>
+
+    <section id="adminView" hidden>
+      <div class="ahead">
+        <h2>Admin</h2>
+        <button class="ghost" type="button" id="aRefresh">Refresh</button>
+        <button class="ghost" type="button" id="aBack">Back to chat</button>
+      </div>
+      <div id="adminBody"><p class="think">Loading…</p></div>
+    </section>
+  </div>
 </div>
 
 <script>
@@ -183,27 +322,193 @@ function swirl(cv, n) {
   }
   requestAnimationFrame(f);
 }
-swirl(document.getElementById("avatar"), 160);
 
-/* chat */
-const log = document.getElementById("log"), form = document.getElementById("f"),
-      q = document.getElementById("q"), send = document.getElementById("send"),
-      tray = document.getElementById("tray"), ferr = document.getElementById("ferr"),
-      modelSel = document.getElementById("model"), linkrow = document.getElementById("linkrow"),
-      linkin = document.getElementById("linkin"), bLink = document.getElementById("bLink");
-let messages = [], busy = false, pending = {attachments: [], links: []};
-const MAX_ATTACH = 6, MAX_PDF = 3 * 1024 * 1024;
+
+const $ = id => document.getElementById(id);
+const MODELS = [
+  {key: "haiku", label: "Haiku (fast, cheapest)"},
+  {key: "sonnet", label: "Sonnet (smarter)"},
+  {key: "opus", label: "Opus (smartest, priciest)"},
+];
 const NAMES = {haiku: "Haiku", sonnet: "Sonnet", opus: "Opus"};
+const MAX_ATTACH = 6, MAX_PDF = 3 * 1024 * 1024;
+let me = null, chatId = null, chats = [], busy = false, pending = {attachments: [], links: []};
+let authMode = "login", swirlsStarted = {};
 
-try { const m = localStorage.getItem("nova-model"); if (m && NAMES[m]) modelSel.value = m; } catch {}
-modelSel.onchange = () => { try { localStorage.setItem("nova-model", modelSel.value); } catch {} };
+async function api(path, opts = {}) {
+  const r = await fetch(path, {credentials: "same-origin", headers: {"Content-Type": "application/json"}, ...opts});
+  let d = {};
+  try { d = await r.json(); } catch {}
+  if (!r.ok) { const e = new Error(d.error || "Something went wrong"); e.status = r.status; throw e; }
+  return d;
+}
+function startSwirl(id, n) { if (swirlsStarted[id]) return; swirlsStarted[id] = true; swirl($(id), n); }
+function ago(t) {
+  if (!t) return "never";
+  const s = Math.round((Date.now() - t) / 1000);
+  if (s < 60) return "just now";
+  if (s < 3600) return Math.round(s / 60) + " min ago";
+  if (s < 86400) return Math.round(s / 3600) + " h ago";
+  if (s < 86400 * 7) return Math.round(s / 86400) + " d ago";
+  return new Date(t).toLocaleDateString();
+}
+function esc(s) { return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 
+/* ---------- auth ---------- */
+function setMode(mode) {
+  authMode = mode;
+  const admin = mode === "admin";
+  $("tabs").hidden = admin;
+  $("nameField").hidden = mode !== "register";
+  $("authTitle").textContent = admin ? "Admin login" : "Welcome to Nova";
+  $("authSub").textContent = admin ? "Only the site admin can log in here." : "Your study helper. Log in or create an account to start.";
+  $("aSubmit").textContent = mode === "register" ? "Create account" : "Log in";
+  $("adminLink").textContent = admin ? "Back to normal login" : "Admin";
+  $("aPass").autocomplete = mode === "register" ? "new-password" : "current-password";
+  document.querySelectorAll("#tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.mode === mode)));
+  $("aErr").textContent = "";
+}
+document.querySelectorAll("#tabs button").forEach(b => b.onclick = () => setMode(b.dataset.mode));
+$("adminLink").onclick = () => setMode(authMode === "admin" ? "login" : "admin");
+["aName", "aEmail", "aPass"].forEach(id => $(id).addEventListener("input", () => $("aErr").textContent = ""));
+
+function showAuth(msg) {
+  me = null;
+  $("appView").hidden = true; $("authView").hidden = false;
+  setMode("login"); startSwirl("authSwirl", 260);
+  $("aErr").textContent = msg || "";
+  $("aEmail").focus();
+}
+
+$("authForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const name = $("aName").value.trim(), email = $("aEmail").value.trim(), password = $("aPass").value;
+  if (authMode === "register" && !name) { $("aErr").textContent = "Enter your name."; return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { $("aErr").textContent = "Enter a valid email."; return; }
+  if (!password) { $("aErr").textContent = "Enter your password."; return; }
+  if (authMode === "register" && password.length < 8) { $("aErr").textContent = "Use a password with at least 8 characters."; return; }
+  $("aSubmit").disabled = true;
+  try {
+    const d = await api("/api/auth", {method: "POST", body: JSON.stringify({action: authMode, name, email, password})});
+    $("aPass").value = "";
+    enterApp(d.user);
+  } catch (err) { $("aErr").textContent = err.message; }
+  finally { $("aSubmit").disabled = false; }
+});
+
+/* ---------- app shell ---------- */
+function enterApp(user) {
+  me = user;
+  $("authView").hidden = true; $("appView").hidden = false;
+  $("rMe").textContent = (user.name || "?").trim().charAt(0).toUpperCase();
+  $("meName").textContent = user.name; $("meEmail").textContent = user.email;
+  $("rAdmin").hidden = !user.admin;
+  startSwirl("headSwirl", 160);
+  fillModels();
+  showChat(); newChat(); loadChats();
+}
+
+function fillModels() {
+  const sel = $("model"); sel.innerHTML = "";
+  for (const m of MODELS) {
+    const o = document.createElement("option");
+    const ok = me.models.includes(m.key);
+    o.value = m.key; o.disabled = !ok;
+    o.textContent = ok ? m.label : `${NAMES[m.key]} (locked)`;
+    sel.appendChild(o);
+  }
+  let saved = null; try { saved = localStorage.getItem("nova-model"); } catch {}
+  sel.value = saved && me.models.includes(saved) ? saved : me.models[0] || "haiku";
+}
+$("model").onchange = () => { try { localStorage.setItem("nova-model", $("model").value); } catch {} };
+
+function closePops() {
+  $("panel").hidden = true; $("menu").hidden = true;
+  $("rChats").setAttribute("aria-expanded", "false"); $("rMe").setAttribute("aria-expanded", "false");
+}
+$("rChats").onclick = e => {
+  e.stopPropagation();
+  const open = $("panel").hidden; closePops();
+  if (open) { $("panel").hidden = false; $("rChats").setAttribute("aria-expanded", "true"); renderChatList(); }
+};
+$("rMe").onclick = e => {
+  e.stopPropagation();
+  const open = $("menu").hidden; closePops();
+  if (open) { $("menu").hidden = false; $("rMe").setAttribute("aria-expanded", "true"); }
+};
+document.addEventListener("click", e => { if (!e.target.closest("#panel,#menu")) closePops(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") closePops(); });
+$("rNew").onclick = () => { closePops(); showChat(); newChat(); };
+$("rAdmin").onclick = () => { closePops(); openAdmin(); };
+$("logout").onclick = async () => {
+  try { await api("/api/auth", {method: "POST", body: JSON.stringify({action: "logout"})}); } catch {}
+  chats = []; chatId = null; showAuth();
+};
+
+function handleAuthError(err) {
+  if (err.status === 401) { showAuth("Your session ended. Log in again."); return true; }
+  return false;
+}
+
+/* ---------- chats ---------- */
+async function loadChats() {
+  try { chats = (await api("/api/chats")).chats; renderChatList(); }
+  catch (err) { if (!handleAuthError(err)) chats = []; }
+}
+function renderChatList() {
+  const list = $("chatList"); list.innerHTML = "";
+  if (!chats.length) { list.innerHTML = `<p class="cempty">No chats yet. Start one and it'll show up here.</p>`; return; }
+  for (const c of chats) {
+    const row = document.createElement("div"); row.className = "citem" + (c.id === chatId ? " on" : "");
+    const open = document.createElement("button"); open.className = "copen"; open.type = "button";
+    open.innerHTML = `<span class="ctitle"></span><span class="ctime"></span>`;
+    open.querySelector(".ctitle").textContent = c.title; open.querySelector(".ctime").textContent = ago(c.updated);
+    open.onclick = () => openChat(c.id);
+    const del = document.createElement("button"); del.className = "cdel"; del.type = "button";
+    del.setAttribute("aria-label", "Delete chat"); del.title = "Delete chat"; del.textContent = "✕";
+    del.onclick = async e => {
+      e.stopPropagation();
+      if (!confirm(`Delete "${c.title}"?`)) return;
+      try {
+        await api(`/api/chats?id=${c.id}`, {method: "DELETE"});
+        chats = chats.filter(x => x.id !== c.id);
+        if (chatId === c.id) newChat();
+        renderChatList();
+      } catch (err) { if (!handleAuthError(err)) alert(err.message); }
+    };
+    row.append(open, del); list.appendChild(row);
+  }
+}
+async function openChat(id) {
+  closePops(); showChat();
+  try {
+    const {chat} = await api(`/api/chats?id=${id}`);
+    chatId = chat.id; $("chatTitle").textContent = chat.title;
+    log.innerHTML = "";
+    for (const m of chat.messages) {
+      if (m.role === "user") add("user", {content: m.content, files: m.files, links: m.links});
+      else add("assistant", m.content, {model: m.model});
+    }
+    if (!chat.messages.length) welcome();
+  } catch (err) { if (!handleAuthError(err)) alert(err.message); }
+}
+function newChat() {
+  if (busy) return;
+  chatId = null; $("chatTitle").textContent = "";
+  pending = {attachments: [], links: []}; drawTray(); showError(""); welcome(); q.focus();
+}
+
+/* ---------- chat view ---------- */
+const log = $("log"), form = $("f"), q = $("q"), send = $("send"), tray = $("tray"), ferr = $("ferr");
 const starters = ["Explain a concept simply", "Quiz me on a topic", "Check my work on a problem", "Help me plan what to study"];
 
+function showChat() { $("adminView").hidden = true; $("chatView").hidden = false; $("rAdmin").classList.remove("on"); }
+
 function welcome() {
+  const first = (me?.name || "").split(" ")[0];
   log.innerHTML = `<div class="empty">
     <canvas width="240" height="240" aria-hidden="true"></canvas>
-    <h2>What are we studying today?</h2>
+    <h2>What are we studying today${first ? ", " + esc(first) : ""}?</h2>
     <p>Ask about any subject, add a photo of a problem, attach notes, or paste a link for Nova to read.</p>
     <div class="chips">${starters.map(s => `<button class="chip" type="button">${s}</button>`).join("")}</div>
   </div>`;
@@ -225,9 +530,9 @@ function renderMath(md) {
   });
 }
 
+
 function showError(t) { ferr.textContent = t || ""; }
 
-/* attachments */
 function drawTray() {
   tray.innerHTML = "";
   const items = [...pending.attachments.map((a, i) => ({a, i, kind: "att"})), ...pending.links.map((l, i) => ({l, i, kind: "link"}))];
@@ -240,8 +545,7 @@ function drawTray() {
       s.textContent = it.kind === "link" ? "🔗 " + it.l : (it.a.type === "pdf" ? "📄 " : "📝 ") + it.a.name;
       el.appendChild(s);
     }
-    const x = document.createElement("button"); x.type = "button"; x.textContent = "✕";
-    x.setAttribute("aria-label", "Remove");
+    const x = document.createElement("button"); x.type = "button"; x.textContent = "✕"; x.setAttribute("aria-label", "Remove");
     x.onclick = () => { (it.kind === "att" ? pending.attachments : pending.links).splice(it.i, 1); drawTray(); };
     el.appendChild(x); tray.appendChild(el);
   }
@@ -293,11 +597,12 @@ async function addFiles(files) {
   drawTray();
 }
 
-document.getElementById("bPhoto").onclick = () => document.getElementById("pickPhoto").click();
-document.getElementById("bFile").onclick = () => document.getElementById("pickFile").click();
-document.getElementById("pickPhoto").onchange = e => { addFiles([...e.target.files]); e.target.value = ""; };
-document.getElementById("pickFile").onchange = e => { addFiles([...e.target.files]); e.target.value = ""; };
 
+$("bPhoto").onclick = () => $("pickPhoto").click();
+$("bFile").onclick = () => $("pickFile").click();
+$("pickPhoto").onchange = e => { addFiles([...e.target.files]); e.target.value = ""; };
+$("pickFile").onchange = e => { addFiles([...e.target.files]); e.target.value = ""; };
+const linkrow = $("linkrow"), linkin = $("linkin"), bLink = $("bLink");
 bLink.onclick = () => {
   const open = linkrow.hidden;
   linkrow.hidden = !open; bLink.setAttribute("aria-pressed", String(open));
@@ -312,10 +617,9 @@ function addLink() {
   showError(""); pending.links.push(v); linkin.value = "";
   linkrow.hidden = true; bLink.setAttribute("aria-pressed", "false"); drawTray(); q.focus();
 }
-document.getElementById("linkadd").onclick = addLink;
+$("linkadd").onclick = addLink;
 linkin.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addLink(); } });
 linkin.addEventListener("input", () => showError(""));
-
 q.addEventListener("paste", e => {
   const imgs = [...(e.clipboardData?.files || [])].filter(f => f.type.startsWith("image/"));
   if (imgs.length) { e.preventDefault(); addFiles(imgs); }
@@ -323,25 +627,22 @@ q.addEventListener("paste", e => {
 form.addEventListener("dragover", e => e.preventDefault());
 form.addEventListener("drop", e => { e.preventDefault(); if (e.dataTransfer.files.length) addFiles([...e.dataTransfer.files]); });
 
-/* messages */
 function add(role, msg, opts = {}) {
   if (log.querySelector(".empty")) log.innerHTML = "";
   const el = document.createElement("div");
   if (role === "user") {
     el.className = "msg user";
     const stack = document.createElement("div"); stack.className = "stack";
-    const pics = (msg.attachments || []).filter(a => a.type === "image");
+    const atts = msg.attachments || [];
+    const pics = atts.filter(a => a.type === "image" && a.preview);
     if (pics.length) {
       const p = document.createElement("div"); p.className = "pics";
       pics.forEach(a => { const i = document.createElement("img"); i.src = a.preview; i.alt = a.name; p.appendChild(i); });
       stack.appendChild(p);
     }
-    for (const a of (msg.attachments || []).filter(a => a.type !== "image")) {
-      const c = document.createElement("div"); c.className = "chip"; c.textContent = (a.type === "pdf" ? "📄 " : "📝 ") + a.name; stack.appendChild(c);
-    }
-    for (const l of msg.links || []) {
-      const c = document.createElement("div"); c.className = "chip"; c.textContent = "🔗 " + l; stack.appendChild(c);
-    }
+    const names = atts.length ? atts.filter(a => !(a.type === "image" && a.preview)).map(a => a.name) : (msg.files || []);
+    for (const n of names) { const c = document.createElement("div"); c.className = "tag"; c.textContent = "📎 " + n; stack.appendChild(c); }
+    for (const l of msg.links || []) { const c = document.createElement("div"); c.className = "tag"; c.textContent = "🔗 " + l; stack.appendChild(c); }
     if (msg.content) { const t = document.createElement("div"); t.className = "txt"; t.textContent = msg.content; stack.appendChild(t); }
     el.appendChild(stack);
   } else {
@@ -349,26 +650,11 @@ function add(role, msg, opts = {}) {
     el.innerHTML = `<span class="dot"></span><div class="body"></div>`;
     const body = el.querySelector(".body");
     body.innerHTML = opts.err ? DOMPurify.sanitize(msg) : renderMath(msg);
-    if (opts.model) { const w = document.createElement("div"); w.className = "who"; w.textContent = NAMES[opts.model]; body.appendChild(w); }
+    if (opts.model) { const w = document.createElement("div"); w.className = "model"; w.textContent = NAMES[opts.model] || opts.model; body.appendChild(w); }
   }
   log.appendChild(el);
   log.scrollTop = log.scrollHeight;
   return el;
-}
-
-function payloadMessages() {
-  const recent = messages.slice(-12);
-  const last = recent.map(m => m.role).lastIndexOf("user");
-  return recent.map((m, i) => {
-    if (i === last) {
-      return {role: m.role, content: m.content,
-        attachments: (m.attachments || []).map(({preview, ...rest}) => rest), links: m.links || []};
-    }
-    let content = m.content;
-    const names = [...(m.attachments || []).map(a => a.name), ...(m.links || [])];
-    if (names.length) content = `${content}\n[Earlier I shared: ${names.join(", ")}]`.trim();
-    return {role: m.role, content};
-  });
 }
 
 function grow() { q.style.height = "auto"; q.style.height = Math.min(q.scrollHeight, 180) + "px"; }
@@ -377,49 +663,138 @@ q.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.p
 
 form.addEventListener("submit", async e => {
   e.preventDefault();
-  const text = q.value.trim();
   if (busy) return;
+  const text = q.value.trim();
   if (!text && !pending.attachments.length && !pending.links.length) { showError("Type a message or add something first."); return; }
-  const msg = {role: "user", content: text, attachments: pending.attachments, links: pending.links};
-  messages.push(msg);
-  const body = JSON.stringify({model: modelSel.value, messages: payloadMessages()});
-  if (body.length > 4_000_000) {
-    messages.pop();
-    showError("That's too much to send at once. Remove a photo or file and try again.");
-    return;
-  }
+  const model = $("model").value;
+  const body = JSON.stringify({
+    chatId, model, content: text,
+    attachments: pending.attachments.map(({preview, ...rest}) => rest), links: pending.links,
+  });
+  if (body.length > 4_000_000) { showError("That's too much to send at once. Remove a photo or file and try again."); return; }
   busy = true; send.disabled = true; showError("");
-  const saved = pending; pending = {attachments: [], links: []}; drawTray();
-  q.value = ""; grow();
-  add("user", msg);
+  const saved = pending, msg = {content: text, attachments: pending.attachments, links: pending.links};
+  pending = {attachments: [], links: []}; drawTray(); q.value = ""; grow();
+  const userEl = add("user", msg);
   const thinking = add("assistant", "");
   thinking.querySelector(".body").innerHTML = `<span class="think">Nova is thinking…</span>`;
   spinTarget = 5;
-  const used = modelSel.value;
   try {
-    const r = await fetch("/api/chat", {method: "POST", headers: {"Content-Type": "application/json"}, body});
-    let data = {};
-    try { data = await r.json(); } catch {}
+    const d = await api("/api/chat", {method: "POST", body});
     thinking.remove();
-    if (!r.ok) throw new Error(data.error || "Something went wrong");
-    messages.push({role: "assistant", content: data.reply});
-    add("assistant", data.reply, {model: used});
+    add("assistant", d.reply, {model});
+    const isNew = chatId !== d.chatId;
+    chatId = d.chatId; $("chatTitle").textContent = d.title;
+    const existing = chats.find(c => c.id === chatId);
+    if (existing) { existing.updated = Date.now(); chats.sort((a, b) => b.updated - a.updated); }
+    else if (isNew) chats.unshift({id: chatId, title: d.title, updated: Date.now()});
   } catch (err) {
-    thinking.remove();
-    messages.pop();
-    log.lastElementChild?.remove();
-    add("assistant", (err.message || "Couldn't reach Nova") + ". Your message wasn't sent, so try again.", {err: true});
+    thinking.remove(); userEl.remove();
+    if (handleAuthError(err)) return;
+    add("assistant", err.message + ". Your message wasn't sent, so try again.", {err: true});
     q.value = text; grow(); pending = saved; drawTray();
   } finally {
-    busy = false; send.disabled = false; spinTarget = 1; q.focus();
+    busy = false; send.disabled = false; spinTarget = 1; if (me) q.focus();
   }
 });
 
-document.getElementById("new").onclick = () => {
-  if (busy) return;
-  messages = []; pending = {attachments: [], links: []}; drawTray(); showError(""); welcome(); q.focus();
-};
-welcome();
+/* ---------- admin ---------- */
+async function openAdmin() {
+  $("chatView").hidden = true; $("adminView").hidden = false; $("rAdmin").classList.add("on");
+  await loadAdmin();
+}
+$("aBack").onclick = showChat;
+$("aRefresh").onclick = loadAdmin;
+
+async function loadAdmin() {
+  const box = $("adminBody");
+  box.innerHTML = `<p class="think">Loading…</p>`;
+  try { renderAdmin(await api("/api/admin")); }
+  catch (err) { if (!handleAuthError(err)) box.innerHTML = `<p class="adminerr">${esc(err.message)}</p>`; }
+}
+
+function renderAdmin({users, log: events}) {
+  const total = users.reduce((s, u) => s + (u.messages || 0), 0);
+  const activeWeek = users.filter(u => u.lastActive && Date.now() - u.lastActive < 7 * 86400000).length;
+  const box = $("adminBody");
+  box.innerHTML = `
+    <div class="stats">
+      <div class="stat"><b>${users.length}</b><span>Accounts</span></div>
+      <div class="stat"><b>${activeWeek}</b><span>Active this week</span></div>
+      <div class="stat"><b>${total}</b><span>Messages sent</span></div>
+    </div>
+    <h3 class="sect">People</h3>
+    <div class="twrap"><table>
+      <thead><tr><th>Person</th><th>Joined</th><th>Last login</th><th>Messages</th><th>Models allowed</th><th>Access</th></tr></thead>
+      <tbody id="uRows"></tbody>
+    </table></div>
+    <h3 class="sect">Recent logins</h3>
+    <div class="loglist" id="logRows"></div>`;
+
+  const rows = $("uRows");
+  for (const u of users) {
+    const tr = document.createElement("tr");
+    const usage = u.usage || {};
+    const split = ["haiku", "sonnet", "opus"].filter(k => usage[k]).map(k => `${NAMES[k]} ${usage[k]}`).join(", ");
+    tr.innerHTML = `
+      <td><div class="nm">${esc(u.name)}${u.admin ? " (you)" : ""}</div><div class="em">${esc(u.email)}</div></td>
+      <td>${esc(ago(u.created))}</td>
+      <td>${esc(ago(u.lastLogin))}</td>
+      <td>${u.messages || 0}${split ? `<div class="em">${esc(split)}</div>` : ""}</td>
+      <td class="modcell"></td>
+      <td class="acccell"></td>`;
+    const mods = document.createElement("div"); mods.className = "mods";
+    const status = document.createElement("span"); status.className = "saved";
+    for (const m of MODELS) {
+      const lab = document.createElement("label");
+      const cb = document.createElement("input"); cb.type = "checkbox"; cb.value = m.key;
+      cb.checked = u.admin || u.models.includes(m.key); cb.disabled = u.admin;
+      lab.append(cb, document.createTextNode(NAMES[m.key])); mods.appendChild(lab);
+    }
+    mods.appendChild(status);
+    if (!u.admin) mods.addEventListener("change", async () => {
+      let models = [...mods.querySelectorAll("input:checked")].map(i => i.value);
+      if (!models.length) { mods.querySelector('input[value="haiku"]').checked = true; models = ["haiku"]; }
+      status.textContent = "Saving…";
+      try { await api("/api/admin", {method: "POST", body: JSON.stringify({email: u.email, models})}); status.textContent = "Saved"; }
+      catch (err) { status.textContent = err.message; }
+    });
+    tr.querySelector(".modcell").appendChild(mods);
+
+    const acc = tr.querySelector(".acccell");
+    if (u.admin) acc.innerHTML = `<span class="saved">Admin</span>`;
+    else {
+      const b = document.createElement("button"); b.type = "button";
+      const paint = () => { b.className = "pill " + (u.blocked ? "no" : "ok"); b.textContent = u.blocked ? "Blocked" : "Active"; b.title = u.blocked ? "Click to let them back in" : "Click to block"; };
+      paint();
+      b.onclick = async () => {
+        if (!u.blocked && !confirm(`Block ${u.name}? They won't be able to use Nova.`)) return;
+        try { await api("/api/admin", {method: "POST", body: JSON.stringify({email: u.email, blocked: !u.blocked})}); u.blocked = !u.blocked; paint(); }
+        catch (err) { alert(err.message); }
+      };
+      acc.appendChild(b);
+    }
+    rows.appendChild(tr);
+  }
+
+  const lr = $("logRows");
+  if (!events.length) lr.innerHTML = `<div class="logrow">No logins yet.</div>`;
+  const byEmail = Object.fromEntries(users.map(u => [u.email, u.name]));
+  for (const ev of events) {
+    const d = document.createElement("div"); d.className = "logrow";
+    d.innerHTML = `<span class="k"></span><span class="w"></span><span class="t"></span>`;
+    d.querySelector(".k").textContent = ev.type === "signup" ? "Signed up" : ev.type === "admin login" ? "Admin login" : "Logged in";
+    d.querySelector(".w").textContent = byEmail[ev.email] ? `${byEmail[ev.email]} (${ev.email})` : ev.email;
+    d.querySelector(".t").textContent = ago(ev.time);
+    lr.appendChild(d);
+  }
+}
+
+/* ---------- start ---------- */
+(async () => {
+  try { const d = await api("/api/auth"); d.user ? enterApp(d.user) : showAuth(); }
+  catch (err) { showAuth(err.message); }
+})();
 </script>
 </body>
 </html>
