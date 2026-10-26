@@ -310,6 +310,11 @@ main::-webkit-scrollbar{width:8px}main::-webkit-scrollbar-thumb{background:rgba(
 #send canvas{position:absolute;left:50%;top:50%;width:88px;height:88px;margin:-44px 0 0 -44px;pointer-events:none}
 #send:hover:not(:disabled){background:#1c1f38!important;border-color:rgba(255,207,138,.6);transform:scale(1.05)}
 #send:disabled{opacity:1;cursor:default}
+/* ignite thinking galaxy */
+.thinkrow{display:inline-flex;align-items:center;gap:10px}
+.thinkrow canvas{width:42px;height:42px;flex:none;margin:-4px 0}
+.thinkrow .think::before{display:none}
+.thinkrow .think{transition:opacity .3s}
 </style>
 </head>
 <body>
@@ -828,10 +833,11 @@ form.addEventListener("submit", async e => {
   pending = {attachments: [], links: []}; drawTray(); q.value = ""; grow();
   const userEl = add("user", msg);
   const thinking = add("assistant", "");
-  thinking.querySelector(".body").innerHTML = `<span class="think">Nova is thinking…</span>`;
+  const ig = igniteLoader(thinking, model);
   spinTarget = 5;
   try {
     const d = await api("/api/chat", {method: "POST", body});
+    await ig.finish();
     thinking.remove();
     add("assistant", d.reply, {model});
     const isNew = chatId !== d.chatId;
@@ -840,7 +846,7 @@ form.addEventListener("submit", async e => {
     if (existing) { existing.updated = Date.now(); chats.sort((a, b) => b.updated - a.updated); }
     else if (isNew) chats.unshift({id: chatId, title: d.title, updated: Date.now()});
   } catch (err) {
-    thinking.remove(); userEl.remove();
+    ig.stop(); thinking.remove(); userEl.remove();
     if (handleAuthError(err)) return;
     add("assistant", err.message + ". Your message wasn't sent, so try again.", {err: true});
     q.value = text; grow(); pending = saved; drawTray();
@@ -1283,6 +1289,75 @@ ${inChats.length ? `<p class="lbl">Open a chat about it</p><div class="cl"></div
   }
   requestAnimationFrame(frame);
 })();
+
+/* ---------- ignite: galaxy that forms while Nova thinks ---------- */
+function igniteLoader(el, model) {
+  const body = el.querySelector(".body");
+  body.innerHTML = `<span class="thinkrow"><canvas width="96" height="96" aria-hidden="true"></canvas><span class="think">Nova is thinking…</span></span>`;
+  const cv = body.querySelector("canvas"), ctx = cv.getContext("2d"), label = body.querySelector(".think");
+  const P = [];
+  for (let i = 0; i < 170; i++) {
+    const r = Math.pow(Math.random(), 1.5), q = Math.random();
+    const c = r < .2 ? (q < .6 ? "255,214,150" : "255,245,228") : r < .55 ? (q < .5 ? "255,250,240" : q < .8 ? "255,207,138" : "170,200,255") : (q < .6 ? "143,179,255" : "235,240,255");
+    P.push({r, a: (i % 2) * Math.PI + r * 5.5 + (Math.random() - .5) * (.5 + r * .9), s: (Math.random() * 1.2 + .5) * (1 - r * .4), c, w: Math.random() * 6});
+  }
+  // how long each model usually takes, so the galaxy fills at a believable pace
+  const T = ({haiku: 1700, sonnet: 3800, opus: 6500})[model] || 3800;
+  const ease = x => 1 - Math.pow(1 - Math.max(0, Math.min(1, x)), 3);
+  const t0 = performance.now();
+  let p = 0, last = t0, phase = 0, doneAt = 0, stopped = false, onDone = null;
+
+  function draw(t) {
+    const W = cv.width, cx = W / 2, cy = W / 2, R = W * .46, k = W / 120;
+    ctx.clearRect(0, 0, W, W);
+    const coreA = ease(p * 2.2);
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * .42 * (.6 + .4 * coreA));
+    g.addColorStop(0, `rgba(255,236,195,${.95 * coreA})`); g.addColorStop(.35, `rgba(255,200,120,${.35 * coreA})`); g.addColorStop(1, "rgba(255,200,120,0)");
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, R * .42, 0, 7); ctx.fill();
+    for (const s of P) {
+      const q = ease((p * 1.25 - s.r * .9) / .3);
+      if (q <= .01) continue;
+      const an = s.a + phase / (s.r + .25);
+      ctx.fillStyle = `rgba(${s.c},${q * (.55 + .45 * Math.sin(t * .003 + s.w))})`;
+      ctx.beginPath(); ctx.arc(cx + Math.cos(an) * s.r * R * q, cy + Math.sin(an) * s.r * R * q, s.s * k, 0, 7); ctx.fill();
+    }
+    if (p > .95) {
+      const sp = ease((p - .95) * 20);
+      for (let j = 0; j < 2; j++) {
+        const s = P[(j * 53) % P.length], an = s.a + phase / (s.r + .25), x = cx + Math.cos(an) * s.r * R, y = cy + Math.sin(an) * s.r * R;
+        const L = (5 + 3 * Math.sin(t * .004 + j)) * k * sp;
+        ctx.strokeStyle = "rgba(255,240,210,.85)"; ctx.lineWidth = .8 * k;
+        ctx.beginPath(); ctx.moveTo(x - L, y); ctx.lineTo(x + L, y); ctx.moveTo(x, y - L); ctx.lineTo(x, y + L); ctx.stroke();
+      }
+    }
+    if (doneAt && p >= 1) {
+      const f = Math.max(0, 1 - (t - doneAt) / 380);
+      const fg = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
+      fg.addColorStop(0, `rgba(255,245,225,${.5 * f})`); fg.addColorStop(1, "rgba(255,220,170,0)");
+      ctx.fillStyle = fg; ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.fill();
+    }
+  }
+  function frame(t) {
+    if (stopped || !cv.isConnected) return;
+    phase += (t - last) * .00025 * (doneAt ? 2 : 3.5);
+    if (!doneAt) p = Math.min(.92, 1 - Math.exp(-(t - t0) / T));
+    else p = Math.min(1, p + (t - last) * .0045);
+    last = t;
+    label.textContent = doneAt ? "Here it comes…" : p < .4 ? "Nova is thinking…" : p < .75 ? "Connecting ideas…" : "Almost there…";
+    draw(t);
+    if (doneAt && p >= 1 && t - doneAt > 260 && onDone) { const r = onDone; onDone = null; stopped = true; r(); return; }
+    requestAnimationFrame(frame);
+  }
+  if (reduce) { p = .8; draw(t0); } else requestAnimationFrame(frame);
+  return {
+    finish() {
+      if (reduce || stopped || !cv.isConnected) return Promise.resolve();
+      doneAt = performance.now();
+      return new Promise(r => { onDone = r; setTimeout(() => { if (onDone) { onDone = null; stopped = true; r(); } }, 1200); });
+    },
+    stop() { stopped = true; },
+  };
+}
 
 /* ---------- start ---------- */
 (async () => {
