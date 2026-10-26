@@ -305,6 +305,11 @@ main::-webkit-scrollbar{width:8px}main::-webkit-scrollbar-thumb{background:rgba(
 .ai .body h2{font-size:1.15em;line-height:1.35;margin:1em 0 .4em}
 .ai .body h3{font-size:1.02em;margin:1em 0 .3em}
 .ai .body table{display:block;overflow-x:auto}
+/* blaze send button */
+#send{position:relative;width:42px;height:42px;padding:0;overflow:visible;background:#16182a!important;border:1px solid rgba(255,207,138,.32);color:transparent}
+#send canvas{position:absolute;left:50%;top:50%;width:88px;height:88px;margin:-44px 0 0 -44px;pointer-events:none}
+#send:hover:not(:disabled){background:#1c1f38!important;border-color:rgba(255,207,138,.6);transform:scale(1.05)}
+#send:disabled{opacity:1;cursor:default}
 </style>
 </head>
 <body>
@@ -1212,6 +1217,72 @@ ${inChats.length ? `<p class="lbl">Open a chat about it</p><div class="cl"></div
     } catch (err) { if (!handleAuthError(err)) alert(err.message); }
   };
 }
+
+/* ---------- blaze send button (shooting star) ---------- */
+(() => {
+  const b = $("send");
+  b.textContent = "";
+  const cv = document.createElement("canvas");
+  cv.width = cv.height = 264; cv.setAttribute("aria-hidden", "true");
+  b.appendChild(cv);
+  const c = cv.getContext("2d"), S = 3, O = 22; // canvas is 88 css px, button sits in the middle 44
+  let parts = [], hover = false, launch = 0, back = -9999;
+  b.addEventListener("pointerenter", () => hover = true);
+  b.addEventListener("pointerleave", () => hover = false);
+  form.addEventListener("submit", () => { if (busy) fire(); });
+
+  function head(t) {
+    if (launch) { const k = Math.min(1, (t - launch) / 480); return [22, 13 - k * k * 46, k]; }
+    return [22 + Math.sin(t * .0025) * .5, 13.5 + Math.sin(t * .004) * .9, 0];
+  }
+  function spark(x, y, f = 1) {
+    const a = Math.PI / 2 + (Math.random() - .5) * (f > 1 ? 2.2 : .8), sp = (.25 + Math.random() * .55) * f;
+    return {x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 1, r: .45 + Math.random() * 1.05,
+      hue: Math.random() < .5 ? "255,207,138" : Math.random() < .5 ? "255,145,75" : "255,246,228"};
+  }
+  function fire() {
+    const t = performance.now(), [x, y] = head(t);
+    launch = t;
+    for (let i = 0; i < 24; i++) parts.push(spark(x, y + 2, 1.9));
+  }
+  function star(x, y, r) {
+    c.beginPath();
+    c.moveTo(x, y - r * 2); c.lineTo(x + r * .5, y - r * .5); c.lineTo(x + r * 2, y); c.lineTo(x + r * .5, y + r * .5);
+    c.lineTo(x, y + r * 2); c.lineTo(x - r * .5, y + r * .5); c.lineTo(x - r * 2, y); c.lineTo(x - r * .5, y - r * .5);
+    c.closePath(); c.fill();
+  }
+  function frame(t) {
+    let [x, y, k] = head(t);
+    if (launch && t - launch > 650) { launch = 0; back = t; [x, y, k] = head(t); }
+    const fadeIn = Math.min(1, (t - back) / 380), idleA = (b.disabled ? .55 : 1) * fadeIn;
+    c.setTransform(S, 0, 0, S, 0, 0); c.clearRect(0, 0, 88, 88); c.translate(O, O);
+    const flying = launch && k < 1, a = flying ? 1 - k * .6 : idleA;
+    if (!launch || flying) {
+      const n = launch ? 3 : hover && !b.disabled ? 2 : Math.random() < .7 ? 1 : 0;
+      for (let i = 0; i < n; i++) parts.push(spark(x + (Math.random() - .5), y + 2));
+      const len = launch ? 22 : hover ? 18 : 15;
+      const g = c.createLinearGradient(x, y, x, y + len);
+      g.addColorStop(0, `rgba(255,214,150,${.95 * a})`); g.addColorStop(.5, `rgba(255,150,70,${.45 * a})`); g.addColorStop(1, "rgba(255,120,50,0)");
+      c.fillStyle = g;
+      c.beginPath(); c.moveTo(x - 1.6, y); c.lineTo(x + 1.6, y); c.lineTo(x + .25, y + len); c.lineTo(x - .25, y + len); c.closePath(); c.fill();
+    }
+    parts = parts.filter(p => (p.life -= .03) > 0);
+    for (const p of parts) {
+      p.x += p.vx; p.y += p.vy; p.vx *= .97;
+      c.fillStyle = `rgba(${p.hue},${p.life * (launch ? 1 : idleA)})`;
+      c.beginPath(); c.arc(p.x, p.y, p.r * p.life + .2, 0, 7); c.fill();
+    }
+    if (!launch || flying) {
+      const glow = c.createRadialGradient(x, y, 0, x, y, 7);
+      glow.addColorStop(0, `rgba(255,220,160,${.5 * a})`); glow.addColorStop(1, "rgba(255,200,120,0)");
+      c.fillStyle = glow; c.beginPath(); c.arc(x, y, 7, 0, 7); c.fill();
+      c.fillStyle = `rgba(255,247,232,${a})`;
+      star(x, y, 2.3 + Math.sin(t * .009) * .25 + (hover ? .25 : 0));
+    }
+    if (!reduce) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
 
 /* ---------- start ---------- */
 (async () => {
