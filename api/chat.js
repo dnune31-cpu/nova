@@ -127,7 +127,7 @@ export default async function handler(req, res) {
         "anthropic-version": "2023-06-01",
         "content-type": "application/json",
       },
-      body: JSON.stringify({ model: MODEL_IDS[modelKey], max_tokens: 1500, system, messages }),
+      body: JSON.stringify({ model: MODEL_IDS[modelKey], max_tokens: 3000, system, messages }),
     });
     const data = await r.json();
     if (!r.ok) {
@@ -135,7 +135,8 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: data?.error?.message || "The AI request failed" });
     }
     const raw = data.content.filter(b => b.type === "text").map(b => b.text).join("\n");
-    const { reply, labels } = splitConcepts(raw);
+    let { reply, labels } = splitConcepts(raw);
+    if (data.stop_reason === "max_tokens") reply += "\n\n*(I ran out of room here. Say \"continue\" and I'll pick up where I left off.)*";
 
     if (graph && labels.length) {
       try { chat.lastConcepts = await recordConcepts(email, labels, chatId, graph, chat.lastConcepts || []); }

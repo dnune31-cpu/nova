@@ -21,17 +21,17 @@ export function knownLabels(g, n = 40) {
 // Extra instruction added to Nova's system prompt so the concepts come back
 // inside the normal reply (no extra API call, so no extra cost).
 export function conceptRule(known) {
-  return `\n\nAfter your answer, put this on its own final line: <concepts>Concept One; Concept Two</concepts>
+  return `\n\nStart every reply with this on its own first line: <concepts>Concept One; Concept Two</concepts>
 List 1 to 4 short names (1 to 4 words each, Title Case) for the main study concepts covered in this exchange.` +
     (known.length ? ` Reuse one of these exact names when it is the same idea: ${known.join("; ")}.` : "") +
-    ` If the message is only small talk, write <concepts></concepts>. Never mention this line to the student.`;
+    ` If the message is only small talk, write <concepts></concepts>. Then write your answer below it. Never mention this line to the student.`;
 }
 
 export function splitConcepts(raw) {
   let labels = [];
-  const m = String(raw).match(/<concepts>([\s\S]*?)(<\/concepts>|$)/i);
+  const m = String(raw).match(/<concepts>([^\n]*?)(<\/concepts>|\n|$)/i);
   if (m) labels = m[1].split(/[;\n]/).map(s => s.replace(/\s+/g, " ").trim()).filter(Boolean).slice(0, 4);
-  const reply = String(raw).replace(/<concepts>[\s\S]*?(<\/concepts>|$)/gi, "").trim();
+  const reply = String(raw).replace(/<concepts>[^\n]*?(<\/concepts>|\n|$)/gi, "").trim();
   return { reply, labels };
 }
 
