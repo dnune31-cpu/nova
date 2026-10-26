@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import { redis, getJSON, setJSON, getAuth, ALL_MODELS, MODEL_IDS } from "./_lib.js";
+import { loadGraph, knownLabels, conceptRule, splitConcepts, recordConcepts } from "./_neuron.js";
 
 const SYSTEM = `You are Nova, a friendly study helper for high school students.
 Your goal is to help students understand, not to do their homework for them.
@@ -114,6 +115,11 @@ export default async function handler(req, res) {
     while (history.length && history[0].role !== "user") history.shift();
     const messages = [...history, { role: "user", content: await buildNewContent(text, attachments, links) }];
 
+    // Neuron: tell Nova which concepts this student already has so it reuses the same names
+    let graph = null;
+    try { graph = await loadGraph(email); } catch (e) { console.error(e); }
+    const system = graph ? SYSTEM + conceptRule(knownLabels(graph)) : SYSTEM;
+
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -121,14 +127,20 @@ export default async function handler(req, res) {
         "anthropic-version": "2023-06-01",
         "content-type": "application/json",
       },
-      body: JSON.stringify({ model: MODEL_IDS[modelKey], max_tokens: 1500, system: SYSTEM, messages }),
+      body: JSON.stringify({ model: MODEL_IDS[modelKey], max_tokens: 1500, system, messages }),
     });
     const data = await r.json();
     if (!r.ok) {
       console.error(data);
       return res.status(500).json({ error: data?.error?.message || "The AI request failed" });
     }
-    const reply = data.content.filter(b => b.type === "text").map(b => b.text).join("\n");
+    const raw = data.content.filter(b => b.type === "text").map(b => b.text).join("\n");
+    const { reply, labels } = splitConcepts(raw);
+
+    if (graph && labels.length) {
+      try { chat.lastConcepts = await recordConcepts(email, labels, chatId, graph, chat.lastConcepts || []); }
+      catch (e) { console.error(e); }
+    }
 
     const now = Date.now();
     chat.messages.push({
@@ -150,7 +162,7 @@ export default async function handler(req, res) {
       await setJSON(`user:${email}`, fresh);
     }
 
-    return res.status(200).json({ reply, chatId, title: chat.title });
+    return res.status(200).json({ reply, chatId, title: chat.title, concepts: labels });
   } catch (e) {
     console.error(e);
     return res.status(500).json({ error: e.message || "Couldn't reach the AI. Try again." });
