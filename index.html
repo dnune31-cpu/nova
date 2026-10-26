@@ -311,10 +311,8 @@ main::-webkit-scrollbar{width:8px}main::-webkit-scrollbar-thumb{background:rgba(
 #send:hover:not(:disabled){background:#1c1f38!important;border-color:rgba(255,207,138,.6);transform:scale(1.05)}
 #send:disabled{opacity:1;cursor:default}
 /* ignite thinking galaxy */
-.thinkrow{display:inline-flex;align-items:center;gap:10px}
-.thinkrow canvas{width:42px;height:42px;flex:none;margin:-4px 0}
-.thinkrow .think::before{display:none}
-.thinkrow .think{transition:opacity .3s}
+.ai canvas.igdot{width:36px;height:36px;flex:none;margin:3px -13px 0 -13px}
+.think.ig::before{display:none}
 </style>
 </head>
 <body>
@@ -1293,8 +1291,12 @@ ${inChats.length ? `<p class="lbl">Open a chat about it</p><div class="cl"></div
 /* ---------- ignite: galaxy that forms while Nova thinks ---------- */
 function igniteLoader(el, model) {
   const body = el.querySelector(".body");
-  body.innerHTML = `<span class="thinkrow"><canvas width="96" height="96" aria-hidden="true"></canvas><span class="think">Nova is thinking…</span></span>`;
-  const cv = body.querySelector("canvas"), ctx = cv.getContext("2d"), label = body.querySelector(".think");
+  body.innerHTML = `<span class="think ig">Nova is thinking…</span>`;
+  // the galaxy takes the place of the little gold dot beside the bubble
+  const cv = document.createElement("canvas");
+  cv.width = cv.height = 96; cv.className = "igdot"; cv.setAttribute("aria-hidden", "true");
+  el.querySelector(".dot").replaceWith(cv);
+  const ctx = cv.getContext("2d"), label = body.querySelector(".think");
   const P = [];
   for (let i = 0; i < 170; i++) {
     const r = Math.pow(Math.random(), 1.5), q = Math.random();
