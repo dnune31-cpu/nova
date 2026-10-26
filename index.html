@@ -39,7 +39,6 @@ main{flex:1;overflow-y:auto;padding:24px 0}
 .chip:hover{border-color:var(--gold);color:var(--gold)}
 .msg{margin:0 0 22px}
 .user{display:flex;justify-content:flex-end}
-.user div{background:rgba(143,179,255,.16);border:1px solid rgba(143,179,255,.35);padding:10px 14px;border-radius:16px 16px 4px 16px;max-width:80%;white-space:pre-wrap;word-wrap:break-word}
 .ai{display:flex;gap:12px}
 .ai .dot{flex:none;width:8px;height:8px;margin-top:10px;border-radius:50%;background:var(--gold)}
 .ai .body{min-width:0;flex:1}
@@ -51,14 +50,39 @@ main{flex:1;overflow-y:auto;padding:24px 0}
 .ai .katex-display{overflow-x:auto;overflow-y:hidden;padding:4px 0}
 .ai.err .body{color:#ff9d9d}
 .think{color:var(--muted);font-size:14px}
-form{display:flex;gap:8px;align-items:flex-end;background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:8px 8px 8px 16px;margin:0 0 18px}
+form{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:10px 10px 8px 14px;margin:0 0 18px}
 form:focus-within{border-color:rgba(255,207,138,.5)}
+.top{display:flex;gap:8px;align-items:flex-end}
 textarea{flex:1;background:none;border:0;outline:0;color:var(--star);font:inherit;resize:none;max-height:180px;padding:6px 0}
 textarea::placeholder{color:var(--muted)}
 #send{flex:none;width:38px;height:38px;border-radius:50%;border:0;background:var(--gold);color:#1a1405;font-size:18px;cursor:pointer}
 #send:disabled{opacity:.4;cursor:default}
+.tools{display:flex;align-items:center;gap:4px;margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
+.tool{background:none;border:0;color:var(--muted);width:34px;height:34px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.tool:hover,.tool[aria-pressed=true]{color:var(--gold);background:rgba(255,255,255,.05)}
+.tool svg{width:19px;height:19px}
+#model{margin-left:auto;background:rgba(255,255,255,.04);color:var(--star);border:1px solid var(--line);border-radius:999px;font:inherit;font-size:13px;padding:6px 10px;cursor:pointer}
+#model option{background:#0c0e20}
+.tray{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+.tray:empty{display:none}
+.att{position:relative;display:flex;align-items:center;gap:6px;background:rgba(143,179,255,.1);border:1px solid rgba(143,179,255,.3);border-radius:10px;font-size:13px;max-width:220px}
+.att img{width:52px;height:52px;object-fit:cover;border-radius:9px;display:block}
+.att span{padding:6px 26px 6px 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.att button{position:absolute;top:-7px;right:-7px;width:20px;height:20px;border-radius:50%;border:0;background:#2a2f4d;color:var(--star);font-size:12px;cursor:pointer;line-height:1}
+.linkrow{display:flex;gap:8px;margin-bottom:8px}
+.linkrow input{flex:1;background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:10px;color:var(--star);font:inherit;font-size:14px;padding:7px 10px;outline:0}
+.linkrow input:focus{border-color:rgba(255,207,138,.5)}
+.linkrow button{background:none;border:1px solid var(--line);color:var(--star);font:inherit;font-size:13px;border-radius:10px;padding:0 12px;cursor:pointer}
+.ferr{color:#ff9d9d;font-size:13px;margin:0 0 8px}
+.ferr:empty{display:none}
+.user .stack{display:flex;flex-direction:column;align-items:flex-end;gap:6px;max-width:80%}
+.user .stack>div.txt{background:rgba(143,179,255,.16);border:1px solid rgba(143,179,255,.35);padding:10px 14px;border-radius:16px 16px 4px 16px;white-space:pre-wrap;word-wrap:break-word}
+.user .pics{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
+.user .pics img{width:110px;height:110px;object-fit:cover;border-radius:10px;border:1px solid var(--line)}
+.user .chip{font-size:13px;color:var(--blue);border:1px solid rgba(143,179,255,.3);border-radius:8px;padding:3px 8px;word-break:break-all}
+.ai .who{font-size:12px;color:var(--muted);margin-top:6px}
 :focus-visible{outline:2px solid var(--gold);outline-offset:2px}
-@media (max-width:520px){.empty h2{font-size:23px}.user div{max-width:90%}}
+@media (max-width:520px){.empty h2{font-size:23px}.user .stack{max-width:90%}}
 </style>
 </head>
 <body>
@@ -71,8 +95,28 @@ textarea::placeholder{color:var(--muted)}
   </header>
   <main id="log" aria-live="polite"></main>
   <form id="f">
-    <textarea id="q" rows="1" placeholder="Ask a question or paste a problem" aria-label="Message Nova"></textarea>
-    <button id="send" type="submit" aria-label="Send">↑</button>
+    <p class="ferr" id="ferr" role="alert"></p>
+    <div class="linkrow" id="linkrow" hidden>
+      <input id="linkin" type="url" placeholder="https://example.com/article" aria-label="Link to add">
+      <button type="button" id="linkadd">Add link</button>
+    </div>
+    <div class="tray" id="tray"></div>
+    <div class="top">
+      <textarea id="q" rows="1" placeholder="Ask a question or paste a problem" aria-label="Message Nova"></textarea>
+      <button id="send" type="submit" aria-label="Send">↑</button>
+    </div>
+    <div class="tools">
+      <button class="tool" type="button" id="bPhoto" title="Add photos" aria-label="Add photos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m21 16-5-5-8 8"/></svg></button>
+      <button class="tool" type="button" id="bFile" title="Add a file (PDF or text)" aria-label="Add a file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg></button>
+      <button class="tool" type="button" id="bLink" title="Add a link" aria-label="Add a link" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg></button>
+      <select id="model" aria-label="Model">
+        <option value="haiku">Haiku (fast, cheapest)</option>
+        <option value="sonnet">Sonnet (smarter)</option>
+        <option value="opus">Opus (smartest, priciest)</option>
+      </select>
+    </div>
+    <input type="file" id="pickPhoto" accept="image/*" multiple hidden>
+    <input type="file" id="pickFile" accept=".pdf,.txt,.md,.csv,.json,.js,.py,.java,.html,.css,.c,.cpp" multiple hidden>
   </form>
 </div>
 
@@ -143,8 +187,16 @@ swirl(document.getElementById("avatar"), 160);
 
 /* chat */
 const log = document.getElementById("log"), form = document.getElementById("f"),
-      q = document.getElementById("q"), send = document.getElementById("send");
-let messages = [], busy = false;
+      q = document.getElementById("q"), send = document.getElementById("send"),
+      tray = document.getElementById("tray"), ferr = document.getElementById("ferr"),
+      modelSel = document.getElementById("model"), linkrow = document.getElementById("linkrow"),
+      linkin = document.getElementById("linkin"), bLink = document.getElementById("bLink");
+let messages = [], busy = false, pending = {attachments: [], links: []};
+const MAX_ATTACH = 6, MAX_PDF = 3 * 1024 * 1024;
+const NAMES = {haiku: "Haiku", sonnet: "Sonnet", opus: "Opus"};
+
+try { const m = localStorage.getItem("nova-model"); if (m && NAMES[m]) modelSel.value = m; } catch {}
+modelSel.onchange = () => { try { localStorage.setItem("nova-model", modelSel.value); } catch {} };
 
 const starters = ["Explain a concept simply", "Quiz me on a topic", "Check my work on a problem", "Help me plan what to study"];
 
@@ -152,7 +204,7 @@ function welcome() {
   log.innerHTML = `<div class="empty">
     <canvas width="240" height="240" aria-hidden="true"></canvas>
     <h2>What are we studying today?</h2>
-    <p>Ask about any subject, paste a homework problem, or have Nova quiz you before a test.</p>
+    <p>Ask about any subject, add a photo of a problem, attach notes, or paste a link for Nova to read.</p>
     <div class="chips">${starters.map(s => `<button class="chip" type="button">${s}</button>`).join("")}</div>
   </div>`;
   swirl(log.querySelector("canvas"), 420);
@@ -173,55 +225,200 @@ function renderMath(md) {
   });
 }
 
-function add(role, text, isErr) {
+function showError(t) { ferr.textContent = t || ""; }
+
+/* attachments */
+function drawTray() {
+  tray.innerHTML = "";
+  const items = [...pending.attachments.map((a, i) => ({a, i, kind: "att"})), ...pending.links.map((l, i) => ({l, i, kind: "link"}))];
+  for (const it of items) {
+    const el = document.createElement("div"); el.className = "att";
+    if (it.kind === "att" && it.a.type === "image") {
+      const img = document.createElement("img"); img.src = it.a.preview; img.alt = it.a.name; el.appendChild(img);
+    } else {
+      const s = document.createElement("span");
+      s.textContent = it.kind === "link" ? "🔗 " + it.l : (it.a.type === "pdf" ? "📄 " : "📝 ") + it.a.name;
+      el.appendChild(s);
+    }
+    const x = document.createElement("button"); x.type = "button"; x.textContent = "✕";
+    x.setAttribute("aria-label", "Remove");
+    x.onclick = () => { (it.kind === "att" ? pending.attachments : pending.links).splice(it.i, 1); drawTray(); };
+    el.appendChild(x); tray.appendChild(el);
+  }
+}
+
+function shrinkImage(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, 1280 / Math.max(img.width, img.height));
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
+      const ctx = c.getContext("2d"); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, c.width, c.height);
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      const dataUrl = c.toDataURL("image/jpeg", 0.8);
+      URL.revokeObjectURL(url);
+      resolve({type: "image", media_type: "image/jpeg", data: dataUrl.split(",")[1], preview: dataUrl, name: file.name || "photo"});
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("That image couldn't be opened")); };
+    img.src = url;
+  });
+}
+
+function readAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result.split(",")[1]);
+    r.onerror = () => reject(new Error("That file couldn't be read"));
+    r.readAsDataURL(file);
+  });
+}
+
+async function addFiles(files) {
+  showError("");
+  for (const f of files) {
+    if (pending.attachments.length >= MAX_ATTACH) { showError(`You can add up to ${MAX_ATTACH} attachments per message.`); break; }
+    try {
+      if (f.type.startsWith("image/")) {
+        pending.attachments.push(await shrinkImage(f));
+      } else if (f.type === "application/pdf" || /\.pdf$/i.test(f.name)) {
+        if (f.size > MAX_PDF) { showError(`${f.name} is too big. PDFs can be up to 3 MB.`); continue; }
+        pending.attachments.push({type: "pdf", data: await readAsBase64(f), name: f.name});
+      } else {
+        const text = await f.text();
+        pending.attachments.push({type: "text", text: text.slice(0, 60000), name: f.name});
+      }
+    } catch (e) { showError(e.message); }
+  }
+  drawTray();
+}
+
+document.getElementById("bPhoto").onclick = () => document.getElementById("pickPhoto").click();
+document.getElementById("bFile").onclick = () => document.getElementById("pickFile").click();
+document.getElementById("pickPhoto").onchange = e => { addFiles([...e.target.files]); e.target.value = ""; };
+document.getElementById("pickFile").onchange = e => { addFiles([...e.target.files]); e.target.value = ""; };
+
+bLink.onclick = () => {
+  const open = linkrow.hidden;
+  linkrow.hidden = !open; bLink.setAttribute("aria-pressed", String(open));
+  if (open) linkin.focus();
+};
+function addLink() {
+  const v = linkin.value.trim();
+  let ok = false;
+  try { ok = ["http:", "https:"].includes(new URL(v).protocol); } catch {}
+  if (!ok) { showError("Enter a full link that starts with https://"); return; }
+  if (pending.links.length >= 3) { showError("You can add up to 3 links per message."); return; }
+  showError(""); pending.links.push(v); linkin.value = "";
+  linkrow.hidden = true; bLink.setAttribute("aria-pressed", "false"); drawTray(); q.focus();
+}
+document.getElementById("linkadd").onclick = addLink;
+linkin.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); addLink(); } });
+linkin.addEventListener("input", () => showError(""));
+
+q.addEventListener("paste", e => {
+  const imgs = [...(e.clipboardData?.files || [])].filter(f => f.type.startsWith("image/"));
+  if (imgs.length) { e.preventDefault(); addFiles(imgs); }
+});
+form.addEventListener("dragover", e => e.preventDefault());
+form.addEventListener("drop", e => { e.preventDefault(); if (e.dataTransfer.files.length) addFiles([...e.dataTransfer.files]); });
+
+/* messages */
+function add(role, msg, opts = {}) {
   if (log.querySelector(".empty")) log.innerHTML = "";
   const el = document.createElement("div");
   if (role === "user") {
     el.className = "msg user";
-    const d = document.createElement("div"); d.textContent = text; el.appendChild(d);
+    const stack = document.createElement("div"); stack.className = "stack";
+    const pics = (msg.attachments || []).filter(a => a.type === "image");
+    if (pics.length) {
+      const p = document.createElement("div"); p.className = "pics";
+      pics.forEach(a => { const i = document.createElement("img"); i.src = a.preview; i.alt = a.name; p.appendChild(i); });
+      stack.appendChild(p);
+    }
+    for (const a of (msg.attachments || []).filter(a => a.type !== "image")) {
+      const c = document.createElement("div"); c.className = "chip"; c.textContent = (a.type === "pdf" ? "📄 " : "📝 ") + a.name; stack.appendChild(c);
+    }
+    for (const l of msg.links || []) {
+      const c = document.createElement("div"); c.className = "chip"; c.textContent = "🔗 " + l; stack.appendChild(c);
+    }
+    if (msg.content) { const t = document.createElement("div"); t.className = "txt"; t.textContent = msg.content; stack.appendChild(t); }
+    el.appendChild(stack);
   } else {
-    el.className = "msg ai" + (isErr ? " err" : "");
+    el.className = "msg ai" + (opts.err ? " err" : "");
     el.innerHTML = `<span class="dot"></span><div class="body"></div>`;
-    el.querySelector(".body").innerHTML = isErr ? DOMPurify.sanitize(text) : renderMath(text);
+    const body = el.querySelector(".body");
+    body.innerHTML = opts.err ? DOMPurify.sanitize(msg) : renderMath(msg);
+    if (opts.model) { const w = document.createElement("div"); w.className = "who"; w.textContent = NAMES[opts.model]; body.appendChild(w); }
   }
   log.appendChild(el);
   log.scrollTop = log.scrollHeight;
   return el;
 }
 
+function payloadMessages() {
+  const recent = messages.slice(-12);
+  const last = recent.map(m => m.role).lastIndexOf("user");
+  return recent.map((m, i) => {
+    if (i === last) {
+      return {role: m.role, content: m.content,
+        attachments: (m.attachments || []).map(({preview, ...rest}) => rest), links: m.links || []};
+    }
+    let content = m.content;
+    const names = [...(m.attachments || []).map(a => a.name), ...(m.links || [])];
+    if (names.length) content = `${content}\n[Earlier I shared: ${names.join(", ")}]`.trim();
+    return {role: m.role, content};
+  });
+}
+
 function grow() { q.style.height = "auto"; q.style.height = Math.min(q.scrollHeight, 180) + "px"; }
-q.addEventListener("input", grow);
+q.addEventListener("input", () => { grow(); showError(""); });
 q.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); } });
 
 form.addEventListener("submit", async e => {
   e.preventDefault();
   const text = q.value.trim();
-  if (!text || busy) return;
-  busy = true; send.disabled = true;
+  if (busy) return;
+  if (!text && !pending.attachments.length && !pending.links.length) { showError("Type a message or add something first."); return; }
+  const msg = {role: "user", content: text, attachments: pending.attachments, links: pending.links};
+  messages.push(msg);
+  const body = JSON.stringify({model: modelSel.value, messages: payloadMessages()});
+  if (body.length > 4_000_000) {
+    messages.pop();
+    showError("That's too much to send at once. Remove a photo or file and try again.");
+    return;
+  }
+  busy = true; send.disabled = true; showError("");
+  const saved = pending; pending = {attachments: [], links: []}; drawTray();
   q.value = ""; grow();
-  messages.push({role: "user", content: text});
-  add("user", text);
+  add("user", msg);
   const thinking = add("assistant", "");
   thinking.querySelector(".body").innerHTML = `<span class="think">Nova is thinking…</span>`;
   spinTarget = 5;
+  const used = modelSel.value;
   try {
-    const r = await fetch("/api/chat", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({messages})});
-    const data = await r.json();
+    const r = await fetch("/api/chat", {method: "POST", headers: {"Content-Type": "application/json"}, body});
+    let data = {};
+    try { data = await r.json(); } catch {}
     thinking.remove();
     if (!r.ok) throw new Error(data.error || "Something went wrong");
     messages.push({role: "assistant", content: data.reply});
-    add("assistant", data.reply);
+    add("assistant", data.reply, {model: used});
   } catch (err) {
     thinking.remove();
     messages.pop();
-    add("assistant", (err.message || "Couldn't reach Nova") + ". Your message wasn't sent, so try again.", true);
-    q.value = text; grow();
+    log.lastElementChild?.remove();
+    add("assistant", (err.message || "Couldn't reach Nova") + ". Your message wasn't sent, so try again.", {err: true});
+    q.value = text; grow(); pending = saved; drawTray();
   } finally {
     busy = false; send.disabled = false; spinTarget = 1; q.focus();
   }
 });
 
-document.getElementById("new").onclick = () => { if (busy) return; messages = []; welcome(); q.focus(); };
+document.getElementById("new").onclick = () => {
+  if (busy) return;
+  messages = []; pending = {attachments: [], links: []}; drawTray(); showError(""); welcome(); q.focus();
+};
 welcome();
 </script>
 </body>
