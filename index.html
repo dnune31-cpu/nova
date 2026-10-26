@@ -313,39 +313,10 @@ main::-webkit-scrollbar{width:8px}main::-webkit-scrollbar-thumb{background:rgba(
 /* ignite thinking galaxy */
 .ai canvas.igdot{width:36px;height:36px;flex:none;margin:3px -13px 0 -13px}
 .think.ig::before{display:none}
-/* intro cutscene */
-#intro{position:fixed;inset:0;z-index:50;background:#07080f;display:flex;align-items:center;justify-content:center;overflow:hidden;transition:opacity .7s cubic-bezier(.22,1,.36,1),transform .9s cubic-bezier(.22,1,.36,1)}
-#intro.leaving{opacity:0;transform:scale(1.12);pointer-events:none}
-#introVid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.ishade{position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(7,8,15,0) 30%,rgba(7,8,15,.75) 100%);opacity:0;transition:opacity 1s}
-#intro.titled .ishade{opacity:1}
-.ititle{position:relative;z-index:1;text-align:center;padding:24px;display:flex;flex-direction:column;align-items:center}
-.ititle h1{margin:0;font-size:clamp(54px,13vw,128px);font-weight:600;letter-spacing:.32em;margin-right:-.32em;line-height:1;color:#f5f1ea}
-.ititle h1 span{display:inline-block;opacity:0;transform:translateY(18px);filter:blur(10px);animation:iletter .9s cubic-bezier(.22,1,.36,1) forwards}
-.ititle h1 span:nth-child(2){animation-delay:.08s}.ititle h1 span:nth-child(3){animation-delay:.16s}.ititle h1 span:nth-child(4){animation-delay:.24s}
-#introGo{margin-top:40px;background:#ffcf8a;color:#1a1405;border:0;border-radius:999px;font:inherit;font-size:16px;font-weight:600;padding:14px 28px;cursor:pointer;opacity:0;transform:translateY(10px);animation:ifade .8s .7s cubic-bezier(.22,1,.36,1) forwards;transition:background .25s,transform .3s cubic-bezier(.34,1.56,.64,1)}
-#introGo:hover{background:#ffdca6;transform:translateY(-2px)}
-#introGo:hover span{display:inline-block;transform:translateX(3px)}
-#introGo span{display:inline-block;transition:transform .3s}
-.iskip{position:absolute;right:18px;bottom:18px;z-index:2;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:#b9bdd6;border-radius:999px;font:inherit;font-size:13px;padding:7px 14px;cursor:pointer}
-.iskip:hover{color:#fff}
-#intro.titled .iskip{display:none}
-@keyframes iletter{to{opacity:1;transform:none;filter:none}}
-@keyframes ifade{to{opacity:1;transform:none}}
-#introGo:focus-visible{outline:none;box-shadow:0 0 0 4px rgba(255,207,138,.3)}
 </style>
 </head>
 <body>
 <canvas id="sky"></canvas>
-<div id="intro" aria-label="Welcome to Nova">
-<video id="introVid" muted playsinline preload="auto" src="https://d8j0ntlcm91z4.cloudfront.net/user_3KOBfqwOB9ikrbu9I0UQir2iysj/hf_20261026_223100_f49713e9-41ee-4837-a7f7-0ee6769a96c4.mp4"></video>
-<div class="ishade"></div>
-<div class="ititle" id="introTitle" hidden>
-<h1 aria-label="Nova"><span>N</span><span>O</span><span>V</span><span>A</span></h1>
-<button type="button" id="introGo">Take me there <span aria-hidden="true">→</span></button>
-</div>
-<button type="button" class="iskip" id="introSkip">Skip</button>
-</div>
 
 <section id="authView" hidden>
   <div class="card">
@@ -1389,46 +1360,6 @@ function igniteLoader(el, model) {
     stop() { stopped = true; },
   };
 }
-
-/* ---------- intro cutscene ---------- */
-(() => {
-  const intro = $("intro"), vid = $("introVid");
-  if (!intro) return;
-  let titled = false;
-  function showTitle() {
-    if (titled) return;
-    titled = true;
-    intro.classList.add("titled");
-    $("introTitle").hidden = false;
-    vid.pause();
-    setTimeout(() => $("introGo").focus({preventScroll: true}), 700);
-  }
-  function leave() {
-    intro.classList.add("leaving");
-    setTimeout(() => {
-      intro.remove();
-      const f = !$("authView").hidden ? $("aEmail") : $("q");
-      if (f) f.focus();
-    }, 750);
-  }
-  $("introGo").onclick = leave;
-  $("introSkip").onclick = showTitle;
-  document.addEventListener("keydown", e => {
-    if (!intro.isConnected || intro.classList.contains("leaving")) return;
-    if (e.key === "Escape" || e.key === " " || e.key === "Enter") { e.preventDefault(); titled ? leave() : showTitle(); }
-  });
-  if (reduce) { vid.remove(); showTitle(); return; }
-  vid.playbackRate = 1.6;  // the clip is 4s, this plays it in about 2.5s
-  vid.addEventListener("ended", showTitle);
-  vid.addEventListener("error", showTitle);
-  vid.addEventListener("loadedmetadata", () => { vid.playbackRate = 1.6; });
-  // tap the video to jump straight to the title
-  vid.addEventListener("click", showTitle);
-  const p = vid.play();
-  if (p && p.catch) p.catch(showTitle);
-  // never get stuck if the video is slow to load
-  setTimeout(showTitle, 6000);
-})();
 
 /* ---------- start ---------- */
 (async () => {
