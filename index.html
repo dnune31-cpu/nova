@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nova · study helper</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✨</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<style>
+:root{
+  --space:#05060f; --star:#eef1ff; --gold:#ffcf8a; --blue:#8fb3ff; --muted:#8a90b0;
+  --line:rgba(238,241,255,.12); --panel:rgba(12,14,32,.72);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--space);color:var(--star);font-family:"Sora",system-ui,sans-serif;font-weight:300;font-size:16px;line-height:1.65;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+#sky{position:fixed;inset:0;width:100%;height:100%;z-index:0}
+.app{position:relative;z-index:1;height:100%;display:flex;flex-direction:column;max-width:760px;margin:0 auto;padding:0 18px}
+header{display:flex;align-items:center;gap:12px;padding:18px 0 14px;border-bottom:1px solid var(--line)}
+header canvas{width:36px;height:36px}
+header h1{font-size:18px;font-weight:600;margin:0;letter-spacing:.3px}
+header span{color:var(--muted);font-size:14px}
+#new{margin-left:auto;background:none;border:1px solid var(--line);color:var(--muted);font:inherit;font-size:13px;padding:6px 12px;border-radius:999px;cursor:pointer}
+#new:hover{color:var(--star);border-color:rgba(238,241,255,.3)}
+main{flex:1;overflow-y:auto;padding:24px 0}
+.empty{display:flex;flex-direction:column;align-items:flex-start;gap:14px;margin-top:6vh}
+.empty canvas{width:120px;height:120px}
+.empty h2{font-size:28px;font-weight:600;margin:0;line-height:1.2}
+.empty p{margin:0;color:var(--muted);max-width:46ch}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.chip{background:var(--panel);border:1px solid var(--line);color:var(--star);font:inherit;font-size:14px;padding:8px 14px;border-radius:999px;cursor:pointer}
+.chip:hover{border-color:var(--gold);color:var(--gold)}
+.msg{margin:0 0 22px}
+.user{display:flex;justify-content:flex-end}
+.user div{background:rgba(143,179,255,.16);border:1px solid rgba(143,179,255,.35);padding:10px 14px;border-radius:16px 16px 4px 16px;max-width:80%;white-space:pre-wrap;word-wrap:break-word}
+.ai{display:flex;gap:12px}
+.ai .dot{flex:none;width:8px;height:8px;margin-top:10px;border-radius:50%;background:var(--gold)}
+.ai .body{min-width:0;flex:1}
+.ai .body>*:first-child{margin-top:0}.ai .body>*:last-child{margin-bottom:0}
+.ai pre{background:rgba(0,0,0,.45);border:1px solid var(--line);padding:12px;border-radius:8px;overflow-x:auto}
+.ai code{font-family:ui-monospace,Menlo,monospace;font-size:14px}
+.ai :not(pre)>code{background:rgba(255,255,255,.08);padding:1px 5px;border-radius:4px}
+.ai strong{font-weight:600;color:var(--gold)}
+.ai .katex-display{overflow-x:auto;overflow-y:hidden;padding:4px 0}
+.ai.err .body{color:#ff9d9d}
+.think{color:var(--muted);font-size:14px}
+form{display:flex;gap:8px;align-items:flex-end;background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:8px 8px 8px 16px;margin:0 0 18px}
+form:focus-within{border-color:rgba(255,207,138,.5)}
+textarea{flex:1;background:none;border:0;outline:0;color:var(--star);font:inherit;resize:none;max-height:180px;padding:6px 0}
+textarea::placeholder{color:var(--muted)}
+#send{flex:none;width:38px;height:38px;border-radius:50%;border:0;background:var(--gold);color:#1a1405;font-size:18px;cursor:pointer}
+#send:disabled{opacity:.4;cursor:default}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+@media (max-width:520px){.empty h2{font-size:23px}.user div{max-width:90%}}
+</style>
+</head>
+<body>
+<canvas id="sky"></canvas>
+<div class="app">
+  <header>
+    <canvas id="avatar" width="72" height="72" aria-hidden="true"></canvas>
+    <div><h1>Nova</h1><span>study helper</span></div>
+    <button id="new" type="button">New chat</button>
+  </header>
+  <main id="log" aria-live="polite"></main>
+  <form id="f">
+    <textarea id="q" rows="1" placeholder="Ask a question or paste a problem" aria-label="Message Nova"></textarea>
+    <button id="send" type="submit" aria-label="Send">↑</button>
+  </form>
+</div>
+
+<script>
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+let spin = 1, spinTarget = 1;
+
+/* background starfield */
+(() => {
+  const cv = document.getElementById("sky"), ctx = cv.getContext("2d");
+  let W, H, stars = [];
+  function size() {
+    const d = devicePixelRatio || 1;
+    W = cv.width = innerWidth * d; H = cv.height = innerHeight * d;
+    stars = Array.from({length: Math.round(innerWidth * innerHeight / 3500)}, () => ({
+      x: Math.random() * W, y: Math.random() * H, r: (Math.random() * 1.1 + .3) * d,
+      p: Math.random() * 6, c: Math.random() < .15 ? "255,207,138" : Math.random() < .3 ? "143,179,255" : "238,241,255"
+    }));
+  }
+  size(); addEventListener("resize", size);
+  function f(t) {
+    ctx.clearRect(0, 0, W, H);
+    for (const s of stars) {
+      const a = reduce ? .5 : .3 + .35 * Math.sin(t * .0008 + s.p);
+      ctx.fillStyle = `rgba(${s.c},${a})`;
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, 7); ctx.fill();
+    }
+    if (!reduce) requestAnimationFrame(f);
+  }
+  requestAnimationFrame(f);
+})();
+
+/* spiral galaxy swirl (avatar + welcome) */
+function swirl(cv, n) {
+  const ctx = cv.getContext("2d"), P = [];
+  for (let i = 0; i < n; i++) {
+    const r = Math.pow(Math.random(), 1.5), q = Math.random();
+    const c = r < .2 ? (q < .6 ? "255,214,150" : "255,245,228")
+            : r < .55 ? (q < .5 ? "255,250,240" : q < .8 ? "255,207,138" : "170,200,255")
+            : (q < .6 ? "143,179,255" : "235,240,255");
+    P.push({r, a: (i % 2) * Math.PI + r * 5.5 + (Math.random() - .5) * (.5 + r * .9), s: (Math.random() * 1.2 + .5) * (1 - r * .4), c, w: Math.random() * 6});
+  }
+  let last = 0, phase = 0;
+  function f(t) {
+    const W = cv.width, H = cv.height, cx = W / 2, cy = H / 2, R = W * .48, k = W / 120;
+    phase += reduce ? 0 : (t - last) * .00025 * spin; last = t;
+    ctx.clearRect(0, 0, W, H);
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * .4);
+    g.addColorStop(0, "rgba(255,236,195,.95)"); g.addColorStop(.35, "rgba(255,200,120,.35)"); g.addColorStop(1, "rgba(255,200,120,0)");
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, R * .4, 0, 7); ctx.fill();
+    for (const p of P) {
+      const an = p.a + phase / (p.r + .25);
+      ctx.fillStyle = `rgba(${p.c},${.55 + .45 * Math.sin(t * .003 + p.w)})`;
+      ctx.beginPath(); ctx.arc(cx + Math.cos(an) * p.r * R, cy + Math.sin(an) * p.r * R, p.s * k, 0, 7); ctx.fill();
+    }
+    for (let j = 0; j < 2; j++) {
+      const p = P[(j * 53) % n], an = p.a + phase / (p.r + .25), x = cx + Math.cos(an) * p.r * R, y = cy + Math.sin(an) * p.r * R;
+      const L = (5 + 3 * Math.sin(t * .004 + j)) * k;
+      ctx.strokeStyle = "rgba(255,240,210,.85)"; ctx.lineWidth = .8 * k;
+      ctx.beginPath(); ctx.moveTo(x - L, y); ctx.lineTo(x + L, y); ctx.moveTo(x, y - L); ctx.lineTo(x, y + L); ctx.stroke();
+    }
+    spin += (spinTarget - spin) * .05;
+    if (cv.isConnected) requestAnimationFrame(f);
+  }
+  requestAnimationFrame(f);
+}
+swirl(document.getElementById("avatar"), 160);
+
+/* chat */
+const log = document.getElementById("log"), form = document.getElementById("f"),
+      q = document.getElementById("q"), send = document.getElementById("send");
+let messages = [], busy = false;
+
+const starters = ["Explain a concept simply", "Quiz me on a topic", "Check my work on a problem", "Help me plan what to study"];
+
+function welcome() {
+  log.innerHTML = `<div class="empty">
+    <canvas width="240" height="240" aria-hidden="true"></canvas>
+    <h2>What are we studying today?</h2>
+    <p>Ask about any subject, paste a homework problem, or have Nova quiz you before a test.</p>
+    <div class="chips">${starters.map(s => `<button class="chip" type="button">${s}</button>`).join("")}</div>
+  </div>`;
+  swirl(log.querySelector("canvas"), 420);
+  log.querySelectorAll(".chip").forEach(b => b.onclick = () => { q.value = b.textContent + ": "; q.focus(); grow(); });
+}
+
+function renderMath(md) {
+  const store = [];
+  md = md.replace(/\$\$([\s\S]+?)\$\$/g, (_, m) => { store.push([m, true]); return `@@M${store.length - 1}@@`; })
+         .replace(/\\\[([\s\S]+?)\\\]/g, (_, m) => { store.push([m, true]); return `@@M${store.length - 1}@@`; })
+         .replace(/\\\(([\s\S]+?)\\\)/g, (_, m) => { store.push([m, false]); return `@@M${store.length - 1}@@`; })
+         .replace(/\$([^\$\n]+?)\$/g, (_, m) => { store.push([m, false]); return `@@M${store.length - 1}@@`; });
+  let html = DOMPurify.sanitize(marked.parse(md));
+  return html.replace(/@@M(\d+)@@/g, (_, i) => {
+    const [tex, display] = store[+i];
+    try { return katex.renderToString(tex, {displayMode: display, throwOnError: false}); }
+    catch { return tex; }
+  });
+}
+
+function add(role, text, isErr) {
+  if (log.querySelector(".empty")) log.innerHTML = "";
+  const el = document.createElement("div");
+  if (role === "user") {
+    el.className = "msg user";
+    const d = document.createElement("div"); d.textContent = text; el.appendChild(d);
+  } else {
+    el.className = "msg ai" + (isErr ? " err" : "");
+    el.innerHTML = `<span class="dot"></span><div class="body"></div>`;
+    el.querySelector(".body").innerHTML = isErr ? DOMPurify.sanitize(text) : renderMath(text);
+  }
+  log.appendChild(el);
+  log.scrollTop = log.scrollHeight;
+  return el;
+}
+
+function grow() { q.style.height = "auto"; q.style.height = Math.min(q.scrollHeight, 180) + "px"; }
+q.addEventListener("input", grow);
+q.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); } });
+
+form.addEventListener("submit", async e => {
+  e.preventDefault();
+  const text = q.value.trim();
+  if (!text || busy) return;
+  busy = true; send.disabled = true;
+  q.value = ""; grow();
+  messages.push({role: "user", content: text});
+  add("user", text);
+  const thinking = add("assistant", "");
+  thinking.querySelector(".body").innerHTML = `<span class="think">Nova is thinking…</span>`;
+  spinTarget = 5;
+  try {
+    const r = await fetch("/api/chat", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({messages})});
+    const data = await r.json();
+    thinking.remove();
+    if (!r.ok) throw new Error(data.error || "Something went wrong");
+    messages.push({role: "assistant", content: data.reply});
+    add("assistant", data.reply);
+  } catch (err) {
+    thinking.remove();
+    messages.pop();
+    add("assistant", (err.message || "Couldn't reach Nova") + ". Your message wasn't sent, so try again.", true);
+    q.value = text; grow();
+  } finally {
+    busy = false; send.disabled = false; spinTarget = 1; q.focus();
+  }
+});
+
+document.getElementById("new").onclick = () => { if (busy) return; messages = []; welcome(); q.focus(); };
+welcome();
+</script>
+</body>
+</html>
