@@ -81,7 +81,7 @@ export async function getAuth(req) {
   if (!s) return null;
   const user = await getJSON(`user:${s.email}`);
   if (!user || user.blocked) return null;
-  return { user, admin: !!s.admin && isAdminEmail(user.email) };
+  return { user, admin: !!s.admin && !!user.admin };
 }
 
 export function publicUser(user, admin) {
@@ -99,4 +99,14 @@ export async function tooManyAttempts(key) {
   const n = await redis("INCR", `attempts:${key}`);
   if (n === 1) await redis("EXPIRE", `attempts:${key}`, 900);
   return n > 10;
+}
+
+// Marks the current session as admin (after the admin password is entered in Settings)
+export async function elevateSession(req) {
+  const token = getCookie(req, "nova_session");
+  if (!token || !/^[a-f0-9]{64}$/.test(token)) return;
+  const s = await getJSON(`session:${token}`);
+  if (!s) return;
+  s.admin = true;
+  await setJSON(`session:${token}`, s, "EX", 60 * 60 * 24 * 30);
 }

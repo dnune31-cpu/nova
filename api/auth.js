@@ -1,6 +1,6 @@
 import {
   redis, getJSON, setJSON, normEmail, validEmail, isAdminEmail, hashPassword, checkPassword,
-  safeEqual, createSession, clearSession, getAuth, publicUser, logEvent, tooManyAttempts, ALL_MODELS,
+  safeEqual, createSession, clearSession, getAuth, publicUser, logEvent, tooManyAttempts, ALL_MODELS, elevateSession, pipeline,
 } from "./_lib.js";
 
 export default async function handler(req, res) {
@@ -25,7 +25,7 @@ export default async function handler(req, res) {
       if (!validEmail(email)) return res.status(400).json({ error: "Enter a valid email." });
       if (typeof password !== "string" || password.length < 8) return res.status(400).json({ error: "Use a password with at least 8 characters." });
       if (password.length > 200) return res.status(400).json({ error: "That password is too long." });
-      if (isAdminEmail(email)) return res.status(409).json({ error: "That email is already registered. Try logging in." });
+      
 
       const { salt, hash } = hashPassword(password);
       const now = Date.now();
@@ -53,22 +53,34 @@ export default async function handler(req, res) {
       return res.status(200).json({ user: publicUser(user, false) });
     }
 
-    if (action === "admin") {
-      if (!process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD) return res.status(500).json({ error: "Admin login isn't set up yet." });
-      if (await tooManyAttempts("admin")) return res.status(429).json({ error: "Too many tries. Wait 15 minutes and try again." });
-      if (!isAdminEmail(email) || typeof password !== "string" || !safeEqual(password, process.env.ADMIN_PASSWORD)) {
-        return res.status(401).json({ error: "Wrong email or password." });
-      }
-      let user = await getJSON(`user:${email}`);
-      const now = Date.now();
-      if (!user) user = { name: "Admin", email, created: now, models: ALL_MODELS, blocked: false, messages: 0 };
-      user.lastLogin = now; user.blocked = false; user.models = ALL_MODELS;
-      await setJSON(`user:${email}`, user);
-      await redis("SADD", "users", email);
-      await redis("DEL", "attempts:admin");
-      await createSession(res, email, true);
-      await logEvent("admin login", email);
+    if (action === "unlockAdmin") {
+      const me = await getAuth(req);
+      if (!me) return res.status(401).json({ error: "Please log in again." });
+      if (!process.env.ADMIN_PASSWORD) return res.status(500).json({ error: "Admin access isn't set up yet." });
+      const em = me.user.email;
+      if (await tooManyAttempts(`unlock:${em}`) || await tooManyAttempts("unlock-all")) return res.status(429).json({ error: "Too many tries. Wait 15 minutes and try again." });
+      if (typeof password !== "string" || !safeEqual(password, process.env.ADMIN_PASSWORD)) return res.status(401).json({ error: "That's not the admin password." });
+      const user = await getJSON(`user:${em}`);
+      if (!user) return res.status(401).json({ error: "Please log in again." });
+      user.admin = true; user.models = ALL_MODELS;
+      await setJSON(`user:${em}`, user);
+      await redis("DEL", `attempts:unlock:${em}`);
+      await elevateSession(req);
+      await logEvent("admin unlock", em);
       return res.status(200).json({ user: publicUser(user, true) });
+    }
+
+    if (action === "deleteAccount") {
+      const me = await getAuth(req);
+      if (!me) return res.status(401).json({ error: "Please log in again." });
+      if (req.body?.confirm !== "DELETE") return res.status(400).json({ error: "Type DELETE to confirm." });
+      const em = me.user.email;
+      const flat = (await redis("HGETALL", `chatlist:${em}`)) || [];
+      const ids = flat.filter((_, i) => i % 2 === 0);
+      await pipeline([...ids.map(id => ["DEL", `chat:${em}:${id}`]), ["DEL", `chatlist:${em}`], ["DEL", `neuron:${em}`], ["DEL", `user:${em}`], ["SREM", "users", em]]);
+      await clearSession(req, res);
+      await logEvent("deleted account", em);
+      return res.status(200).json({ ok: true });
     }
 
     return res.status(400).json({ error: "Unknown action" });
