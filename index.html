@@ -498,6 +498,10 @@ form#f{width:calc(100% - 20px)}
 .sdel:hover{background:rgba(255,157,157,.08)}
 .slink{display:block;margin:16px auto 0;background:none;border:0;color:#6f6d68;font:inherit;font-size:12px;cursor:pointer;padding:4px 8px}
 .slink:hover{color:#a19f99}
+/* settings gear + menu above sidebar */
+#menu{z-index:40}
+.merow #rGear{margin-left:auto;width:32px;height:32px}
+.merow #rGear svg{width:19px;height:19px}
 </style>
 </head>
 <body>
@@ -1907,6 +1911,17 @@ function igniteLoader(el, model) {
       showAuth("Your account was deleted.");
     } catch (err) { if (!handleAuthError(err)) alert(err.message); }
   };
+})();
+
+/* ---------- settings gear ---------- */
+(() => {
+  const row = document.querySelector(".merow");
+  if (!row) return;
+  const g = document.createElement("button");
+  g.type = "button"; g.className = "sbicon"; g.id = "rGear"; g.title = "Settings"; g.setAttribute("aria-label", "Settings");
+  g.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
+  g.onclick = e => { e.stopPropagation(); $("openSettings").click(); };
+  row.appendChild(g);
 })();
 
 /* ---------- start ---------- */
