@@ -355,6 +355,123 @@ main::-webkit-scrollbar{width:8px}main::-webkit-scrollbar-thumb{background:rgba(
 .ai pre:hover .ccopy,.ccopy:focus-visible{opacity:1}
 @media (hover:none){.ccopy{opacity:1}}
 .ccopy:hover{color:var(--star)}
+/* ===== sidebar layout (v3) ===== */
+:root{--c-bg:#1f1f1e;--c-side:#181817;--c-line:#2c2c2a;--c-line2:#3a3a37;--c-text:#ecebe7;--c-muted:#a19f99;--c-input:#2a2a28;--c-user:#32322f;--c-hover:#272725}
+body{background:var(--c-bg);color:var(--c-text);font-family:"Inter",system-ui,sans-serif}
+body:has(#appView:not([hidden])) #sky{display:none}
+#appView{padding:0;background:var(--c-bg)}
+button,input,textarea,select{font-family:inherit}
+
+/* sidebar */
+.rail{width:272px;flex:none;height:100%;margin:0;border-radius:0;padding:10px 10px 8px;gap:1px;align-items:stretch;background:var(--c-side);border:0;border-right:1px solid var(--c-line);box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;z-index:20}
+.sbtop{display:flex;align-items:center;justify-content:space-between;padding:2px 2px 12px 6px}
+.brand{display:flex;align-items:center;gap:9px;font-weight:600;font-size:17px;color:var(--c-text)}
+.brand canvas{width:28px;height:28px}
+.sbicon{background:none;border:0;color:var(--c-muted);width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none}
+.sbicon svg{width:20px;height:20px}
+.sbicon:hover{background:var(--c-hover);color:var(--c-text)}
+.rail .rbtn{width:100%;height:auto;border-radius:10px;justify-content:flex-start;gap:12px;padding:8px 10px;color:var(--c-text);font-size:14.5px;transform:none;box-shadow:none;background:none}
+.rail .rbtn svg{width:19px;height:19px;flex:none;color:var(--c-muted)}
+.rail .rbtn:hover,.rail .rbtn.on,.rail .rbtn[aria-expanded=true]{background:var(--c-hover);box-shadow:none;transform:none}
+.rail .rbtn.on svg{color:var(--gold)}
+.rail .rbtn.new{background:none;margin:0 0 2px;color:var(--c-text)}
+.rail .rbtn.new svg{width:22px;height:22px;padding:3px;border-radius:50%;background:var(--gold);color:#1a1405;margin-left:-2px}
+.rail .rbtn.new:hover{background:var(--c-hover);transform:none}
+.rail .gap{display:none}
+.sbhead{color:var(--c-muted);font-size:12.5px;padding:18px 10px 6px}
+.sbsearch{margin:2px 4px 6px;background:var(--c-input);border:1px solid var(--c-line2);border-radius:9px;color:var(--c-text);font-size:14px;padding:7px 10px;outline:0}
+.sbsearch:focus{border-color:#55534e}
+.rail #chatList{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:1px;scrollbar-width:thin;scrollbar-color:#3a3a37 transparent}
+.rail .citem{border-radius:9px}
+.rail .citem:hover,.rail .citem.on{background:var(--c-hover)}
+.rail .copen{display:flex;align-items:center;gap:11px;padding:7px 8px 7px 12px;color:var(--c-text)}
+.rail .copen::before{content:"";width:5px;height:5px;border-radius:50%;border:1px solid var(--c-muted);flex:none;opacity:.7}
+.rail .citem.on .copen::before{background:var(--gold);border-color:var(--gold);opacity:1}
+.rail .ctitle{font-size:14.5px;color:var(--c-text)}
+.rail .citem.on .ctitle{color:var(--c-text)}
+.rail .ctime{display:none}
+.rail .cdel{width:28px;height:28px}
+.rail .cempty{font-size:13.5px;color:var(--c-muted);padding:6px 12px}
+.merow{display:flex;align-items:center;gap:10px;padding:9px 8px 3px;margin-top:6px;border-top:1px solid var(--c-line);border-radius:0;cursor:pointer}
+.merow:hover .mename{color:#fff}
+.merow .avatar{width:30px;height:30px;font-size:13px;background:#3b3a36;border:0;box-shadow:none;color:var(--c-text)}
+.mename{font-size:14.5px;color:var(--c-text);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#panel{display:none!important}
+#menu{left:12px;bottom:58px;width:248px;background:#262624;border:1px solid var(--c-line2);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.4);-webkit-backdrop-filter:none;backdrop-filter:none}
+#menu button{background:none;border-color:var(--c-line2)}
+.sbopen{display:none}
+#appView.sb-closed .rail{display:none}
+#appView.sb-closed .sbopen{display:flex}
+
+/* main column */
+.stage{padding:0;background:var(--c-bg)}
+.app{max-width:none;padding:0}
+header.top{padding:12px 16px;border:0;gap:6px;min-height:58px}
+header.top canvas,header.top h1{display:none}
+#chatTitle{font-size:15.5px;color:var(--c-text);padding:0 6px}
+#chatTitle:empty::before{content:"New chat";color:var(--c-muted)}
+main{padding:20px 20px 28px;-webkit-mask-image:none;mask-image:none;scrollbar-width:thin;scrollbar-color:#3a3a37 transparent}
+.msg{max-width:760px;margin:0 auto 30px;animation:rise .45s cubic-bezier(.22,1,.36,1) both}
+.user .stack{max-width:78%}
+.user .txt{background:var(--c-user);border:0;border-radius:18px;padding:10px 16px;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;font-size:15.5px;line-height:1.55;color:var(--c-text)}
+.user .tag{background:var(--c-user);border:0;color:var(--c-muted);border-radius:10px}
+.ai{gap:0}
+.ai .dot{display:none}
+.ai canvas.igdot{width:30px;height:30px;margin:-2px 10px 0 -4px}
+.ai .body{background:none;border:0;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;padding:0;border-radius:0;font-family:"Source Serif 4",Georgia,serif;font-size:17.5px;line-height:1.7;color:#e7e5df}
+.ai .body h1,.ai .body h2,.ai .body h3{font-family:inherit;font-weight:600;color:#f3f1ec}
+.ai .body strong{color:#fff;font-weight:600}
+.ai .body code,.ai .body pre{font-size:14px}
+.ai .body pre{background:#171716;border:1px solid var(--c-line);border-radius:12px}
+.ai .body li{margin:4px 0}
+.ai .model,.ai .think,.ai .atools{font-family:"Inter",system-ui,sans-serif}
+.ai .model{font-size:12px;color:var(--c-muted);margin-top:10px}
+.think{font-size:15px;color:var(--c-muted)}
+.atools{opacity:.75;margin-top:6px}
+.msg.ai:hover .atools{opacity:1}
+.atool{background:none;border:0;color:var(--c-muted);border-radius:8px;padding:5px 9px}
+.atool:hover{background:var(--c-hover);color:var(--c-text);border:0}
+
+/* welcome */
+.empty{align-items:center;text-align:center;margin:14vh auto 0;max-width:760px;gap:10px}
+.empty canvas{width:76px;height:76px}
+.empty h2{font-family:"Source Serif 4",Georgia,serif;font-weight:400;font-size:clamp(28px,4.4vw,40px);color:var(--c-text);letter-spacing:-.01em}
+.empty p{color:var(--c-muted);font-size:15px;max-width:52ch}
+.chips{justify-content:center;margin-top:14px}
+.chip{background:none;border:1px solid var(--c-line2);color:var(--c-muted);border-radius:10px;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;font-size:14px;padding:8px 14px}
+.chip:hover{background:var(--c-hover);color:var(--c-text);border-color:var(--c-line2);transform:none}
+
+/* message box */
+form#f{max-width:780px;width:calc(100% - 32px);margin:0 auto 4px;background:var(--c-input);border:1px solid var(--c-line2);border-radius:22px;padding:14px 12px 10px 18px;box-shadow:0 6px 24px rgba(0,0,0,.28);-webkit-backdrop-filter:none;backdrop-filter:none}
+form#f:focus-within{border-color:#4d4c48;box-shadow:0 6px 24px rgba(0,0,0,.3)}
+#f textarea{font-size:16px;color:var(--c-text);padding:2px 0 8px}
+#f .tools{border-top:0;margin-top:4px;padding-top:0;gap:2px}
+#f .tool{color:var(--c-muted);width:34px;height:34px;border-radius:10px}
+#f .tool:hover,#f .tool[aria-pressed=true]{background:#353532;color:var(--c-text);transform:none}
+#model{margin-left:auto;background:none;border:0;color:var(--c-text);font-size:14.5px;padding:7px 8px;border-radius:10px;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;max-width:52%}
+#model:hover{background:#353532}
+#f .tools #send{margin-left:6px;width:36px;height:36px;border-radius:12px}
+.disclaim{max-width:780px;margin:6px auto 12px;padding:0 16px;text-align:center;color:var(--c-muted);font-size:12.5px}
+.ferr{font-family:"Inter",system-ui,sans-serif}
+
+/* other views */
+#neuronView{background:var(--c-bg)}
+.nwrap{background:#151514;border-color:var(--c-line);box-shadow:none}
+.ghost{background:none;border:1px solid var(--c-line2);color:var(--c-text);box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+.ghost:hover{background:var(--c-hover);transform:none}
+.ncard,.nselbar{background:#232321;border-color:var(--c-line2)}
+.stat,.twrap,.loglist{background:#232321;border-color:var(--c-line);box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+
+@media (max-width:760px){
+.rail{position:fixed;left:0;top:0;bottom:0;width:min(86vw,300px);transform:translateX(-100%);transition:transform .3s cubic-bezier(.22,1,.36,1);box-shadow:none}
+#appView.sb-open .rail{transform:none;box-shadow:0 0 0 100vmax rgba(0,0,0,.5)}
+#appView.sb-closed .rail{display:flex}
+.sbopen{display:flex}
+#menu{left:12px}
+.user .stack{max-width:88%}
+.ai .body{font-size:16.5px}
+form#f{width:calc(100% - 20px)}
+}
 </style>
 </head>
 <body>
@@ -1583,6 +1700,98 @@ function igniteLoader(el, model) {
     if ($("appView").hidden || $("chatView").hidden) return;
     e.preventDefault(); q.focus();
   });
+})();
+
+/* ---------- sidebar layout (v3) ---------- */
+(() => {
+  const fl = document.createElement("link");
+  fl.rel = "stylesheet";
+  fl.href = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap";
+  document.head.appendChild(fl);
+
+  const rail = document.querySelector(".rail"), app = $("appView"), gap = rail.querySelector(".gap");
+  const SIDE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M9.5 4.5v15"/></svg>';
+  const SEARCH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg>';
+
+  // brand + close button at the top of the sidebar
+  const top = document.createElement("div");
+  top.className = "sbtop";
+  top.innerHTML = '<div class="brand"><canvas id="sbSwirl" width="64" height="64" aria-hidden="true"></canvas><span>Nova</span></div><button class="sbicon" type="button" id="sbClose" aria-label="Close sidebar" title="Close sidebar">' + SIDE + '</button>';
+  rail.prepend(top);
+
+  // labeled buttons
+  const label = (id, text, svg) => {
+    const b = $(id);
+    if (!b) return;
+    if (svg) b.querySelector("svg").outerHTML = svg;
+    const s = document.createElement("span");
+    s.textContent = text;
+    b.appendChild(s);
+  };
+  label("rNew", "New chat");
+  label("rChats", "Search chats", SEARCH);
+  label("rNeuron", "Constellation");
+  label("rAdmin", "Admin");
+  rail.insertBefore($("rNeuron"), $("rChats").nextSibling);
+  rail.insertBefore($("rAdmin"), $("rNeuron").nextSibling);
+
+  // the chat list lives in the sidebar
+  const head = document.createElement("div");
+  head.className = "sbhead"; head.textContent = "Chats";
+  const search = document.createElement("input");
+  search.className = "sbsearch"; search.type = "search"; search.placeholder = "Search chats";
+  search.setAttribute("aria-label", "Search chats"); search.hidden = true;
+  const list = $("chatList");
+  rail.insertBefore(head, gap); rail.insertBefore(search, gap); rail.insertBefore(list, gap);
+  const filter = () => {
+    const v = search.value.trim().toLowerCase();
+    for (const r of list.querySelectorAll(".citem")) r.hidden = !!v && !r.textContent.toLowerCase().includes(v);
+  };
+  search.addEventListener("input", filter);
+  $("rChats").onclick = e => {
+    e.stopPropagation();
+    search.hidden = !search.hidden;
+    if (!search.hidden) search.focus(); else { search.value = ""; filter(); }
+  };
+
+  // account row at the bottom
+  const me = $("rMe"), row = document.createElement("div");
+  row.className = "merow";
+  me.replaceWith(row); row.appendChild(me);
+  const nm = document.createElement("span");
+  nm.className = "mename"; row.appendChild(nm);
+  row.addEventListener("click", e => { if (!me.contains(e.target)) { e.stopPropagation(); me.click(); } });
+  const syncName = () => { nm.textContent = $("meName").textContent || ""; };
+  new MutationObserver(syncName).observe($("meName"), {childList: true, characterData: true, subtree: true});
+  syncName();
+
+  // send button sits at the end of the tool row, with the model picker
+  document.querySelector("#f .tools").appendChild($("send"));
+  const p = document.createElement("p");
+  p.className = "disclaim";
+  p.textContent = "Nova is AI and can make mistakes. Please double-check important answers.";
+  $("f").after(p);
+
+  // open / close the sidebar (a drawer on phones)
+  const open = document.createElement("button");
+  open.className = "sbicon sbopen"; open.id = "sbOpen"; open.type = "button";
+  open.setAttribute("aria-label", "Open sidebar"); open.title = "Open sidebar"; open.innerHTML = SIDE;
+  document.querySelector("header.top").prepend(open);
+  const narrow = () => matchMedia("(max-width: 760px)").matches;
+  open.onclick = e => { e.stopPropagation(); app.classList.remove("sb-closed"); app.classList.add("sb-open"); };
+  $("sbClose").onclick = e => { e.stopPropagation(); app.classList.remove("sb-open"); if (!narrow()) app.classList.add("sb-closed"); };
+  app.addEventListener("click", e => {
+    if (narrow() && app.classList.contains("sb-open") && !e.target.closest(".rail")) app.classList.remove("sb-open");
+  });
+  rail.addEventListener("click", e => {
+    if (narrow() && e.target.closest(".copen,#rNew,#rNeuron,#rAdmin")) app.classList.remove("sb-open");
+  });
+
+  // keep the list fresh and the open chat highlighted
+  new MutationObserver(() => { renderChatList(); filter(); })
+    .observe($("chatTitle"), {childList: true, characterData: true, subtree: true});
+
+  startSwirl("sbSwirl", 120);
 })();
 
 /* ---------- start ---------- */
