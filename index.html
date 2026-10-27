@@ -641,15 +641,15 @@ function swirl(cv, n) {
   for (let i = 0; i < n; i++) {
     const kind = Math.random();
     let r, a;
-    if (kind < .16) {            // bright central bulge
-      r = Math.abs(gauss()) * .16; a = Math.random() * 6.283;
+    if (kind < .22) {            // bright central bulge
+      r = Math.abs(gauss()) * .18; a = Math.random() * 6.283;
     } else if (kind < .86) {     // the two spiral arms
-      const t = Math.pow(Math.random(), .85);
-      r = .1 + t * .9;
-      a = (i % 2) * Math.PI + 2.1 * Math.log(r / .1) + gauss() * (.24 + .2 * t);
-      r += gauss() * .05;
+      const t = Math.pow(Math.random(), 1.4);
+      r = .1 + t * .75;
+      a = (i % 2) * Math.PI + 2.4 * Math.log(r / .1) + gauss() * (.3 + .25 * t);
+      r += gauss() * .045;
     } else {                     // faint dust between the arms
-      r = .15 + Math.random() * .85; a = Math.random() * 6.283;
+      r = Math.pow(Math.random(), .7) * .85; a = Math.random() * 6.283;
     }
     const q = Math.random();
     const c = r < .2 ? (q < .6 ? "255,214,150" : "255,245,228") : r < .55 ? (q < .5 ? "255,250,240" : q < .8 ? "255,207,138" : "170,200,255") : (q < .6 ? "143,179,255" : "235,240,255");
@@ -661,7 +661,7 @@ function swirl(cv, n) {
     const W = cv.width, H = cv.height, cx = W / 2, cy = H / 2, R = W * .47, small = W < 160, k = W / 120 * (small ? 1.9 : 1);
     phase += reduce ? 0 : (t - last) * .00022 * spin; last = t;
     ctx.clearRect(0, 0, W, H);
-    const cr = R * (small ? .3 : .38), g = ctx.createRadialGradient(cx, cy, 0, cx, cy, cr);
+    const cr = R * (small ? .32 : .42), g = ctx.createRadialGradient(cx, cy, 0, cx, cy, cr);
     g.addColorStop(0, "rgba(255,238,200,.95)"); g.addColorStop(.3, "rgba(255,200,120,.38)"); g.addColorStop(1, "rgba(255,200,120,0)");
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, cr, 0, 7); ctx.fill();
     for (const p of P) {
