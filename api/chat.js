@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { redis, getJSON, setJSON, getAuth, ALL_MODELS, MODEL_IDS } from "./_lib.js";
-import { loadGraph, knownLabels, conceptRule, splitConcepts, recordConcepts } from "./_neuron.js";
+import { loadGraph, knownLabels, conceptRule, splitConcepts, recordConcepts, findStarRefs, starContext } from "./_neuron.js";
 
 const SYSTEM = `You are Nova, a friendly study helper for high school students.
 Your goal is to help students understand, not to do their homework for them.
@@ -115,10 +115,15 @@ export default async function handler(req, res) {
     while (history.length && history[0].role !== "user") history.shift();
     const messages = [...history, { role: "user", content: await buildNewContent(text, attachments, links) }];
 
-    // Neuron: tell Nova which concepts this student already has so it reuses the same names
-    let graph = null;
-    try { graph = await loadGraph(email); } catch (e) { console.error(e); }
-    const system = graph ? SYSTEM + conceptRule(knownLabels(graph)) : SYSTEM;
+    // Constellation: tell Nova which concepts this student already has so it reuses the same names,
+    // and if they mention "the ___ star", give Nova everything saved under that star
+    let graph = null, starRefs = [], starText = "";
+    try {
+      graph = await loadGraph(email);
+      starRefs = findStarRefs(text, graph);
+      if (starRefs.length) starText = await starContext(email, graph, starRefs);
+    } catch (e) { console.error(e); }
+    const system = graph ? SYSTEM + starText + conceptRule(knownLabels(graph)) : SYSTEM;
 
     const r = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -135,11 +140,11 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: data?.error?.message || "The AI request failed" });
     }
     const raw = data.content.filter(b => b.type === "text").map(b => b.text).join("\n");
-    let { reply, labels } = splitConcepts(raw);
+    let { reply, items } = splitConcepts(raw);
     if (data.stop_reason === "max_tokens") reply += "\n\n*(I ran out of room here. Say \"continue\" and I'll pick up where I left off.)*";
 
-    if (graph && labels.length) {
-      try { chat.lastConcepts = await recordConcepts(email, labels, chatId, graph, chat.lastConcepts || []); }
+    if (graph && items.length) {
+      try { await recordConcepts(email, items, chatId, graph); }
       catch (e) { console.error(e); }
     }
 
@@ -163,7 +168,7 @@ export default async function handler(req, res) {
       await setJSON(`user:${email}`, fresh);
     }
 
-    return res.status(200).json({ reply, chatId, title: chat.title, concepts: labels });
+    return res.status(200).json({ reply, chatId, title: chat.title, concepts: items.map(i => i.name), stars: starRefs.map(k => graph?.nodes[k]?.label).filter(Boolean) });
   } catch (e) {
     console.error(e);
     return res.status(500).json({ error: e.message || "Couldn't reach the AI. Try again." });
