@@ -196,6 +196,35 @@ td .em{color:var(--muted);font-size:12px;word-break:break-all}
 .ncard .x{position:absolute;top:8px;right:8px;width:26px;height:26px;border:0;border-radius:8px;background:none;color:var(--muted);cursor:pointer}
 .ncard .x:hover{color:var(--star);background:rgba(255,255,255,.06)}
 @media (max-width:600px){#neuronView{padding:14px 12px}.nhead h2{font-size:21px}}
+.nacts{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.nacts .ghost{margin-left:0}
+.nacts .ghost.on{border-color:rgba(255,157,157,.5);color:#ffb3b3}
+.nacts .ghost:disabled{opacity:.6;cursor:default}
+.nsubs{display:flex;gap:6px;flex-wrap:wrap;margin:-2px 0 10px}
+.nsub{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.04);border:1px solid var(--line);color:var(--muted);border-radius:999px;font:inherit;font-size:12px;padding:4px 11px;cursor:pointer}
+.nsub i,.subj i{width:8px;height:8px;border-radius:50%;display:inline-block}
+.nsub:hover{color:var(--star)}
+.nsub.on{color:var(--star);border-color:rgba(255,207,138,.55);background:rgba(255,207,138,.08)}
+.ncount.flash{color:var(--gold)}
+.nselbar{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);display:flex;align-items:center;gap:8px;background:rgba(14,16,30,.96);border:1px solid var(--line);border-radius:999px;padding:6px 6px 6px 16px;font-size:13px;white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.35);animation:pop .3s cubic-bezier(.22,1,.36,1)}
+.nselbar span{color:var(--muted);margin-right:4px}
+.nselbar button{background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--star);border-radius:999px;font:inherit;font-size:12px;padding:5px 12px;cursor:pointer}
+.nselbar .danger{background:#ff9d9d;color:#2a0a0a;border-color:transparent;font-weight:600}
+.nselbar .danger:disabled{opacity:.35;cursor:default}
+.ncard{width:350px;max-height:calc(100% - 28px);overflow-y:auto}
+.ncard .meta{display:flex;flex-wrap:wrap;align-items:center;gap:4px}
+.subj{display:inline-flex;align-items:center;gap:5px;color:var(--star)}
+.sumhead{display:flex;align-items:center;justify-content:space-between;margin-top:4px}
+.sumhead .lbl{margin:0}
+.sre{background:none;border:0;color:var(--muted);font-size:15px;cursor:pointer;border-radius:8px;width:26px;height:26px}
+.sre:hover{color:var(--star);background:rgba(255,255,255,.06)}
+.nsum{font-size:13.5px;line-height:1.55;margin:4px 0 12px;color:#dfe2f3}
+.nsum p{margin:0 0 8px}.nsum ul{margin:4px 0 0;padding-left:18px}.nsum li{margin:2px 0}
+.nsum strong{color:var(--gold);font-weight:600}
+.nbtns{display:flex;gap:8px;margin-bottom:12px}
+.nask{background:var(--gold);color:#1a1405;border:0;border-radius:999px;font:inherit;font-size:13px;font-weight:600;padding:7px 14px;cursor:pointer}
+.nask:hover{background:#ffdca6}
+@media (max-width:600px){.nhead{flex-wrap:wrap}.nacts{margin-left:0;justify-content:flex-start}.ncard{width:auto;right:14px}.nselbar{left:14px;right:14px;transform:none;flex-wrap:wrap;border-radius:18px}}
 
 @media (max-width:600px){
   .rail{width:52px}.rbtn{width:36px;height:36px}
@@ -404,13 +433,15 @@ main::-webkit-scrollbar{width:8px}main::-webkit-scrollbar-thumb{background:rgba(
 
     <section id="neuronView" hidden>
 <div class="nhead">
-<div><h2>Constellation</h2><p>Every star is an idea you've studied with Nova. Drag them around.</p></div>
-<button class="ghost" type="button" id="nFit">Recenter</button>
+<div><h2>Constellation</h2><p>Every star is an idea you've studied with Nova. Tap one for a summary, or say "the ___ star" in a chat to review it.</p></div>
+<div class="nacts"><button class="ghost" type="button" id="nTidy" title="Merge duplicates, sort into subjects and redraw the strings">Tidy up</button><button class="ghost" type="button" id="nSelect">Select</button><button class="ghost" type="button" id="nFit">Recenter</button></div>
 </div>
+<div class="nsubs" id="nSubs" hidden></div>
 <div class="nwrap">
 <canvas id="nCanvas" aria-label="Your constellation of concepts"></canvas>
 <div class="ncount" id="nCount"></div>
 <div class="nempty" id="nEmpty" hidden><b>Your sky is empty for now</b><span>Ask Nova about anything you're studying and the ideas you cover will show up here as stars, strung to the ideas they connect to.</span></div>
+<div class="nselbar" id="nSelBar" hidden><span id="nSelN">Tap stars to select them</span><button type="button" id="nSelAll">Select all</button><button type="button" id="nSelDel" class="danger" disabled>Delete</button><button type="button" id="nSelCancel">Done</button></div>
 <div class="ncard" id="nCard" hidden></div>
 </div>
 </section>
@@ -960,7 +991,13 @@ function renderAdmin({users, log: events}) {
 
 /* ---------- neuron (constellation graph) ---------- */
 const NV = {nodes: [], links: [], byId: {}, cam: {x: 0, y: 0, z: 1}, camT: null, sel: null, hover: null,
-  drag: null, pan: null, pts: new Map(), pinch: null, running: false, fitted: false, W: 0, H: 0, d: 1, idle: 0};
+  drag: null, pan: null, pts: new Map(), pinch: null, running: false, fitted: false, W: 0, H: 0, d: 1, idle: 0,
+  selMode: false, picked: new Set(), filter: null, anchors: {}, sums: {}};
+// each subject gets its own color, and its own region of the sky
+const SUBJ_C = {"Biology": "126,224,176", "Chemistry": "185,164,255", "Physics": "143,179,255", "Math": "255,207,138",
+  "History": "242,169,126", "English": "255,159,184", "Languages": "246,226,122", "Computer Science": "111,211,255",
+  "Economics": "155,227,184", "Psychology": "224,164,255", "Art & Music": "255,179,167", "Other": "200,205,230"};
+const subjC = s => SUBJ_C[s] || SUBJ_C.Other;
 const nCv = $("nCanvas"), nCtx = nCv.getContext("2d");
 
 function showNeuron() {
@@ -972,6 +1009,78 @@ function showNeuron() {
 }
 $("rNeuron").onclick = showNeuron;
 $("nFit").onclick = () => fitNeuron();
+$("nSelect").onclick = () => setSelMode(!NV.selMode);
+$("nSelCancel").onclick = () => setSelMode(false);
+$("nSelAll").onclick = () => {
+  const vis = NV.nodes.filter(n => !NV.filter || n.subject === NV.filter);
+  const all = vis.every(n => NV.picked.has(n.id));
+  for (const n of vis) all ? NV.picked.delete(n.id) : NV.picked.add(n.id);
+  drawSelBar();
+};
+$("nSelDel").onclick = async () => {
+  const ids = [...NV.picked];
+  if (!ids.length) return;
+  if (!confirm(`Delete ${ids.length} star${ids.length === 1 ? "" : "s"}? This can't be undone.`)) return;
+  try {
+    await api("/api/neuron", {method: "POST", body: JSON.stringify({action: "delete", ids})});
+    const gone = new Set(ids);
+    mergeNeuron({
+      nodes: NV.nodes.filter(x => !gone.has(x.id)),
+      links: NV.links.filter(l => !gone.has(l.a.id) && !gone.has(l.b.id)).map(l => ({a: l.a.id, b: l.b.id, w: l.w})),
+    });
+    setSelMode(false);
+  } catch (err) { if (!handleAuthError(err)) alert(err.message); }
+};
+$("nTidy").onclick = async () => {
+  if (!NV.nodes.length) return;
+  if (!confirm("Nova will merge duplicate stars, sort every star into a subject, and redraw the strings so only related ideas connect. It uses a tiny bit of credit. Go ahead?")) return;
+  const b = $("nTidy"); b.disabled = true; b.textContent = "Tidying…";
+  try {
+    const r = await api("/api/neuron", {method: "POST", body: JSON.stringify({action: "tidy"})});
+    NV.sums = {};
+    mergeNeuron(r);
+    fitNeuron();
+    flashCount(`Tidied: ${r.merged} merged, ${r.removed} removed`);
+  } catch (err) { if (!handleAuthError(err)) alert(err.message); }
+  finally { b.disabled = false; b.textContent = "Tidy up"; }
+};
+function setSelMode(on) {
+  NV.selMode = on; NV.picked.clear();
+  if (on) { NV.sel = null; drawNeuronCard(); }
+  $("nSelect").textContent = on ? "Cancel" : "Select";
+  $("nSelect").classList.toggle("on", on);
+  drawSelBar();
+}
+function drawSelBar() {
+  $("nSelBar").hidden = !NV.selMode;
+  const n = NV.picked.size;
+  $("nSelN").textContent = n ? `${n} selected` : "Tap stars to select them";
+  $("nSelDel").disabled = !n;
+}
+function flashCount(msg) {
+  const el = $("nCount"), old = el.textContent;
+  el.textContent = msg; el.classList.add("flash");
+  setTimeout(() => { el.classList.remove("flash"); countLabel(); }, 3500);
+}
+function countLabel() {
+  $("nCount").textContent = NV.nodes.length ? `${NV.nodes.length} star${NV.nodes.length === 1 ? "" : "s"} · ${NV.links.length} string${NV.links.length === 1 ? "" : "s"}` : "";
+}
+function drawSubjects() {
+  const box = $("nSubs"), counts = {};
+  for (const n of NV.nodes) counts[n.subject] = (counts[n.subject] || 0) + 1;
+  const subs = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+  if (NV.filter && !counts[NV.filter]) NV.filter = null;
+  box.hidden = subs.length < 2;
+  box.innerHTML = "";
+  const mk = (label, val, c) => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "nsub" + (NV.filter === val ? " on" : "");
+    b.innerHTML = (c ? `<i style="background:rgb(${c})"></i>` : "") + esc(label);
+    b.onclick = () => { NV.filter = NV.filter === val ? null : val; drawSubjects(); };
+    box.appendChild(b);
+  };
+  mk(`All ${NV.nodes.length}`, null, null);
+  for (const s of subs) mk(`${s} ${counts[s]}`, s, subjC(s));
+}
 addEventListener("resize", () => { if (!$("neuronView").hidden) neuronSize(); });
 
 function neuronSize() {
@@ -989,10 +1098,14 @@ async function loadNeuron() {
 function mergeNeuron(g) {
   const old = NV.byId, byId = {}, now = performance.now();
   const fresh = [];
+  // spread subjects around a ring so each one forms its own cluster
+  const subs = [...new Set(g.nodes.map(n => n.subject || "Other"))].sort();
+  const ringR = subs.length > 1 ? 120 + 22 * Math.sqrt(g.nodes.length) : 0;
+  NV.anchors = Object.fromEntries(subs.map((s, i) => [s, [Math.cos(i / subs.length * 6.283 - 1.57) * ringR, Math.sin(i / subs.length * 6.283 - 1.57) * ringR]]));
   NV.nodes = g.nodes.map((n, i) => {
     if (old[n.id]) { Object.assign(old[n.id], n); byId[n.id] = old[n.id]; return old[n.id]; }
-    const a = i * 2.39996, r = 24 + 26 * Math.sqrt(i);
-    const nn = {...n, x: Math.cos(a) * r, y: Math.sin(a) * r, vx: 0, vy: 0, born: now + (NV.fitted ? 0 : i * 18), tw: Math.random() * 6.3};
+    const a = i * 2.39996, r = 20 + 14 * Math.sqrt(i), [ax, ay] = NV.anchors[n.subject || "Other"] || [0, 0];
+    const nn = {...n, x: ax + Math.cos(a) * r, y: ay + Math.sin(a) * r, vx: 0, vy: 0, born: now + (NV.fitted ? 0 : i * 18), tw: Math.random() * 6.3};
     byId[n.id] = nn; fresh.push(nn); return nn;
   });
   NV.byId = byId;
@@ -1007,8 +1120,9 @@ function mergeNeuron(g) {
   }
   for (const l of NV.links) { l.mx = (l.a.x + l.b.x) / 2; l.my = (l.a.y + l.b.y) / 2; }
   if (NV.sel && !byId[NV.sel.id]) NV.sel = null;
+  for (const id of [...NV.picked]) if (!byId[id]) NV.picked.delete(id);
   $("nEmpty").hidden = NV.nodes.length > 0;
-  $("nCount").textContent = NV.nodes.length ? `${NV.nodes.length} star${NV.nodes.length === 1 ? "" : "s"} · ${NV.links.length} string${NV.links.length === 1 ? "" : "s"}` : "";
+  countLabel(); drawSubjects(); drawSelBar();
   NV.idle = 0;
   drawNeuronCard();
   if (!NV.fitted && NV.nodes.length) { NV.fitted = true; NV.cam = {x: 0, y: 0, z: 1}; setTimeout(fitNeuron, 900); }
@@ -1065,7 +1179,8 @@ function neuronStep(t) {
     l.mx += l.mvx; l.my += l.mvy;
   }
   for (const n of N) {
-    n.vx -= n.x * .0015; n.vy -= n.y * .0015;
+    const [ax, ay] = NV.anchors[n.subject] || [0, 0];
+    n.vx -= (n.x - ax) * .0022; n.vy -= (n.y - ay) * .0022;
     if (!reduce) { n.vx += Math.sin(t * .0006 + n.tw) * .015; n.vy += Math.cos(t * .0005 + n.tw * 1.3) * .015; }
     n.vx *= .86; n.vy *= .86;
     if (NV.drag && NV.drag.node === n) {
@@ -1092,10 +1207,11 @@ function neuronDraw(t) {
   c.lineCap = "round";
   for (const l of NV.links) {
     const lit = focus && (l.a === focus || l.b === focus);
+    const lOff = NV.filter && (l.a.subject !== NV.filter || l.b.subject !== NV.filter);
     const [ax, ay] = toScreen(l.a.x, l.a.y), [bx, by] = toScreen(l.b.x, l.b.y), [mx, my] = toScreen(l.mx, l.my);
     const grow = Math.min(1, Math.max(0, (t - Math.max(l.a.born, l.b.born)) / 700));
     if (!grow) continue;
-    c.strokeStyle = lit ? "rgba(255,214,150,.8)" : `rgba(255,207,138,${(focus ? .07 : .16 + Math.min(l.w, 6) * .035) * grow})`;
+    c.strokeStyle = lit ? "rgba(255,214,150,.8)" : `rgba(255,207,138,${(focus || lOff ? .06 : .16 + Math.min(l.w, 6) * .035) * grow})`;
     c.lineWidth = lit ? 1.5 : .8 + Math.min(l.w, 6) * .14;
     c.beginPath(); c.moveTo(ax, ay);
     c.quadraticCurveTo(2 * mx - (ax + bx) / 2, 2 * my - (ay + by) / 2, bx, by);
@@ -1109,13 +1225,15 @@ function neuronDraw(t) {
     if (!g) continue;
     const e = 1 + 2.2 * Math.pow(g - 1, 3) + 1.2 * Math.pow(g - 1, 2); // slight overshoot pop-in
     const [x, y] = toScreen(n.x, n.y);
-    const isF = n === focus, isN = near.has(n), dim = focus && !isF && !isN;
+    const isF = n === focus, isN = near.has(n), off = NV.filter && n.subject !== NV.filter;
+    const dim = off || (focus && !isF && !isN), picked = NV.picked.has(n.id), col = subjC(n.subject);
     const tw = reduce ? 1 : .82 + .18 * Math.sin(t * .0021 + n.tw);
     const r = starR(n) * Math.max(.7, Math.min(z, 1.5)) * e * (isF ? 1.3 : 1);
-    c.globalAlpha = dim ? .28 : 1;
+    c.globalAlpha = off ? .14 : dim ? .28 : 1;
     const glow = c.createRadialGradient(x, y, 0, x, y, r * 4.2);
-    glow.addColorStop(0, `rgba(255,214,150,${.45 * tw})`); glow.addColorStop(1, "rgba(255,207,138,0)");
+    glow.addColorStop(0, `rgba(${col},${.5 * tw})`); glow.addColorStop(1, `rgba(${col},0)`);
     c.fillStyle = glow; c.beginPath(); c.arc(x, y, r * 4.2, 0, 7); c.fill();
+    if (picked) { c.strokeStyle = "#ff9d9d"; c.lineWidth = 2; c.beginPath(); c.arc(x, y, r + 5, 0, 7); c.stroke(); }
     c.fillStyle = "#ffcf8a"; c.beginPath(); c.arc(x, y, r, 0, 7); c.fill();
     c.fillStyle = "#fff6e6"; c.beginPath(); c.arc(x, y, r * .5, 0, 7); c.fill();
     if (n.count >= 3 || isF) {
@@ -1123,9 +1241,9 @@ function neuronDraw(t) {
       c.strokeStyle = `rgba(255,244,222,${.75 * tw})`; c.lineWidth = 1;
       c.beginPath(); c.moveTo(x - s, y); c.lineTo(x + s, y); c.moveTo(x, y - s); c.lineTo(x, y + s); c.stroke();
     }
-    if (labelsOn || isF || isN) {
+    if ((labelsOn && !off) || isF || isN || picked) {
       c.font = `${isF ? 600 : 400} ${isF ? 14 : 12}px Sora, system-ui, sans-serif`;
-      c.fillStyle = isF ? "#ffcf8a" : isN ? "rgba(238,241,255,.95)" : "rgba(200,206,235,.75)";
+      c.fillStyle = picked ? "#ffb3b3" : isF ? "#ffcf8a" : isN ? "rgba(238,241,255,.95)" : "rgba(200,206,235,.75)";
       c.fillText(n.label, x, y + r + 6);
     }
     c.globalAlpha = 1;
@@ -1179,7 +1297,11 @@ nCv.addEventListener("pointermove", e => {
 function neuronUp(e) {
   NV.pts.delete(e.pointerId);
   if (NV.pinch) { if (NV.pts.size < 2) NV.pinch = null; return; }
-  if (NV.drag && !NV.drag.moved) { NV.sel = NV.sel === NV.drag.node ? null : NV.drag.node; drawNeuronCard(); }
+  if (NV.drag && !NV.drag.moved) {
+    const n = NV.drag.node;
+    if (NV.selMode) { NV.picked.has(n.id) ? NV.picked.delete(n.id) : NV.picked.add(n.id); drawSelBar(); }
+    else { NV.sel = NV.sel === n ? null : n; drawNeuronCard(); }
+  }
   if (NV.pan && !NV.pan.moved && NV.sel) { NV.sel = null; drawNeuronCard(); }
   NV.drag = null; NV.pan = null;
   nCv.classList.remove("grabbing");
@@ -1205,14 +1327,16 @@ function drawNeuronCard() {
   const nb = NV.links.filter(l => l.a === n || l.b === n).map(l => l.a === n ? l.b : l.a);
   card.innerHTML = `<button class="x" type="button" aria-label="Close">✕</button>
 <h3></h3>
-<div class="meta">Came up ${n.count} time${n.count === 1 ? "" : "s"} · last ${esc(ago(n.last))}</div>
+<div class="meta"><span class="subj"><i style="background:rgb(${subjC(n.subject)})"></i>${esc(n.subject || "Other")}</span> · studied ${n.count} time${n.count === 1 ? "" : "s"} · last ${esc(ago(n.last))}</div>
+<div class="sumhead"><p class="lbl">Everything you've covered</p><button class="sre" type="button" title="Rewrite the summary">↻</button></div>
+<div class="nsum"><span class="think">Gathering everything you've covered…</span></div>
+<div class="nbtns"><button class="nask" type="button">Review with Nova</button><button class="rm" type="button">Remove</button></div>
 ${nb.length ? `<p class="lbl">Strung to</p><div class="nb"></div>` : ""}
-${inChats.length ? `<p class="lbl">Open a chat about it</p><div class="cl"></div>` : ""}
-<button class="rm" type="button">Remove this star</button>`;
+${inChats.length ? `<p class="lbl">Chats about it</p><div class="cl"></div>` : ""}`;
   card.querySelector("h3").textContent = n.label;
   card.querySelector(".x").onclick = () => { NV.sel = null; drawNeuronCard(); };
   const nbBox = card.querySelector(".nb");
-  for (const o of nb.slice(0, 10)) {
+  for (const o of nb.slice(0, 12)) {
     const b = document.createElement("button"); b.type = "button"; b.textContent = o.label;
     b.onclick = () => { NV.sel = o; NV.camT = {x: o.x, y: o.y, z: Math.max(NV.cam.z, 1)}; drawNeuronCard(); };
     nbBox.appendChild(b);
@@ -1223,6 +1347,12 @@ ${inChats.length ? `<p class="lbl">Open a chat about it</p><div class="cl"></div
     b.onclick = () => { $("rNeuron").classList.remove("on"); openChat(id); };
     cl.appendChild(b);
   }
+  card.querySelector(".nask").onclick = () => {
+    $("rNeuron").classList.remove("on");
+    showChat(); newChat();
+    q.value = `Let's review the ${n.label} star. Quiz me on it and fill in anything I haven't covered yet.`;
+    grow(); q.focus();
+  };
   card.querySelector(".rm").onclick = async () => {
     if (!confirm(`Remove "${n.label}" from your sky?`)) return;
     try {
@@ -1233,6 +1363,23 @@ ${inChats.length ? `<p class="lbl">Open a chat about it</p><div class="cl"></div
       });
     } catch (err) { if (!handleAuthError(err)) alert(err.message); }
   };
+  card.querySelector(".sre").onclick = () => loadSummary(n, true);
+  loadSummary(n, false);
+}
+
+async function loadSummary(n, force) {
+  const box = () => NV.sel === n ? $("nCard").querySelector(".nsum") : null;
+  const key = n.id + "|" + n.count + "|" + n.notes;
+  if (!force && NV.sums[n.id] && NV.sums[n.id].key === key) { if (box()) box().innerHTML = renderMath(NV.sums[n.id].text); return; }
+  if (box()) box().innerHTML = `<span class="think">${force ? "Rewriting the summary…" : "Gathering everything you've covered…"}</span>`;
+  try {
+    const {summary} = await api("/api/neuron", {method: "POST", body: JSON.stringify({action: "summary", id: n.id, force})});
+    NV.sums[n.id] = {key, text: summary};
+    if (box()) box().innerHTML = renderMath(summary);
+  } catch (err) {
+    if (handleAuthError(err)) return;
+    if (box()) box().innerHTML = `<span class="adminerr">${esc(err.message)}</span>`;
+  }
 }
 
 /* ---------- blaze send button (shooting star) ---------- */
