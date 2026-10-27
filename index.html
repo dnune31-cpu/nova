@@ -604,30 +604,43 @@ let spin = 1, spinTarget = 1;
 })();
 
 /* spiral galaxy swirl (avatar + welcome) */
+/* spiral galaxy logo: two clean logarithmic arms that turn as one piece */
 function swirl(cv, n) {
   const ctx = cv.getContext("2d"), P = [];
+  const gauss = () => (Math.random() + Math.random() + Math.random() - 1.5) / 1.5;
   for (let i = 0; i < n; i++) {
-    const r = Math.pow(Math.random(), 1.5), q = Math.random();
-    const c = r < .2 ? (q < .6 ? "255,214,150" : "255,245,228")
-            : r < .55 ? (q < .5 ? "255,250,240" : q < .8 ? "255,207,138" : "170,200,255")
-            : (q < .6 ? "143,179,255" : "235,240,255");
-    P.push({r, a: (i % 2) * Math.PI + r * 5.5 + (Math.random() - .5) * (.5 + r * .9), s: (Math.random() * 1.2 + .5) * (1 - r * .4), c, w: Math.random() * 6});
+    const kind = Math.random();
+    let r, a;
+    if (kind < .16) {            // bright central bulge
+      r = Math.abs(gauss()) * .16; a = Math.random() * 6.283;
+    } else if (kind < .86) {     // the two spiral arms
+      const t = Math.pow(Math.random(), .85);
+      r = .1 + t * .9;
+      a = (i % 2) * Math.PI + 2.1 * Math.log(r / .1) + gauss() * (.24 + .2 * t);
+      r += gauss() * .05;
+    } else {                     // faint dust between the arms
+      r = .15 + Math.random() * .85; a = Math.random() * 6.283;
+    }
+    const q = Math.random();
+    const c = r < .2 ? (q < .6 ? "255,214,150" : "255,245,228") : r < .55 ? (q < .5 ? "255,250,240" : q < .8 ? "255,207,138" : "170,200,255") : (q < .6 ? "143,179,255" : "235,240,255");
+    const dust = kind >= .86;
+    P.push({r: Math.max(.01, r), a, s: (dust ? .35 : 1) * (Math.random() * 1.1 + .5) * (1 - Math.min(r, 1) * .45), c, w: Math.random() * 6, o: dust ? .35 : 1});
   }
   let last = 0, phase = 0;
   function f(t) {
-    const W = cv.width, H = cv.height, cx = W / 2, cy = H / 2, R = W * .48, k = W / 120;
-    phase += reduce ? 0 : (t - last) * .00025 * spin; last = t;
+    const W = cv.width, H = cv.height, cx = W / 2, cy = H / 2, R = W * .47, small = W < 160, k = W / 120 * (small ? 1.9 : 1);
+    phase += reduce ? 0 : (t - last) * .00022 * spin; last = t;
     ctx.clearRect(0, 0, W, H);
-    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * .4);
-    g.addColorStop(0, "rgba(255,236,195,.95)"); g.addColorStop(.35, "rgba(255,200,120,.35)"); g.addColorStop(1, "rgba(255,200,120,0)");
-    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, R * .4, 0, 7); ctx.fill();
+    const cr = R * (small ? .3 : .38), g = ctx.createRadialGradient(cx, cy, 0, cx, cy, cr);
+    g.addColorStop(0, "rgba(255,238,200,.95)"); g.addColorStop(.3, "rgba(255,200,120,.38)"); g.addColorStop(1, "rgba(255,200,120,0)");
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, cr, 0, 7); ctx.fill();
     for (const p of P) {
-      const an = p.a + phase / (p.r + .25);
-      ctx.fillStyle = `rgba(${p.c},${.55 + .45 * Math.sin(t * .003 + p.w)})`;
+      const an = p.a - phase;
+      ctx.fillStyle = `rgba(${p.c},${p.o * (.55 + .45 * Math.sin(t * .003 + p.w))})`;
       ctx.beginPath(); ctx.arc(cx + Math.cos(an) * p.r * R, cy + Math.sin(an) * p.r * R, p.s * k, 0, 7); ctx.fill();
     }
-    for (let j = 0; j < 2; j++) {
-      const p = P[(j * 53) % n], an = p.a + phase / (p.r + .25), x = cx + Math.cos(an) * p.r * R, y = cy + Math.sin(an) * p.r * R;
+    for (let j = 0; j < (small ? 0 : 2); j++) {
+      const p = P[(j * 53 + 20) % n], an = p.a - phase, x = cx + Math.cos(an) * p.r * R, y = cy + Math.sin(an) * p.r * R;
       const L = (5 + 3 * Math.sin(t * .004 + j)) * k;
       ctx.strokeStyle = "rgba(255,240,210,.85)"; ctx.lineWidth = .8 * k;
       ctx.beginPath(); ctx.moveTo(x - L, y); ctx.lineTo(x + L, y); ctx.moveTo(x, y - L); ctx.lineTo(x, y + L); ctx.stroke();
@@ -637,7 +650,6 @@ function swirl(cv, n) {
   }
   requestAnimationFrame(f);
 }
-
 
 const $ = id => document.getElementById(id);
 const MODELS = [
@@ -1578,7 +1590,7 @@ function igniteLoader(el, model) {
   for (let i = 0; i < 170; i++) {
     const r = Math.pow(Math.random(), 1.5), q = Math.random();
     const c = r < .2 ? (q < .6 ? "255,214,150" : "255,245,228") : r < .55 ? (q < .5 ? "255,250,240" : q < .8 ? "255,207,138" : "170,200,255") : (q < .6 ? "143,179,255" : "235,240,255");
-    P.push({r, a: (i % 2) * Math.PI + r * 5.5 + (Math.random() - .5) * (.5 + r * .9), s: (Math.random() * 1.2 + .5) * (1 - r * .4), c, w: Math.random() * 6});
+    P.push({r, a: (i % 2) * Math.PI + 2.1 * Math.log(Math.max(r, .1) / .1) + (Math.random() - .5) * (.45 + r * .35), s: (Math.random() * 1.2 + .5) * (1 - r * .4), c, w: Math.random() * 6});
   }
   // how long each model usually takes, so the galaxy fills at a believable pace
   const T = ({haiku: 1700, sonnet: 3800, opus: 6500})[model] || 3800;
@@ -1596,14 +1608,14 @@ function igniteLoader(el, model) {
     for (const s of P) {
       const q = ease((p * 1.25 - s.r * .9) / .3);
       if (q <= .01) continue;
-      const an = s.a + phase / (s.r + .25);
+      const an = s.a - phase;
       ctx.fillStyle = `rgba(${s.c},${q * (.55 + .45 * Math.sin(t * .003 + s.w))})`;
       ctx.beginPath(); ctx.arc(cx + Math.cos(an) * s.r * R * q, cy + Math.sin(an) * s.r * R * q, s.s * k, 0, 7); ctx.fill();
     }
     if (p > .95) {
       const sp = ease((p - .95) * 20);
       for (let j = 0; j < 2; j++) {
-        const s = P[(j * 53) % P.length], an = s.a + phase / (s.r + .25), x = cx + Math.cos(an) * s.r * R, y = cy + Math.sin(an) * s.r * R;
+        const s = P[(j * 53) % P.length], an = s.a - phase, x = cx + Math.cos(an) * s.r * R, y = cy + Math.sin(an) * s.r * R;
         const L = (5 + 3 * Math.sin(t * .004 + j)) * k * sp;
         ctx.strokeStyle = "rgba(255,240,210,.85)"; ctx.lineWidth = .8 * k;
         ctx.beginPath(); ctx.moveTo(x - L, y); ctx.lineTo(x + L, y); ctx.moveTo(x, y - L); ctx.lineTo(x, y + L); ctx.stroke();
