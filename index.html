@@ -472,6 +472,32 @@ form#f:focus-within{border-color:#4d4c48;box-shadow:0 6px 24px rgba(0,0,0,.3)}
 .ai .body{font-size:16.5px}
 form#f{width:calc(100% - 20px)}
 }
+/* settings + hidden admin */
+#adminLink,#rAdmin{display:none!important}
+#menu #openSettings{margin-bottom:6px}
+#menu #openSettings:hover{border-color:var(--c-line2,#3a3a37);color:var(--star);background:rgba(255,255,255,.05)}
+#settings{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px;animation:fade .25s ease}
+.sbox{position:relative;width:100%;max-width:460px;max-height:calc(100% - 32px);overflow-y:auto;background:#232321;border:1px solid #3a3a37;border-radius:18px;padding:22px 22px 16px;box-shadow:0 20px 60px rgba(0,0,0,.5);animation:pop .3s cubic-bezier(.22,1,.36,1);font-family:"Inter",system-ui,sans-serif}
+.sbox h2{margin:0 0 14px;font-size:20px;font-weight:600}
+.sx{position:absolute;top:14px;right:14px;width:30px;height:30px;border:0;border-radius:9px;background:none;color:#a19f99;cursor:pointer;font-size:14px}
+.sx:hover{background:#2e2e2b;color:#ecebe7}
+.slbl{margin:16px 0 6px;font-size:12.5px;color:#a19f99}
+.scard{display:flex;align-items:center;gap:12px;background:#1c1c1b;border:1px solid #31312e;border-radius:14px;padding:12px 14px}
+.scard.col{flex-direction:column;align-items:stretch;gap:10px}
+.savatar{width:38px;height:38px;border-radius:50%;background:#3b3a36;display:flex;align-items:center;justify-content:center;font-weight:600;flex:none}
+.sinfo{display:flex;flex-direction:column;min-width:0}
+.sinfo b{font-weight:600}
+.sinfo span,.smuted{color:#a19f99;font-size:13.5px;word-break:break-all}
+.scard input{background:#2a2a28;border:1px solid #3a3a37;border-radius:10px;color:#ecebe7;font:inherit;font-size:15px;padding:10px 12px;outline:0}
+.scard input:focus{border-color:#55534e}
+.scard .aerr{margin:0}
+.sprim{background:var(--gold);color:#1a1405;border:0;border-radius:10px;font:inherit;font-size:14px;font-weight:600;padding:9px 14px;cursor:pointer}
+.sprim:hover{background:#ffdca6}
+.sprim:disabled{opacity:.5;cursor:default}
+.sdel{background:none;border:1px solid rgba(255,157,157,.4);color:#ff9d9d;border-radius:10px;font:inherit;font-size:14px;padding:9px 14px;cursor:pointer}
+.sdel:hover{background:rgba(255,157,157,.08)}
+.slink{display:block;margin:16px auto 0;background:none;border:0;color:#6f6d68;font:inherit;font-size:12px;cursor:pointer;padding:4px 8px}
+.slink:hover{color:#a19f99}
 </style>
 </head>
 <body>
@@ -1804,6 +1830,83 @@ function igniteLoader(el, model) {
     .observe($("chatTitle"), {childList: true, characterData: true, subtree: true});
 
   startSwirl("sbSwirl", 120);
+})();
+
+/* ---------- settings + hidden admin ---------- */
+(() => {
+  const sb = document.createElement("button");
+  sb.type = "button"; sb.id = "openSettings"; sb.textContent = "Settings";
+  $("logout").before(sb);
+
+  const modal = document.createElement("div");
+  modal.id = "settings"; modal.hidden = true;
+  modal.innerHTML = '<div class="sbox" role="dialog" aria-modal="true" aria-labelledby="setT">' +
+    '<button class="sx" type="button" aria-label="Close">✕</button>' +
+    '<h2 id="setT">Settings</h2>' +
+    '<p class="slbl">Account</p>' +
+    '<div class="scard"><div class="savatar" id="setAv"></div><div class="sinfo"><b id="setName"></b><span id="setEmail"></span></div></div>' +
+    '<div id="admBox"></div>' +
+    '<p class="slbl">Danger zone</p>' +
+    '<div class="scard col"><span class="smuted">Deleting your account erases your chats and your Constellation for good.</span>' +
+    '<button type="button" class="sdel" id="delAcct">Delete my account</button></div>' +
+    '<button type="button" class="slink" id="admReveal">Admin access</button>' +
+    '</div>';
+  document.body.appendChild(modal);
+  const box = modal.querySelector(".sbox");
+
+  function close() { modal.hidden = true; }
+  function drawAdmin(showForm) {
+    const a = $("admBox");
+    if (me && me.admin) {
+      a.innerHTML = '<p class="slbl">Admin</p><div class="scard col"><span class="smuted">You have admin access on this account.</span><button type="button" class="sprim" id="openAdm">Open admin panel</button></div>';
+      $("openAdm").onclick = () => { close(); openAdmin(); };
+      $("admReveal").hidden = true;
+      return;
+    }
+    $("admReveal").hidden = !!showForm;
+    if (!showForm) { a.innerHTML = ""; return; }
+    a.innerHTML = '<p class="slbl">Admin access</p><form class="scard col" id="admForm" novalidate>' +
+      '<input type="password" id="admPw" placeholder="Admin password" autocomplete="off" aria-label="Admin password">' +
+      '<p class="aerr" id="admErr" role="alert"></p><button type="submit" class="sprim" id="admGo">Unlock</button></form>';
+    $("admPw").focus();
+    $("admPw").addEventListener("input", () => { $("admErr").textContent = ""; });
+    $("admForm").addEventListener("submit", async e => {
+      e.preventDefault();
+      const pw = $("admPw").value;
+      if (!pw) { $("admErr").textContent = "Enter the admin password."; return; }
+      $("admGo").disabled = true;
+      try {
+        const d = await api("/api/auth", {method: "POST", body: JSON.stringify({action: "unlockAdmin", password: pw})});
+        me = d.user; fillModels();
+        drawAdmin(false);
+      } catch (err) {
+        if (handleAuthError(err)) { close(); return; }
+        $("admErr").textContent = err.message;
+      } finally { const b = $("admGo"); if (b) b.disabled = false; }
+    });
+  }
+  function openSettings() {
+    closePops();
+    $("setName").textContent = me?.name || "";
+    $("setEmail").textContent = me?.email || "";
+    $("setAv").textContent = (me?.name || "?").trim().charAt(0).toUpperCase();
+    drawAdmin(false);
+    modal.hidden = false;
+  }
+  sb.onclick = e => { e.stopPropagation(); openSettings(); };
+  modal.querySelector(".sx").onclick = close;
+  modal.addEventListener("click", e => { if (!box.contains(e.target)) close(); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && !modal.hidden) close(); });
+  $("admReveal").onclick = () => drawAdmin(true);
+  $("delAcct").onclick = async () => {
+    const typed = prompt("This erases your account, all your chats and your Constellation. It can't be undone.\n\nType DELETE to confirm.");
+    if (typed !== "DELETE") return;
+    try {
+      await api("/api/auth", {method: "POST", body: JSON.stringify({action: "deleteAccount", confirm: "DELETE"})});
+      close(); chats = []; chatId = null;
+      showAuth("Your account was deleted.");
+    } catch (err) { if (!handleAuthError(err)) alert(err.message); }
+  };
 })();
 
 /* ---------- start ---------- */
