@@ -75,6 +75,20 @@ async function buildNewContent(text, attachments, links) {
   return blocks;
 }
 
+// what the student should see so far: the hidden <concepts> line is left out
+function visibleText(raw) {
+  let s = raw.replace(/^\s+/, "");
+  const low = s.toLowerCase();
+  if (s.length < 10 && "<concepts>".startsWith(low)) return null;
+  if (low.startsWith("<concepts>")) {
+    const close = low.indexOf("</concepts>"), nl = s.indexOf("\n");
+    const ends = [close >= 0 ? close + 11 : -1, nl].filter(x => x >= 0);
+    if (!ends.length) return null;
+    s = s.slice(Math.min(...ends)).replace(/^\s+/, "");
+  }
+  return s.replace(/<concepts>[^\n]*?(<\/concepts>|\n|$)/gi, "");
+}
+
 function historyText(m) {
   let t = m.content || "";
   const extras = [...(m.files || []), ...(m.links || [])];
@@ -89,6 +103,15 @@ export default async function handler(req, res) {
     if (!auth) return res.status(401).json({ error: "Please log in again." });
     const { user, admin } = auth;
     const email = user.email;
+
+    // the Stop button: flag this answer so the stream that's writing it stops early
+    if (typeof req.body?.stop === "string") {
+      if (!/^[a-z0-9]{8,32}$/.test(req.body.stop)) return res.status(400).json({ error: "Bad request" });
+      await redis("SET", `stop:${email}:${req.body.stop}`, "1", "EX", "120");
+      return res.status(200).json({ ok: true });
+    }
+    const wantStream = req.body?.stream === true;
+    const rid = typeof req.body?.rid === "string" && /^[a-z0-9]{8,32}$/.test(req.body.rid) ? req.body.rid : null;
 
     const modelKey = req.body?.model;
     const allowed = admin ? ALL_MODELS : (user.models || ["haiku"]);
@@ -125,23 +148,96 @@ export default async function handler(req, res) {
     } catch (e) { console.error(e); }
     const system = graph ? SYSTEM + starText + conceptRule(knownLabels(graph)) : SYSTEM;
 
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": process.env.ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({ model: MODEL_IDS[modelKey], max_tokens: 3000, system, messages }),
-    });
-    const data = await r.json();
-    if (!r.ok) {
-      console.error(data);
-      return res.status(500).json({ error: data?.error?.message || "The AI request failed" });
+    // stream the answer from Claude so the student sees it being written
+    const up = new AbortController();
+    let stopped = false, clientGone = false;
+    res.on("close", () => { if (!res.writableFinished) { clientGone = true; stopped = true; up.abort(); } });
+    const stopKey = rid ? `stop:${email}:${rid}` : null;
+    const checkStop = async () => {
+      if (!stopKey || stopped) return;
+      try { if (await redis("GET", stopKey)) { stopped = true; up.abort(); } } catch {}
+    };
+    await checkStop();
+
+    let raw = "", stopReason = null;
+    const send = o => { if (wantStream && !clientGone) res.write(JSON.stringify(o) + "\n"); };
+    let shown = "";
+    const emit = () => {
+      if (!wantStream) return;
+      const v = visibleText(raw);
+      if (v === null || v === shown) return;
+      if (v.startsWith(shown)) send({ t: "d", d: v.slice(shown.length) });
+      else send({ t: "r", text: v });
+      shown = v;
+    };
+
+    if (!stopped) {
+      let r;
+      try {
+        r = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "x-api-key": process.env.ANTHROPIC_API_KEY,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({ model: MODEL_IDS[modelKey], max_tokens: 3000, system, messages, stream: true }),
+          signal: up.signal,
+        });
+      } catch (e) {
+        if (!stopped) throw e;
+      }
+      if (r && !r.ok) {
+        let data = {};
+        try { data = await r.json(); } catch {}
+        console.error(data);
+        return res.status(500).json({ error: data?.error?.message || "The AI request failed" });
+      }
+      if (wantStream) {
+        res.writeHead(200, { "Content-Type": "application/x-ndjson; charset=utf-8", "Cache-Control": "no-cache, no-transform", "X-Accel-Buffering": "no" });
+        send({ t: "start", chatId, title: chat.title, stars: starRefs.map(k => graph?.nodes[k]?.label).filter(Boolean) });
+      }
+      if (r) {
+        const poll = setInterval(checkStop, 700);
+        try {
+          const reader = r.body.getReader(), dec = new TextDecoder();
+          let buf = "";
+          for (;;) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buf += dec.decode(value, { stream: true });
+            let i;
+            while ((i = buf.indexOf("\n\n")) >= 0) {
+              const block = buf.slice(0, i); buf = buf.slice(i + 2);
+              const line = block.split("\n").find(l => l.startsWith("data:"));
+              if (!line) continue;
+              let ev;
+              try { ev = JSON.parse(line.slice(5)); } catch { continue; }
+              if (ev.type === "content_block_delta" && ev.delta?.type === "text_delta") { raw += ev.delta.text; emit(); }
+              else if (ev.type === "message_delta" && ev.delta?.stop_reason) stopReason = ev.delta.stop_reason;
+              else if (ev.type === "error") throw new Error(ev.error?.message || "The AI stream failed");
+            }
+          }
+        } catch (e) {
+          if (!stopped) throw e;
+        } finally {
+          clearInterval(poll);
+        }
+      }
+    } else if (wantStream) {
+      res.writeHead(200, { "Content-Type": "application/x-ndjson; charset=utf-8", "Cache-Control": "no-cache, no-transform", "X-Accel-Buffering": "no" });
+      send({ t: "start", chatId, title: chat.title, stars: [] });
     }
-    const raw = data.content.filter(b => b.type === "text").map(b => b.text).join("\n");
+    if (stopKey) redis("DEL", stopKey).catch(() => {});
+
     let { reply, items } = splitConcepts(raw);
-    if (data.stop_reason === "max_tokens") reply += "\n\n*(I ran out of room here. Say \"continue\" and I'll pick up where I left off.)*";
+    if (stopped) {
+      reply = reply ? reply + "\n\n*(Stopped)*" : "*(Stopped before answering.)*";
+      items = [];
+    } else if (stopReason === "max_tokens") {
+      reply += "\n\n*(I ran out of room here. Say \"continue\" and I'll pick up where I left off.)*";
+    }
+    if (!reply) reply = "*(No answer came back. Try asking again.)*";
 
     if (graph && items.length) {
       try { await recordConcepts(email, items, chatId, graph); }
@@ -168,9 +264,16 @@ export default async function handler(req, res) {
       await setJSON(`user:${email}`, fresh);
     }
 
-    return res.status(200).json({ reply, chatId, title: chat.title, concepts: items.map(i => i.name), stars: starRefs.map(k => graph?.nodes[k]?.label).filter(Boolean) });
+    const result = { reply, chatId, title: chat.title, stopped, concepts: items.map(i => i.name), stars: starRefs.map(k => graph?.nodes[k]?.label).filter(Boolean) };
+    if (wantStream) {
+      send({ t: "done", ...result });
+      return res.end();
+    }
+    return res.status(200).json(result);
   } catch (e) {
     console.error(e);
-    return res.status(500).json({ error: e.message || "Couldn't reach the AI. Try again." });
+    const error = e.message || "Couldn't reach the AI. Try again.";
+    if (res.headersSent) { try { res.write(JSON.stringify({ t: "error", error }) + "\n"); } catch {} return res.end(); }
+    return res.status(500).json({ error });
   }
 }

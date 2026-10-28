@@ -1,4 +1,4 @@
-import { redis, getJSON, getAuth } from "./_lib.js";
+import { redis, getJSON, setJSON, getAuth } from "./_lib.js";
 
 const validId = id => typeof id === "string" && /^[a-f0-9]{16}$/.test(id);
 
@@ -22,6 +22,17 @@ export default async function handler(req, res) {
       const chat = await getJSON(`chat:${email}:${id}`);
       if (!chat) return res.status(404).json({ error: "That chat doesn't exist anymore." });
       return res.status(200).json({ chat });
+    }
+    if (req.method === "PATCH") {
+      const title = String(req.body?.title || "").replace(/\s+/g, " ").trim().slice(0, 60);
+      if (!title) return res.status(400).json({ error: "Give the chat a name." });
+      const key = `chat:${email}:${id}`;
+      const chat = await getJSON(key);
+      if (!chat) return res.status(404).json({ error: "That chat doesn't exist anymore." });
+      chat.title = title;
+      await setJSON(key, chat);
+      await redis("HSET", `chatlist:${email}`, id, JSON.stringify({ id, title, updated: chat.updated || chat.created || Date.now() }));
+      return res.status(200).json({ ok: true, title });
     }
     if (req.method === "DELETE") {
       await redis("DEL", `chat:${email}:${id}`);
