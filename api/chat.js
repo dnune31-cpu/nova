@@ -108,6 +108,10 @@ function trollReply() {
   return `<div class="trollmsg">BOI YOU REALLY THOUGHT SIGMA 6767676767676767 SKIBIDI TUNG TUNG!!!<div class="trollemo">${e}</div></div>`;
 }
 
+// estimated API prices (US$ per million tokens), used for the admin panel's "Spent" column
+const PRICES = { haiku: [0.1, 0.5], sonnet: [2, 10], opus: [4, 20] };
+const today = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
+
 function historyText(m) {
   let t = m.content || "";
   const extras = [...(m.files || []), ...(m.links || [])];
@@ -136,6 +140,10 @@ export default async function handler(req, res) {
     const modelKey = req.body?.model;
     const allowed = admin ? ALL_MODELS : (user.models || ["haiku"]);
     if (!allowed.includes(modelKey)) return res.status(403).json({ error: "You don't have access to that model yet." });
+    const limit = Number(user.dailyLimit) || 0;
+    if (!admin && limit > 0 && user.day === today() && (user.dayMsgs || 0) >= limit) {
+      return res.status(429).json({ error: `You've used all ${limit} of today's messages. They reset at midnight` });
+    }
 
     const text = typeof req.body?.content === "string" ? req.body.content.slice(0, 8000) : "";
     const attachments = req.body?.attachments || [];
@@ -166,7 +174,9 @@ export default async function handler(req, res) {
       starRefs = findStarRefs(text, graph);
       if (starRefs.length) starText = await starContext(email, graph, starRefs);
     } catch (e) { console.error(e); }
-    const base = req.body?.mode === "tutor" ? TUTOR : SYSTEM;
+    const mine = typeof user.instructions === "string" ? user.instructions.trim() : "";
+    const base = (req.body?.mode === "tutor" ? TUTOR : SYSTEM) +
+      (mine ? `\n\nThe student's custom instructions (follow them unless they conflict with the rules above):\n${mine}` : "");
     const system = graph ? base + starText + conceptRule(knownLabels(graph)) : base;
 
     // stream the answer from Claude so the student sees it being written
@@ -180,7 +190,7 @@ export default async function handler(req, res) {
     };
     await checkStop();
 
-    let raw = "", stopReason = null;
+    let raw = "", stopReason = null, tokIn = 0, tokOut = 0;
     const send = o => { if (wantStream && !clientGone) res.write(JSON.stringify(o) + "\n"); };
     let shown = "";
     const emit = () => {
@@ -234,8 +244,9 @@ export default async function handler(req, res) {
               if (!line) continue;
               let ev;
               try { ev = JSON.parse(line.slice(5)); } catch { continue; }
-              if (ev.type === "content_block_delta" && ev.delta?.type === "text_delta") { raw += ev.delta.text; emit(); }
-              else if (ev.type === "message_delta" && ev.delta?.stop_reason) stopReason = ev.delta.stop_reason;
+              if (ev.type === "message_start") { const u = ev.message?.usage || {}; tokIn = (u.input_tokens || 0) + (u.cache_creation_input_tokens || 0) + (u.cache_read_input_tokens || 0); }
+              else if (ev.type === "content_block_delta" && ev.delta?.type === "text_delta") { raw += ev.delta.text; emit(); }
+              else if (ev.type === "message_delta") { if (ev.delta?.stop_reason) stopReason = ev.delta.stop_reason; if (ev.usage?.output_tokens) tokOut = ev.usage.output_tokens; }
               else if (ev.type === "error") throw new Error(ev.error?.message || "The AI stream failed");
             }
           }
@@ -283,6 +294,15 @@ export default async function handler(req, res) {
       fresh.lastActive = now;
       fresh.usage = fresh.usage || {};
       fresh.usage[modelKey] = (fresh.usage[modelKey] || 0) + 1;
+      // what this message cost, roughly (stopped answers still count what was written)
+      if (stopped && !tokOut && raw) tokOut = Math.ceil(raw.length / 4);
+      const p = PRICES[modelKey] || PRICES.sonnet;
+      const cost = (tokIn * p[0] + tokOut * p[1]) / 1e6;
+      fresh.cost = (fresh.cost || 0) + cost;
+      const d = today();
+      if (fresh.day !== d) { fresh.day = d; fresh.dayMsgs = 0; fresh.dayCost = 0; }
+      fresh.dayMsgs = (fresh.dayMsgs || 0) + 1;
+      fresh.dayCost = (fresh.dayCost || 0) + cost;
       await setJSON(`user:${email}`, fresh);
     }
 

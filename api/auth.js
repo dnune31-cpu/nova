@@ -70,6 +70,18 @@ export default async function handler(req, res) {
       return res.status(200).json({ user: publicUser(user, true) });
     }
 
+    if (action === "instructions") {
+      const me = await getAuth(req);
+      if (!me) return res.status(401).json({ error: "Please log in again." });
+      const user = await getJSON(`user:${me.user.email}`);
+      if (!user) return res.status(401).json({ error: "Please log in again." });
+      if (typeof req.body?.text === "string") {
+        user.instructions = req.body.text.replace(/\r/g, "").trim().slice(0, 1500);
+        await setJSON(`user:${me.user.email}`, user);
+      }
+      return res.status(200).json({ instructions: user.instructions || "" });
+    }
+
     if (action === "deleteAccount") {
       const me = await getAuth(req);
       if (!me) return res.status(401).json({ error: "Please log in again." });
