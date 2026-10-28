@@ -15,11 +15,18 @@ export default async function handler(req, res) {
         models: u.models || ["haiku"], blocked: !!u.blocked, troll: !!u.troll, cost: u.cost || 0, dailyLimit: u.dailyLimit || 0, todayMsgs: u.day === today() ? u.dayMsgs || 0 : 0, todayCost: u.day === today() ? u.dayCost || 0 : 0, messages: u.messages || 0, usage: u.usage || {}, admin: !!u.admin,
       })).sort((a, b) => (b.lastLogin || 0) - (a.lastLogin || 0));
       const log = ((await redis("LRANGE", "loginlog", 0, 99)) || []).map(x => JSON.parse(x));
-      return res.status(200).json({ users, log });
+      return res.status(200).json({ users, log, announce: await getJSON("announce") });
     }
 
     if (req.method === "POST") {
-      const email = normEmail(req.body?.email);
+      if (typeof req.body?.announce === "string") {
+      const text = req.body.announce.replace(/\s+/g, " ").trim().slice(0, 280);
+      if (!text) { await redis("DEL", "announce"); return res.status(200).json({ ok: true, announce: null }); }
+      const ann = { id: Date.now().toString(36), text, time: Date.now() };
+      await setJSON("announce", ann);
+      return res.status(200).json({ ok: true, announce: ann });
+    }
+    const email = normEmail(req.body?.email);
       
       const user = await getJSON(`user:${email}`);
       if (!user) return res.status(404).json({ error: "User not found." });

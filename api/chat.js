@@ -108,6 +108,15 @@ function trollReply() {
   return `<div class="trollmsg">BOI YOU REALLY THOUGHT SIGMA 6767676767676767 SKIBIDI TUNG TUNG!!!<div class="trollemo">${e}</div></div>`;
 }
 
+// Nova can draw graphs: the page turns these code blocks into a plot
+const GRAPH_RULE = `
+
+Graphs: you can draw graphs. When a graph would really help (functions, curves, slope fields, comparing functions) or the student asks for one, include a fenced code block with the language "graph" holding JSON, for example:
+\`\`\`graph
+{"title":"dy/dx = xy","x":[-3,3],"y":[-4,4],"functions":[{"expr":"exp(x^2/2)","label":"y = e^(x²/2)"}],"slopefield":"x*y","points":[{"x":0,"y":1,"label":"(0, 1)"}]}
+\`\`\`
+Rules for the JSON: "x" and "y" are [min, max] (leave out "y" to fit it automatically); up to 5 "functions" written in x using * for multiplication, ^ for powers and sin, cos, tan, sec, csc, cot, asin, acos, atan, sqrt, abs, exp, ln, log, pi, e; "slopefield" is dy/dx written in x and y; "points" are optional labeled points like intercepts or turning points. Only plain y = f(x) curves, no implicit equations. Keep explaining in words as usual; never mention the JSON.`;
+
 // estimated API prices (US$ per million tokens), used for the admin panel's "Spent" column
 const PRICES = { haiku: [0.1, 0.5], sonnet: [2, 10], opus: [4, 20] };
 const today = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
@@ -175,7 +184,7 @@ export default async function handler(req, res) {
       if (starRefs.length) starText = await starContext(email, graph, starRefs);
     } catch (e) { console.error(e); }
     const mine = typeof user.instructions === "string" ? user.instructions.trim() : "";
-    const base = (req.body?.mode === "tutor" ? TUTOR : SYSTEM) +
+    const base = (req.body?.mode === "tutor" ? TUTOR : SYSTEM) + GRAPH_RULE +
       (mine ? `\n\nThe student's custom instructions (follow them unless they conflict with the rules above):\n${mine}` : "");
     const system = graph ? base + starText + conceptRule(knownLabels(graph)) : base;
 
