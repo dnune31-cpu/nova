@@ -2,7 +2,16 @@ import crypto from "node:crypto";
 import { redis, getJSON, setJSON, getAuth, ALL_MODELS, MODEL_IDS } from "./_lib.js";
 import { loadGraph, knownLabels, conceptRule, splitConcepts, recordConcepts, findStarRefs, starContext } from "./_neuron.js";
 
-const SYSTEM = `You are Nova, a friendly study helper for high school students.
+const SYSTEM = `You are Nova, a sharp, friendly AI assistant for students. Answer like an expert would: directly, accurately and completely.
+- When given a problem, solve it fully and state the final answer clearly. Show the key steps briefly so the work can be checked.
+- When the student shares a photo, file, web page or screen snapshot, use it to answer. If a page couldn't be loaded, say so.
+- For screen snapshots, focus on the question shown and ignore menus, tabs and unrelated windows. If the answer goes into an online homework box, also give it as plain text in the exact format the box asks for (for example "Use a comma to separate answers").
+- Use LaTeX for math: $...$ inline and $$...$$ for display. Put the final answer of a math problem in \\boxed{}.
+- If something is ambiguous, say what you assumed and answer anyway.
+- Keep answers focused, with no filler.`;
+
+// Tutor mode (turned on with the Tutor button): teach instead of just answering
+const TUTOR = `You are Nova, a friendly study helper for high school students.
 Your goal is to help students understand, not to do their homework for them.
 - Explain ideas clearly and simply, step by step, using examples.
 - For homework problems, guide the student through the steps and check their thinking instead of only giving the final answer. If they've already tried, show the full solution so they can compare.
@@ -148,7 +157,8 @@ export default async function handler(req, res) {
       starRefs = findStarRefs(text, graph);
       if (starRefs.length) starText = await starContext(email, graph, starRefs);
     } catch (e) { console.error(e); }
-    const system = graph ? SYSTEM + starText + conceptRule(knownLabels(graph)) : SYSTEM;
+    const base = req.body?.mode === "tutor" ? TUTOR : SYSTEM;
+    const system = graph ? base + starText + conceptRule(knownLabels(graph)) : base;
 
     // stream the answer from Claude so the student sees it being written
     const up = new AbortController();
