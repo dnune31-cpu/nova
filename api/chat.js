@@ -61,7 +61,7 @@ async function buildNewContent(text, attachments, links) {
   const blocks = [];
   for (const a of (Array.isArray(attachments) ? attachments : []).slice(0, 6)) {
     if (a.type === "image" && IMAGE_TYPES.includes(a.media_type) && typeof a.data === "string") {
-      if (a.screen === true) blocks.push({ type: "text", text: "Snapshot of my screen right now:" });
+      if (a.screen) blocks.push({ type: "text", text: "Snapshot of my screen right now" + (["left half", "right half", "top half", "bottom half"].includes(a.screen) ? ` (${a.screen}, the two halves overlap a little)` : "") + ":" });
       blocks.push({ type: "image", source: { type: "base64", media_type: a.media_type, data: a.data } });
     } else if (a.type === "pdf" && typeof a.data === "string") {
       blocks.push({ type: "document", source: { type: "base64", media_type: "application/pdf", data: a.data } });
