@@ -100,6 +100,14 @@ function visibleText(raw) {
   return s.replace(/<concepts>[^\n]*?(<\/concepts>|\n|$)/gi, "");
 }
 
+// troll mode (an admin can switch it on for someone): every answer is this, no AI call
+function trollReply() {
+  const E = ["👀", "😂", "🤣", "💀", "😭", "🗿", "🔥", "🤡", "😹", "🫵", "😆", "👁️"];
+  let e = "";
+  for (let i = 0; i < 12; i++) e += E[Math.floor(Math.random() * E.length)];
+  return `<div class="trollmsg">BOI YOU REALLY THOUGHT SIGMA 6767676767676767 SKIBIDI TUNG TUNG!!!<div class="trollemo">${e}</div></div>`;
+}
+
 function historyText(m) {
   let t = m.content || "";
   const extras = [...(m.files || []), ...(m.links || [])];
@@ -122,6 +130,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
     const wantStream = req.body?.stream === true;
+    const troll = !!user.troll && !admin;
     const rid = typeof req.body?.rid === "string" && /^[a-z0-9]{8,32}$/.test(req.body.rid) ? req.body.rid : null;
 
     const modelKey = req.body?.model;
@@ -152,7 +161,7 @@ export default async function handler(req, res) {
     // Constellation: tell Nova which concepts this student already has so it reuses the same names,
     // and if they mention "the ___ star", give Nova everything saved under that star
     let graph = null, starRefs = [], starText = "";
-    try {
+    if (!troll) try {
       graph = await loadGraph(email);
       starRefs = findStarRefs(text, graph);
       if (starRefs.length) starText = await starContext(email, graph, starRefs);
@@ -183,7 +192,7 @@ export default async function handler(req, res) {
       shown = v;
     };
 
-    if (!stopped) {
+    if (!stopped && !troll) {
       let r;
       try {
         r = await fetch("https://api.anthropic.com/v1/messages", {
@@ -241,6 +250,7 @@ export default async function handler(req, res) {
       send({ t: "start", chatId, title: chat.title, stars: [] });
     }
     if (stopKey) redis("DEL", stopKey).catch(() => {});
+    if (troll && !stopped) { raw = trollReply(); if (wantStream) send({ t: "d", d: raw }); }
 
     let { reply, items } = splitConcepts(raw);
     if (stopped) {
