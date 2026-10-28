@@ -533,8 +533,8 @@ form#f{width:calc(100% - 20px)}
 /* galaxy lens (screen sharing) */
 @property --lensA{syntax:"<angle>";inherits:false;initial-value:0deg}
 #chatView{position:relative}
-#lens{position:absolute;right:24px;bottom:calc(var(--lensB,150px) + 30px);width:118px;height:118px;border-radius:50%;z-index:15;cursor:zoom-in;outline:none;transition:width .45s cubic-bezier(.22,1,.36,1),height .45s cubic-bezier(.22,1,.36,1),border-radius .45s cubic-bezier(.22,1,.36,1);animation:lensIn .6s cubic-bezier(.34,1.56,.64,1)}
-#lens.big{width:min(400px,calc(100% - 48px));height:min(250px,45vh);border-radius:22px;cursor:zoom-out}
+#lens{position:absolute;right:24px;bottom:calc(var(--lensB,150px) + 30px);width:140px;height:140px;border-radius:50%;z-index:15;cursor:zoom-in;outline:none;transition:width .45s cubic-bezier(.22,1,.36,1),height .45s cubic-bezier(.22,1,.36,1),border-radius .45s cubic-bezier(.22,1,.36,1);animation:lensIn .6s cubic-bezier(.34,1.56,.64,1)}
+#lens.big{width:min(440px,calc(100% - 48px));height:min(275px,48vh);border-radius:22px;cursor:zoom-out}
 #lens:focus-visible{box-shadow:0 0 0 2px var(--gold)}
 #lens .lring{position:absolute;inset:0;border-radius:inherit;background:conic-gradient(from var(--lensA),#ffcf8a,#8fb3ff 30%,rgba(143,179,255,0) 55%,rgba(255,207,138,0) 75%,#ffcf8a);animation:lensSpin 6s linear infinite;box-shadow:0 0 28px rgba(255,207,138,.28),0 10px 30px rgba(0,0,0,.45)}
 #lens video{position:absolute;inset:5px;width:calc(100% - 10px);height:calc(100% - 10px);border-radius:inherit;object-fit:cover;background:#0b0d1f;border:3px solid var(--c-bg,#1f1f1e);box-sizing:border-box}
@@ -564,7 +564,11 @@ form#f{width:calc(100% - 20px)}
 @keyframes lensFlash{0%{opacity:.9}100%{opacity:0}}
 @keyframes lensPulse{40%{box-shadow:0 0 50px rgba(255,220,160,.7),0 10px 30px rgba(0,0,0,.45)}}
 @keyframes lensTwinkle{50%{opacity:.2;transform:scale(.5)}}
-@media (max-width:760px){#lens{width:92px;height:92px;right:14px}}
+@media (max-width:760px){#lens{width:108px;height:108px;right:14px}}
+.lsug{display:flex;align-items:center;gap:8px;margin:0 0 10px;background:rgba(255,207,138,.08);border:1px solid rgba(255,207,138,.35);color:var(--c-text,#ecebe7);border-radius:12px;font:500 14px "Inter",system-ui,sans-serif;padding:7px 12px 7px 10px;cursor:pointer;animation:pop .3s cubic-bezier(.22,1,.36,1)}
+.lsug:hover{background:rgba(255,207,138,.15);border-color:rgba(255,207,138,.6)}
+.lsug .lsg-star{color:var(--gold);font-size:13px;text-shadow:0 0 8px rgba(255,207,138,.7)}
+.lsug .lsg-k{font-size:11px;color:#1a1405;background:var(--gold);border-radius:999px;padding:1px 7px;font-weight:600}
 </style>
 </head>
 <body>
@@ -2276,6 +2280,7 @@ document.addEventListener("keydown", e => {
     lens.hidden = true; lens.classList.remove("big", "still");
     tb.setAttribute("aria-pressed", "false"); tb.title = "Watch my screen";
     if ("ph" in q.dataset) q.placeholder = q.dataset.ph;
+    typing = null; syncSug();
   }
   async function start() {
     if (!can) { showError("Screen sharing works in Safari or Chrome on a Mac or PC, not on phones or iPads."); return; }
@@ -2299,7 +2304,7 @@ document.addEventListener("keydown", e => {
     tb.setAttribute("aria-pressed", "true"); tb.title = "Stop watching my screen";
     if (!("ph" in q.dataset)) q.dataset.ph = q.placeholder;
     q.placeholder = "Ask about your screen…";
-    q.focus();
+    q.focus(); syncSug();
   }
   tb.onclick = () => { if (stream) stop(); else start(); };
   lens.querySelector(".lx").onclick = e => { e.stopPropagation(); stop(); };
@@ -2309,6 +2314,31 @@ document.addEventListener("keydown", e => {
     if (!q.value.trim()) q.value = "Look at my screen and help me with what's there.";
     form.requestSubmit();
   };
+  // suggested prompt above the message box while sharing: click it and it types itself in
+  const SUG = "Answer the question on screen";
+  const sug = document.createElement("button");
+  sug.type = "button"; sug.className = "lsug"; sug.hidden = true;
+  sug.innerHTML = '<span class="lsg-star" aria-hidden="true">✦</span><span class="lsg-t"></span><span class="lsg-k">Suggested</span>';
+  sug.querySelector(".lsg-t").textContent = SUG;
+  $("tray").before(sug);
+  let typing = null;
+  function syncSug() { sug.hidden = !stream || !!typing || !!q.value.trim(); }
+  sug.onclick = () => {
+    if (typing || busy) return;
+    const run = typing = {};
+    sug.hidden = true; q.value = ""; q.focus();
+    let i = 0;
+    (function tick() {
+      if (typing !== run) return;
+      q.value = SUG.slice(0, ++i); grow();
+      if (i < SUG.length) setTimeout(tick, 22 + Math.random() * 28);
+      else { typing = null; q.dispatchEvent(new Event("input", {bubbles: true})); q.setSelectionRange(q.value.length, q.value.length); }
+    })();
+  };
+  q.addEventListener("keydown", () => { if (typing) typing = null; });
+  q.addEventListener("input", syncSug);
+  form.addEventListener("submit", () => setTimeout(syncSug, 0));
+
   const toggleBig = () => { lens.classList.toggle("big"); };
   lens.addEventListener("click", toggleBig);
   lens.addEventListener("keydown", e => { if (e.target === lens && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); toggleBig(); } });
