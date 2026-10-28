@@ -569,6 +569,12 @@ form#f{width:calc(100% - 20px)}
 .lsug:hover{background:rgba(255,207,138,.15);border-color:rgba(255,207,138,.6)}
 .lsug .lsg-star{color:var(--gold);font-size:13px;text-shadow:0 0 8px rgba(255,207,138,.7)}
 .lsug .lsg-k{font-size:11px;color:#1a1405;background:var(--gold);border-radius:999px;padding:1px 7px;font-weight:600}
+
+/* tutor mode toggle */
+#f .tool.tutorbtn{width:auto;display:flex;align-items:center;gap:6px;padding:0 10px 0 8px;font:500 13px "Inter",system-ui,sans-serif}
+#f .tool.tutorbtn span{display:none}
+#f .tool.tutorbtn[aria-pressed=true]{color:#9be3b8!important;background:rgba(155,227,184,.12)!important}
+#f .tool.tutorbtn[aria-pressed=true] span{display:inline}
 </style>
 </head>
 <body>
@@ -1095,7 +1101,7 @@ if (!text && !pending.attachments.length && !pending.links.length) { showError("
 const model = $("model").value;
 const rid = Array.from(crypto.getRandomValues(new Uint8Array(8)), b => b.toString(16).padStart(2, "0")).join("");
 const body = JSON.stringify({
-chatId, model, content: text, stream: true, rid,
+chatId, model, content: text, stream: true, rid, mode: tutorOn() ? "tutor" : "answer",
 attachments: pending.attachments.map(({preview, ...rest}) => rest), links: pending.links,
 });
 if (body.length > 4_000_000) { showError("That's too much to send at once. Remove a photo or file and try again."); return; }
@@ -2371,6 +2377,23 @@ document.addEventListener("keydown", e => {
     pending.attachments.push(...parts);
     lens.classList.remove("flash"); void lens.offsetWidth; lens.classList.add("flash");
   }, true);
+})();
+
+/* ---------- tutor mode toggle (default is straight question and answer) ---------- */
+function tutorOn() { const b = document.getElementById("bTutor"); return !!b && b.getAttribute("aria-pressed") === "true"; }
+(() => {
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "tool tutorbtn"; b.id = "bTutor";
+  b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c3 2.5 9 2.5 12 0v-5"/><path d="M22 9v6"/></svg><span>Tutor</span>';
+  const set = on => {
+    b.setAttribute("aria-pressed", String(on));
+    b.title = on ? "Tutor mode is on: Nova teaches step by step. Click to get straight answers." : "Turn on tutor mode: Nova teaches step by step instead of just answering";
+    try { localStorage.setItem("nova-tutor", on ? "1" : "0"); } catch {}
+  };
+  let saved = false; try { saved = localStorage.getItem("nova-tutor") === "1"; } catch {}
+  set(saved);
+  b.onclick = () => set(!tutorOn());
+  ($("bLens") || $("bLink")).after(b);
 })();
 </script>
 </body>
