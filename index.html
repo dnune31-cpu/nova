@@ -533,12 +533,19 @@ form#f{width:calc(100% - 20px)}
 /* galaxy lens (screen sharing) */
 @property --lensA{syntax:"<angle>";inherits:false;initial-value:0deg}
 #chatView{position:relative}
-#lens{position:absolute;right:24px;bottom:var(--lensB,150px);width:118px;height:118px;border-radius:50%;z-index:15;cursor:zoom-in;outline:none;transition:width .45s cubic-bezier(.22,1,.36,1),height .45s cubic-bezier(.22,1,.36,1),border-radius .45s cubic-bezier(.22,1,.36,1);animation:lensIn .6s cubic-bezier(.34,1.56,.64,1)}
+#lens{position:absolute;right:24px;bottom:calc(var(--lensB,150px) + 30px);width:118px;height:118px;border-radius:50%;z-index:15;cursor:zoom-in;outline:none;transition:width .45s cubic-bezier(.22,1,.36,1),height .45s cubic-bezier(.22,1,.36,1),border-radius .45s cubic-bezier(.22,1,.36,1);animation:lensIn .6s cubic-bezier(.34,1.56,.64,1)}
 #lens.big{width:min(400px,calc(100% - 48px));height:min(250px,45vh);border-radius:22px;cursor:zoom-out}
 #lens:focus-visible{box-shadow:0 0 0 2px var(--gold)}
 #lens .lring{position:absolute;inset:0;border-radius:inherit;background:conic-gradient(from var(--lensA),#ffcf8a,#8fb3ff 30%,rgba(143,179,255,0) 55%,rgba(255,207,138,0) 75%,#ffcf8a);animation:lensSpin 6s linear infinite;box-shadow:0 0 28px rgba(255,207,138,.28),0 10px 30px rgba(0,0,0,.45)}
 #lens video{position:absolute;inset:5px;width:calc(100% - 10px);height:calc(100% - 10px);border-radius:inherit;object-fit:cover;background:#0b0d1f;border:3px solid var(--c-bg,#1f1f1e);box-sizing:border-box}
 #lens.big video{object-fit:contain;border-radius:17px}
+#lens .lstill{position:absolute;inset:5px;width:calc(100% - 10px);height:calc(100% - 10px);border-radius:inherit;object-fit:cover;border:3px solid var(--c-bg,#1f1f1e);box-sizing:border-box;display:none;background:#0b0d1f}
+#lens.still .lstill{display:block}
+#lens.big .lstill{object-fit:contain;border-radius:17px}
+#lens.still .ltag i{background:#ffcf8a;box-shadow:0 0 0 3px rgba(255,207,138,.2);animation:none}
+#lens .llook{position:absolute;left:50%;bottom:-40px;transform:translateX(-50%);background:var(--gold);color:#1a1405;border:0;border-radius:999px;font:600 12px "Inter",system-ui,sans-serif;padding:5px 12px;white-space:nowrap;cursor:pointer;box-shadow:0 4px 14px rgba(255,207,138,.25)}
+#lens .llook:hover{background:#ffdca6}
+#lens .llook:active{transform:translateX(-50%) scale(.95)}
 #lens .lflash{position:absolute;inset:5px;border-radius:inherit;background:radial-gradient(circle,rgba(255,246,228,.95),rgba(255,207,138,.4) 60%,rgba(255,207,138,0));opacity:0;pointer-events:none}
 #lens.flash .lflash{animation:lensFlash .7s ease-out}
 #lens.flash .lring{animation:lensSpin 6s linear infinite,lensPulse .7s ease-out}
@@ -2186,6 +2193,7 @@ document.addEventListener("keydown", e => {
 (() => {
   const can = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
   const view = $("chatView");
+  const MAXS = 1568; // longest side Claude reads at full detail
   const tb = document.createElement("button");
   tb.type = "button"; tb.className = "tool"; tb.id = "bLens";
   tb.title = can ? "Watch my screen" : "Screen sharing works in Safari or Chrome on a computer";
@@ -2197,13 +2205,14 @@ document.addEventListener("keydown", e => {
   lens.id = "lens"; lens.hidden = true;
   lens.setAttribute("role", "button"); lens.tabIndex = 0;
   lens.setAttribute("aria-label", "Your shared screen. Press to make it bigger or smaller.");
-  lens.title = "Nova takes a snapshot of this each time you send";
-  lens.innerHTML = '<div class="lring"></div><video muted playsinline autoplay></video><div class="lflash"></div>' +
+  lens.innerHTML = '<div class="lring"></div><video muted playsinline autoplay></video><canvas class="lstill" aria-hidden="true"></canvas><div class="lflash"></div>' +
     '<button type="button" class="lx" aria-label="Stop sharing" title="Stop sharing">✕</button>' +
-    '<span class="ltag"><i></i>Watching</span><b class="ls s1"></b><b class="ls s2"></b><b class="ls s3"></b>';
+    '<span class="ltag"><i></i><span class="ltxt">Live</span></span>' +
+    '<button type="button" class="llook" title="Nova reads your screen and helps with what\'s there">Look now</button>' +
+    '<b class="ls s1"></b><b class="ls s2"></b><b class="ls s3"></b>';
   view.appendChild(lens);
-  const video = lens.querySelector("video");
-  let stream = null;
+  const video = lens.querySelector("video"), still = lens.querySelector(".lstill"), ltxt = lens.querySelector(".ltxt");
+  let stream = null, last = null, returnedAt = 0, grabT = null, ageT = null;
 
   // keep the lens floating just above the message box
   const place = () => {
@@ -2213,10 +2222,58 @@ document.addEventListener("keydown", e => {
   if (window.ResizeObserver) new ResizeObserver(place).observe(form);
   addEventListener("resize", place);
 
+  // the current frame of the shared screen, at full size (capped so it stays light)
+  function frame() {
+    const w = video.videoWidth, h = video.videoHeight;
+    if (!w || !h) return null;
+    const k = Math.min(1, 3200 / Math.max(w, h));
+    const c = document.createElement("canvas");
+    c.width = Math.round(w * k); c.height = Math.round(h * k);
+    c.getContext("2d").drawImage(video, 0, 0, c.width, c.height);
+    return c;
+  }
+
+  // "last look": when Nova shares the same window it lives in, the shared picture shows Nova itself
+  // whenever you're on the Nova tab. So while you're on another tab, keep grabbing what the screen
+  // shows, and when you come back to type, use that picture instead.
+  function grabLast() {
+    if (!stream || !document.hidden) return;
+    if (video.paused) video.play().catch(() => {});
+    const c = frame();
+    if (c) last = {c, at: Date.now()};
+  }
+  const useLast = () => !!(last && returnedAt && last.at <= returnedAt && Date.now() - returnedAt < 15 * 60e3);
+  function ago(t) { const s = Math.round((Date.now() - t) / 1000); return s < 60 ? s + "s ago" : Math.round(s / 60) + " min ago"; }
+  function showMode() {
+    const on = useLast();
+    lens.classList.toggle("still", on);
+    if (on) {
+      if (still.width !== last.c.width || still.height !== last.c.height) { still.width = last.c.width; still.height = last.c.height; }
+      still.getContext("2d").drawImage(last.c, 0, 0);
+      ltxt.textContent = "Last look · " + ago(last.at);
+      lens.title = "Nova will use this picture of your other tab when you send";
+    } else {
+      ltxt.textContent = "Live";
+      lens.title = "Nova takes a snapshot of this each time you send";
+    }
+  }
+  document.addEventListener("visibilitychange", () => {
+    if (!stream) return;
+    clearInterval(grabT); grabT = null;
+    if (document.hidden) {
+      setTimeout(grabLast, 600);
+      grabT = setInterval(grabLast, 1500);
+    } else {
+      returnedAt = Date.now();
+      showMode();
+    }
+  });
+
   function stop() {
     if (stream) stream.getTracks().forEach(t => t.stop());
-    stream = null; video.srcObject = null;
-    lens.hidden = true; lens.classList.remove("big");
+    stream = null; video.srcObject = null; last = null; returnedAt = 0;
+    clearInterval(grabT); clearInterval(ageT); grabT = ageT = null;
+    lens.hidden = true; lens.classList.remove("big", "still");
     tb.setAttribute("aria-pressed", "false"); tb.title = "Watch my screen";
     if ("ph" in q.dataset) q.placeholder = q.dataset.ph;
   }
@@ -2236,7 +2293,9 @@ document.addEventListener("keydown", e => {
     track.addEventListener("ended", stop);
     video.srcObject = stream;
     video.play().catch(() => {});
-    lens.hidden = false; place();
+    last = null; returnedAt = 0;
+    lens.hidden = false; place(); showMode();
+    ageT = setInterval(() => { if (useLast()) ltxt.textContent = "Last look · " + ago(last.at); }, 5000);
     tb.setAttribute("aria-pressed", "true"); tb.title = "Stop watching my screen";
     if (!("ph" in q.dataset)) q.dataset.ph = q.placeholder;
     q.placeholder = "Ask about your screen…";
@@ -2244,27 +2303,42 @@ document.addEventListener("keydown", e => {
   }
   tb.onclick = () => { if (stream) stop(); else start(); };
   lens.querySelector(".lx").onclick = e => { e.stopPropagation(); stop(); };
-  const grow2 = () => { lens.classList.toggle("big"); };
-  lens.addEventListener("click", grow2);
-  lens.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); grow2(); } });
+  lens.querySelector(".llook").onclick = e => {
+    e.stopPropagation();
+    if (busy) return;
+    if (!q.value.trim()) q.value = "Look at my screen and help me with what's there.";
+    form.requestSubmit();
+  };
+  const toggleBig = () => { lens.classList.toggle("big"); };
+  lens.addEventListener("click", toggleBig);
+  lens.addEventListener("keydown", e => { if (e.target === lens && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); toggleBig(); } });
 
-  // one snapshot of the shared screen rides along with each message
-  function snap() {
-    const w = video.videoWidth, h = video.videoHeight;
-    if (!w || !h) return null;
-    const k = Math.min(1, 1568 / Math.max(w, h));
+  // turn a picture into one image, or two sharper halves when the screen is big
+  function toJpeg(src, sx, sy, sw, sh) {
+    const k = Math.min(1, MAXS / Math.max(sw, sh));
     const c = document.createElement("canvas");
-    c.width = Math.round(w * k); c.height = Math.round(h * k);
-    c.getContext("2d").drawImage(video, 0, 0, c.width, c.height);
-    const url = c.toDataURL("image/jpeg", 0.85);
-    return {type: "image", media_type: "image/jpeg", data: url.split(",")[1], preview: url, name: "Screen snapshot", screen: true};
+    c.width = Math.round(sw * k); c.height = Math.round(sh * k);
+    c.getContext("2d").drawImage(src, sx, sy, sw, sh, 0, 0, c.width, c.height);
+    return c.toDataURL("image/jpeg", 0.85);
+  }
+  function pieces(c) {
+    const w = c.width, h = c.height, att = (url, part) => ({type: "image", media_type: "image/jpeg", data: url.split(",")[1], preview: url, name: "Screen snapshot", screen: part});
+    if (Math.max(w, h) <= MAXS * 1.15) return [att(toJpeg(c, 0, 0, w, h), true)];
+    const o = 0.04; // a little overlap so nothing on the seam gets cut in half
+    if (w >= h) {
+      const hw = Math.round(w * (0.5 + o));
+      return [att(toJpeg(c, 0, 0, hw, h), "left half"), att(toJpeg(c, w - hw, 0, hw, h), "right half")];
+    }
+    const hh = Math.round(h * (0.5 + o));
+    return [att(toJpeg(c, 0, 0, w, hh), "top half"), att(toJpeg(c, 0, h - hh, w, hh), "bottom half")];
   }
   document.addEventListener("submit", e => {
     if (e.target !== form || busy || !stream) return;
-    if (pending.attachments.length >= MAX_ATTACH) return;
-    const s = snap();
-    if (!s) return;
-    pending.attachments.push(s);
+    const src = useLast() ? last.c : frame();
+    if (!src) return;
+    const parts = pieces(src);
+    if (pending.attachments.length + parts.length > MAX_ATTACH) return;
+    pending.attachments.push(...parts);
     lens.classList.remove("flash"); void lens.offsetWidth; lens.classList.add("flash");
   }, true);
 })();
