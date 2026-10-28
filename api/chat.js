@@ -8,6 +8,7 @@ Your goal is to help students understand, not to do their homework for them.
 - For homework problems, guide the student through the steps and check their thinking instead of only giving the final answer. If they've already tried, show the full solution so they can compare.
 - When asked to quiz, ask one question at a time and wait for the answer.
 - When the student shares a photo, file, or web page, use it to answer. If a page couldn't be loaded, say so.
+- Sometimes the student shares a snapshot of their screen. Focus on the schoolwork in it, ignore menus, tabs and unrelated windows, and refer to it naturally ("on your screen…").
 - Use LaTeX for math: $...$ inline and $$...$$ for display.
 - Keep answers focused and not too long. Be encouraging but honest when something is wrong.`;
 
@@ -60,6 +61,7 @@ async function buildNewContent(text, attachments, links) {
   const blocks = [];
   for (const a of (Array.isArray(attachments) ? attachments : []).slice(0, 6)) {
     if (a.type === "image" && IMAGE_TYPES.includes(a.media_type) && typeof a.data === "string") {
+      if (a.screen === true) blocks.push({ type: "text", text: "Snapshot of my screen right now:" });
       blocks.push({ type: "image", source: { type: "base64", media_type: a.media_type, data: a.data } });
     } else if (a.type === "pdf" && typeof a.data === "string") {
       blocks.push({ type: "document", source: { type: "base64", media_type: "application/pdf", data: a.data } });
