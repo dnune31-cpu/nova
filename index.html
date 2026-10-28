@@ -593,6 +593,35 @@ form#f{width:calc(100% - 20px)}
 .spent{color:var(--gold);font-weight:600}
 .liminput{width:76px;background:#2a2a28;border:1px solid #3a3a37;border-radius:8px;color:#ecebe7;font:inherit;font-size:13px;padding:5px 8px;outline:0}
 .liminput:focus{border-color:#55534e}
+
+/* graphs (starfield) */
+.ai .body .ngraph{margin:12px 0 14px;font-family:"Inter",system-ui,sans-serif}
+.ngraph .ngt{font-size:13.5px;font-weight:600;color:#ffcf8a;margin:0 0 6px}
+.ngraph .ngc{display:block;width:100%;height:300px;border-radius:14px;border:1px solid #2c2c2a;background:#0b0d1f}
+.ngraph.big .ngc{height:min(560px,70vh)}
+.ngraph .ngcap{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}
+.ngchip{display:inline-flex;align-items:center;gap:6px;border:1px solid #3a3a37;border-radius:999px;padding:2px 9px;font-size:12px;color:#c9c7c1}
+.ngchip i{width:8px;height:8px;border-radius:50%;display:inline-block;box-shadow:0 0 6px currentColor}
+.ngbig{margin-left:auto;background:none;border:1px solid #3a3a37;border-radius:8px;color:#ecebe7;font:inherit;font-size:12px;padding:3px 10px;cursor:pointer}
+.ngbig:hover{background:#272725}
+.ngwait{margin:12px 0;padding:14px;border:1px dashed #3a3a37;border-radius:14px;color:#a19f99;font:13px "Inter",system-ui,sans-serif;background:#0b0d1f}
+
+/* announcement banner (shooting star) */
+#annc{position:absolute;left:50%;top:64px;transform:translateX(-50%);z-index:14;max-width:min(620px,calc(100% - 32px));pointer-events:none}
+#annc .anpill{pointer-events:auto;display:flex;align-items:center;gap:8px;background:#232321;border:1px solid rgba(255,207,138,.45);border-radius:999px;padding:6px 7px 6px 13px;font:500 13.5px "Inter",system-ui,sans-serif;color:#ecebe7;box-shadow:0 0 22px rgba(255,207,138,.22),0 8px 24px rgba(0,0,0,.35)}
+#annc .anstar{color:#ffcf8a;text-shadow:0 0 8px rgba(255,207,138,.8)}
+#annc .antext{line-height:1.35}
+#annc .anx{flex:none;width:22px;height:22px;border-radius:50%;border:0;background:none;color:#a19f99;cursor:pointer;font-size:11px;padding:0}
+#annc .anx:hover{background:#30302d;color:#ecebe7}
+#annc .antrail{position:absolute;right:100%;top:50%;width:180px;height:2px;margin-top:-1px;background:linear-gradient(90deg,transparent,rgba(255,207,138,.95));border-radius:2px;opacity:0}
+#annc .antrail::after{content:"";position:absolute;right:-4px;top:-3px;width:8px;height:8px;border-radius:50%;background:#fff3dc;box-shadow:0 0 12px #ffcf8a}
+#annc.fly .antrail{animation:anTrail 1.1s cubic-bezier(.22,1,.36,1) forwards}
+#annc.fly .anpill{animation:anLand .5s cubic-bezier(.34,1.56,.64,1) .55s both}
+@keyframes anTrail{0%{opacity:0;transform:translateX(-55vw)}15%{opacity:1}55%{opacity:1;transform:translateX(12px)}100%{opacity:0;transform:translateX(12px)}}
+@keyframes anLand{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
+.annbox{display:flex;gap:8px;align-items:center;margin-bottom:22px;flex-wrap:wrap}
+#annIn{flex:1;min-width:220px;background:#2a2a28;border:1px solid #3a3a37;border-radius:10px;color:#ecebe7;font:inherit;font-size:14px;padding:9px 12px;outline:0}
+#annIn:focus{border-color:#55534e}
 </style>
 </head>
 <body>
@@ -1255,7 +1284,7 @@ async function loadAdmin() {
   catch (err) { if (!handleAuthError(err)) box.innerHTML = `<p class="adminerr">${esc(err.message)}</p>`; }
 }
 
-function renderAdmin({users, log: events}) {
+function renderAdmin({users, log: events, announce}) {
   const total = users.reduce((s, u) => s + (u.messages || 0), 0);
   const activeWeek = users.filter(u => u.lastActive && Date.now() - u.lastActive < 7 * 86400000).length;
   const box = $("adminBody");
@@ -1266,7 +1295,9 @@ function renderAdmin({users, log: events}) {
       <div class="stat"><b>${total}</b><span>Messages sent</span></div>
 <div class="stat"><b>$${users.reduce((t, x) => t + (x.cost || 0), 0).toFixed(2)}</b><span>Spent (estimated)</span></div>
     </div>
-    <h3 class="sect">People</h3>
+    <h3 class="sect">Announcement</h3>
+<div class="annbox"><input id="annIn" maxlength="280" placeholder="Write a message everyone sees when they open Nova" aria-label="Announcement"><button type="button" class="sprim" id="annPost">Post</button><button type="button" class="ghost" id="annClear">Clear</button><span class="saved" id="annMsg"></span></div>
+<h3 class="sect">People</h3>
     <div class="twrap"><table>
       <thead><tr><th>Person</th><th>Joined</th><th>Last login</th><th>Messages</th><th title="Estimated from Oct 28, 2026 on">Spent</th><th>Daily limit</th><th>Models allowed</th><th>Access</th></tr></thead>
       <tbody id="uRows"></tbody>
@@ -1275,6 +1306,20 @@ function renderAdmin({users, log: events}) {
     <div class="loglist" id="logRows"></div>`;
 
   const rows = $("uRows");
+const ai = $("annIn"), am = $("annMsg");
+if (announce) { ai.value = announce.text; am.textContent = "Live now"; }
+const postAnn = async text => {
+am.textContent = "Saving…";
+try {
+const d = await api("/api/admin", {method: "POST", body: JSON.stringify({announce: text})});
+am.textContent = d.announce ? "Live now" : "Cleared"; if (!d.announce) ai.value = "";
+try { localStorage.removeItem("nova-ann-seen"); } catch {}
+if (window.novaAnnounce) novaAnnounce.show(d.announce);
+} catch (err) { am.textContent = err.message; }
+};
+$("annPost").onclick = () => { if (ai.value.trim()) postAnn(ai.value); };
+ai.addEventListener("keydown", e => { if (e.key === "Enter" && ai.value.trim()) postAnn(ai.value); });
+$("annClear").onclick = () => postAnn("");
   for (const u of users) {
     const tr = document.createElement("tr");
     const usage = u.usage || {};
@@ -2462,6 +2507,217 @@ function tutorOn() { const b = document.getElementById("bTutor"); return !!b && 
     finally { save.disabled = false; }
   };
   new MutationObserver(() => { if (!modal.hidden) load(); }).observe(modal, {attributes: true, attributeFilter: ["hidden"]});
+})();
+
+/* ---------- graphs: ```graph blocks drawn as a starfield plot ---------- */
+const novaGraphs = {store: new Map(), n: 0};
+(() => {
+  // a small, safe math parser: numbers, x, y, pi, e, + - * / ^, functions, implicit multiplication
+  const FN = {sin: Math.sin, cos: Math.cos, tan: Math.tan, asin: Math.asin, acos: Math.acos, atan: Math.atan,
+    sec: v => 1 / Math.cos(v), csc: v => 1 / Math.sin(v), cot: v => 1 / Math.tan(v),
+    sinh: Math.sinh, cosh: Math.cosh, tanh: Math.tanh, sqrt: Math.sqrt, abs: Math.abs, exp: Math.exp,
+    ln: Math.log, log: Math.log10, floor: Math.floor, ceil: Math.ceil, round: Math.round, sign: Math.sign};
+  function compile(src) {
+    const s = String(src).toLowerCase().replace(/\*\*/g, "^").replace(/π/g, "pi").replace(/−/g, "-").replace(/·|×/g, "*").replace(/\s+/g, "");
+    const toks = s.match(/\d*\.?\d+(?:e[+-]?\d+)?|[a-z]+|[-+*/^(),|]/g) || [];
+    if (toks.join("") !== s) throw new Error("bad expression");
+    // split runs of letters into known names (e.g. "xsin" -> x, sin)
+    const out = [];
+    for (const t of toks) {
+      if (!/^[a-z]+$/.test(t)) { out.push(t); continue; }
+      let r = t;
+      while (r) {
+        const m = Object.keys(FN).concat(["pi", "x", "y", "t", "e"]).sort((a, b) => b.length - a.length).find(k => r.startsWith(k));
+        if (!m) throw new Error("unknown name " + r);
+        out.push(m); r = r.slice(m.length);
+      }
+    }
+    let i = 0;
+    const peek = () => out[i], take = () => out[i++];
+    const startsAtom = t => t !== undefined && (/^[\d.]/.test(t) || /^[a-z]/.test(t) || t === "(" || t === "|");
+    function expr() { let a = term(); while (peek() === "+" || peek() === "-") { const o = take(), b = term(), A = a; a = o === "+" ? (x, y) => A(x, y) + b(x, y) : (x, y) => A(x, y) - b(x, y); } return a; }
+    function term() {
+      let a = unary();
+      for (;;) {
+        if (peek() === "*" || peek() === "/") { const o = take(), b = unary(), A = a; a = o === "*" ? (x, y) => A(x, y) * b(x, y) : (x, y) => A(x, y) / b(x, y); }
+        else if (startsAtom(peek()) && !(peek() === "|" && absDepth > 0)) { const b = power(), A = a; a = (x, y) => A(x, y) * b(x, y); }
+        else return a;
+      }
+    }
+    function unary() { if (peek() === "-") { take(); const a = unary(); return (x, y) => -a(x, y); } if (peek() === "+") { take(); return unary(); } return power(); }
+    function power() { const a = atom(); if (peek() === "^") { take(); const b = unary(); return (x, y) => Math.pow(a(x, y), b(x, y)); } return a; }
+    let absDepth = 0;
+    function atom() {
+      const t = take();
+      if (t === undefined) throw new Error("ended early");
+      if (/^[\d.]/.test(t)) { const v = parseFloat(t); return () => v; }
+      if (t === "x" || t === "t") return x => x;
+      if (t === "y") return (x, y) => y;
+      if (t === "pi") return () => Math.PI;
+      if (t === "e") return () => Math.E;
+      if (t === "(") { const a = expr(); if (take() !== ")") throw new Error("missing )"); return a; }
+      if (t === "|") { absDepth++; const a = expr(); absDepth--; if (take() !== "|") throw new Error("missing |"); return (x, y) => Math.abs(a(x, y)); }
+      if (FN[t]) {
+        const f = FN[t];
+        if (peek() === "^") { take(); const p = unary(), arg = atom(); return (x, y) => Math.pow(f(arg(x, y)), p(x, y)); } // sin^2(x)
+        const arg = peek() === "(" ? atom() : power();
+        return (x, y) => f(arg(x, y));
+      }
+      throw new Error("unexpected " + t);
+    }
+    const f = expr();
+    if (i < out.length) throw new Error("unexpected " + out[i]);
+    return f;
+  }
+
+  const COLORS = ["#ffcf8a", "#8fb3ff", "#ff8fc7", "#9be3b8", "#c4a7ff"];
+  function niceStep(span) { const raw = span / 8, p = Math.pow(10, Math.floor(Math.log10(raw))), m = raw / p; return (m < 1.5 ? 1 : m < 3.5 ? 2 : m < 7.5 ? 5 : 10) * p; }
+  const fmt = v => Math.abs(v) < 1e-9 ? "0" : String(+v.toFixed(6)).replace("-", "−");
+  function seeded(n) { let s = n >>> 0 || 1; return () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296; }
+
+  function prepare(spec) {
+    const g = {title: typeof spec.title === "string" ? spec.title.slice(0, 80) : "", fns: [], field: null, pts: []};
+    const list = Array.isArray(spec.functions) ? spec.functions : spec.expr ? [{expr: spec.expr, label: spec.label}] : [];
+    list.slice(0, 5).forEach((f, k) => {
+      const e = typeof f === "string" ? f : f && f.expr;
+      if (typeof e !== "string") return;
+      try { g.fns.push({f: compile(e.replace(/^\s*(y|f\(x\))\s*=/i, "")), label: (f.label || (/^\s*(y|f\(x\))\s*=/i.test(e) ? e : "y = " + e)).toString().slice(0, 40), color: COLORS[g.fns.length % COLORS.length]}); } catch {}
+    });
+    if (typeof spec.slopefield === "string") { try { g.field = compile(spec.slopefield.replace(/^\s*(dy\/dx|y')\s*=/i, "")); } catch {} }
+    if (Array.isArray(spec.points)) for (const p of spec.points.slice(0, 12)) if (p && isFinite(p.x) && isFinite(p.y)) g.pts.push({x: +p.x, y: +p.y, label: typeof p.label === "string" ? p.label.slice(0, 24) : ""});
+    const xr = Array.isArray(spec.x) && spec.x.length === 2 && spec.x[0] < spec.x[1] ? spec.x.map(Number) : [-10, 10];
+    let yr = Array.isArray(spec.y) && spec.y.length === 2 && spec.y[0] < spec.y[1] ? spec.y.map(Number) : null;
+    if (!yr) { // pick a y range from the curves and points
+      const ys = [];
+      for (const f of g.fns) for (let i = 0; i <= 200; i++) { const v = f.f(xr[0] + (xr[1] - xr[0]) * i / 200, 0); if (isFinite(v)) ys.push(v); }
+      for (const p of g.pts) ys.push(p.y);
+      ys.sort((a, b) => a - b);
+      if (ys.length) { let lo = ys[Math.floor(ys.length * .04)], hi = ys[Math.ceil(ys.length * .96) - 1]; if (hi - lo < 1e-6) { lo -= 1; hi += 1; } const pad = (hi - lo) * .12; yr = [Math.min(lo - pad, 0 < lo ? -pad : lo - pad), Math.max(hi + pad, hi < 0 ? pad : hi + pad)]; }
+      else yr = [xr[0], xr[1]];
+    }
+    g.xr = xr; g.yr = yr;
+    if (!g.fns.length && !g.field && !g.pts.length) return null;
+    return g;
+  }
+
+  function draw(cv, g, seed) {
+    const dpr = Math.min(2, devicePixelRatio || 1), W = cv.clientWidth, H = cv.clientHeight;
+    if (!W || !H) return;
+    cv.width = W * dpr; cv.height = H * dpr;
+    const x = cv.getContext("2d"); x.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const {xr, yr} = g, X = v => (v - xr[0]) / (xr[1] - xr[0]) * W, Y = v => H - (v - yr[0]) / (yr[1] - yr[0]) * H;
+    x.fillStyle = "#0b0d1f"; x.fillRect(0, 0, W, H);
+    const rnd = seeded(seed);
+    for (let i = 0; i < W * H / 2600; i++) { x.fillStyle = `rgba(238,241,255,${rnd() * .45})`; x.beginPath(); x.arc(rnd() * W, rnd() * H, rnd() * 1.1 + .2, 0, 7); x.fill(); }
+    const sx = niceStep(xr[1] - xr[0]), sy = niceStep(yr[1] - yr[0]);
+    x.strokeStyle = "rgba(143,179,255,.08)"; x.lineWidth = 1;
+    for (let v = Math.ceil(xr[0] / sx) * sx; v <= xr[1]; v += sx) { x.beginPath(); x.moveTo(X(v), 0); x.lineTo(X(v), H); x.stroke(); }
+    for (let v = Math.ceil(yr[0] / sy) * sy; v <= yr[1]; v += sy) { x.beginPath(); x.moveTo(0, Y(v)); x.lineTo(W, Y(v)); x.stroke(); }
+    const ax = Math.min(Math.max(X(0), 0), W), ay = Math.min(Math.max(Y(0), 0), H);
+    x.strokeStyle = "rgba(238,241,255,.35)"; x.lineWidth = 1.5;
+    x.beginPath(); x.moveTo(ax, 0); x.lineTo(ax, H); x.moveTo(0, ay); x.lineTo(W, ay); x.stroke();
+    x.fillStyle = "rgba(238,241,255,.55)"; x.font = "11px Inter,system-ui,sans-serif";
+    for (let v = Math.ceil(xr[0] / sx) * sx; v <= xr[1]; v += sx) if (Math.abs(v) > sx / 2) x.fillText(fmt(v), X(v) - 6, Math.min(ay + 14, H - 4));
+    for (let v = Math.ceil(yr[0] / sy) * sy; v <= yr[1]; v += sy) if (Math.abs(v) > sy / 2) x.fillText(fmt(v), Math.min(ax + 5, W - 30), Y(v) + 4);
+    if (g.field) { // slope field
+      x.strokeStyle = "rgba(143,179,255,.55)"; x.lineWidth = 1.3;
+      const nx = Math.max(10, Math.round(W / 34)), ny = Math.max(6, Math.round(H / 34)), L = 11;
+      for (let i = 0; i <= nx; i++) for (let j = 0; j <= ny; j++) {
+        const px = W * i / nx, py = H * j / ny, a = xr[0] + (xr[1] - xr[0]) * i / nx, b = yr[1] - (yr[1] - yr[0]) * j / ny;
+        const m = g.field(a, b); if (!isFinite(m)) continue;
+        const ang = Math.atan(m * (H / (yr[1] - yr[0])) / (W / (xr[1] - xr[0])));
+        x.beginPath(); x.moveTo(px - Math.cos(ang) * L / 2, py + Math.sin(ang) * L / 2); x.lineTo(px + Math.cos(ang) * L / 2, py - Math.sin(ang) * L / 2); x.stroke();
+      }
+    }
+    for (const f of g.fns) { // glowing curves, broken at jumps (like tan x)
+      x.save(); x.shadowColor = f.color; x.shadowBlur = 12; x.strokeStyle = f.color; x.lineWidth = 2.6; x.lineJoin = "round";
+      x.beginPath(); let up = true, last = null; const N = Math.max(400, W * 2), span = yr[1] - yr[0];
+      for (let i = 0; i <= N; i++) {
+        const a = xr[0] + (xr[1] - xr[0]) * i / N, v = f.f(a, 0);
+        if (!isFinite(v) || (last !== null && Math.abs(v - last) > span * 1.5)) { up = true; last = isFinite(v) ? v : null; continue; }
+        const py = Y(Math.max(yr[0] - span * 2, Math.min(yr[1] + span * 2, v)));
+        up ? x.moveTo(X(a), py) : x.lineTo(X(a), py); up = false; last = v;
+      }
+      x.stroke(); x.restore();
+    }
+    for (const p of g.pts) { // key points as little stars
+      const px = X(p.x), py = Y(p.y);
+      x.save(); x.shadowColor = "#ffcf8a"; x.shadowBlur = 14; x.fillStyle = "#ffcf8a"; x.beginPath(); x.arc(px, py, 5, 0, 7); x.fill(); x.restore();
+      x.fillStyle = "#fff8ec"; x.beginPath(); x.arc(px, py, 2.2, 0, 7); x.fill();
+      if (p.label) { x.font = "600 12.5px Inter,system-ui,sans-serif"; x.fillStyle = "#ffcf8a"; x.fillText(p.label, Math.min(px + 9, W - x.measureText(p.label).width - 4), Math.max(py - 9, 14)); }
+    }
+  }
+
+  function render(el) {
+    const g = novaGraphs.store.get(+el.dataset.gid);
+    if (!g) return;
+    if (!el.dataset.built) {
+      el.dataset.built = "1";
+      el.innerHTML = (g.title ? '<div class="ngt"></div>' : "") + '<canvas class="ngc" aria-hidden="true"></canvas><div class="ngcap"></div>';
+      if (g.title) el.querySelector(".ngt").textContent = g.title;
+      const cap = el.querySelector(".ngcap");
+      for (const f of g.fns) { const c = document.createElement("span"); c.className = "ngchip"; c.innerHTML = "<i></i>"; c.firstChild.style.background = f.color; c.append(f.label); cap.appendChild(c); }
+      if (g.field) { const c = document.createElement("span"); c.className = "ngchip"; c.innerHTML = '<i style="background:#8fb3ff"></i>slope field'; cap.appendChild(c); }
+      const b = document.createElement("button"); b.type = "button"; b.className = "ngbig"; b.textContent = "⤢ Expand";
+      b.onclick = () => { el.classList.toggle("big"); b.textContent = el.classList.contains("big") ? "⤡ Shrink" : "⤢ Expand"; draw(el.querySelector("canvas"), g, +el.dataset.gid * 7919); };
+      cap.appendChild(b);
+      el.setAttribute("role", "img"); el.setAttribute("aria-label", "Graph: " + (g.title || g.fns.map(f => f.label).join(", ") || "slope field"));
+    }
+    draw(el.querySelector("canvas"), g, +el.dataset.gid * 7919);
+  }
+
+  // swap ```graph code blocks for graph boxes whenever an answer is rendered
+  const base = renderMath, keyOf = new Map();
+  const unesc = s => { const t = document.createElement("textarea"); t.innerHTML = s; return t.value; };
+  renderMath = function (md) {
+    return base(md).replace(/<pre><code class="language-graph">([\s\S]*?)<\/code><\/pre>/g, (_, body) => {
+      const src = unesc(body).trim();
+      let id = keyOf.get(src);
+      if (id === undefined) {
+        let g = null;
+        try { g = prepare(JSON.parse(src)); } catch {}
+        if (!g) return '<div class="ngwait">✦ Drawing a graph…</div>';
+        id = ++novaGraphs.n; novaGraphs.store.set(id, g); keyOf.set(src, id);
+      }
+      return `<div class="ngraph" data-gid="${id}"></div>`;
+    });
+  };
+  const scan = () => { for (const el of document.querySelectorAll(".ngraph:not([data-built])")) render(el); };
+  new MutationObserver(scan).observe(log, {childList: true, subtree: true});
+  let rt = 0;
+  addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => document.querySelectorAll(".ngraph[data-built]").forEach(render), 150); });
+  novaGraphs.compile = compile;
+})();
+
+/* ---------- announcement banner (shooting star) ---------- */
+(() => {
+  const view = $("chatView");
+  const wrap = document.createElement("div");
+  wrap.id = "annc"; wrap.hidden = true;
+  wrap.innerHTML = '<span class="antrail" aria-hidden="true"></span><div class="anpill" role="status"><span class="anstar" aria-hidden="true">✦</span><span class="antext"></span><button type="button" class="anx" aria-label="Dismiss announcement" title="Dismiss">✕</button></div>';
+  view.appendChild(wrap);
+  const KEY = "nova-ann-seen";
+  let cur = null;
+  function show(a) {
+    cur = a;
+    let seen = null; try { seen = localStorage.getItem(KEY); } catch {}
+    if (!a || !a.text || seen === a.id) { wrap.hidden = true; return; }
+    wrap.querySelector(".antext").textContent = a.text;
+    if (wrap.hidden || wrap.dataset.id !== a.id) {
+      wrap.dataset.id = a.id; wrap.hidden = false;
+      wrap.classList.remove("fly"); void wrap.offsetWidth; wrap.classList.add("fly");
+    }
+  }
+  async function check() {
+    if ($("appView").hidden) return;
+    try { show((await api("/api/announce")).announce); } catch {}
+  }
+  wrap.querySelector(".anx").onclick = () => { if (cur) { try { localStorage.setItem(KEY, cur.id); } catch {} } wrap.hidden = true; };
+  new MutationObserver(() => { if (!$("appView").hidden) check(); }).observe($("appView"), {attributes: true, attributeFilter: ["hidden"]});
+  setInterval(check, 5 * 60e3);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) check(); });
+  window.novaAnnounce = {check, show};
+  check();
 })();
 </script>
 </body>
