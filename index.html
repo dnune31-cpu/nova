@@ -622,6 +622,98 @@ form#f{width:calc(100% - 20px)}
 .annbox{display:flex;gap:8px;align-items:center;margin-bottom:22px;flex-wrap:wrap}
 #annIn{flex:1;min-width:220px;background:#2a2a28;border:1px solid #3a3a37;border-radius:10px;color:#ecebe7;font:inherit;font-size:14px;padding:9px 12px;outline:0}
 #annIn:focus{border-color:#55534e}
+
+/* games */
+#gamesView{height:100%;overflow-y:auto;padding:18px 22px 40px;background:var(--c-bg,#1f1f1e);font-family:"Inter",system-ui,sans-serif;animation:fade .35s ease}
+.ghead{display:flex;align-items:center;gap:10px;margin:2px 0 16px;max-width:900px}
+.gtitle{font-family:"Source Serif 4",Georgia,serif;font-weight:400;font-size:28px;margin:0}
+.gback{background:none;border:1px solid var(--c-line2,#3a3a37);color:var(--c-text,#ecebe7);border-radius:999px;font:inherit;font-size:13px;padding:6px 12px;cursor:pointer}
+.gback:hover{background:var(--c-hover,#272725)}
+.gtiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px;max-width:900px}
+.gtile{position:relative;overflow:hidden;text-align:left;height:150px;padding:16px;border-radius:16px;border:1px solid #33322f;color:var(--c-text,#ecebe7);cursor:pointer;font:inherit;transition:transform .25s cubic-bezier(.34,1.56,.64,1),border-color .2s}
+.gtile:hover{transform:translateY(-3px);border-color:rgba(255,207,138,.45)}
+.gtile:after{content:"";position:absolute;right:-30px;top:-30px;width:110px;height:110px;border-radius:50%;background:radial-gradient(circle,rgba(255,207,138,.2),transparent 70%)}
+.gtile .gic{font-size:40px;line-height:1;display:block}
+.gtile b{display:block;font-size:16px;margin-top:14px}
+.gtile small{color:#a19f99;font-size:12.5px}
+.gtile.c1{background:linear-gradient(150deg,#2a2418,#1b1a17)}.gtile.c2{background:linear-gradient(150deg,#16271c,#171a17)}.gtile.c3{background:linear-gradient(150deg,#1a1f33,#17181d)}
+.garea{max-width:900px}
+.gbtn{background:#2a2a28;border:1px solid #3a3a37;color:var(--c-text,#ecebe7);border-radius:10px;font:500 13.5px "Inter",system-ui,sans-serif;padding:8px 14px;cursor:pointer}
+.gbtn:hover:not(:disabled){background:#33332f}
+.gbtn:disabled{opacity:.4;cursor:default}
+.gbtn.gold{background:var(--gold,#ffcf8a);color:#1a1405;border-color:transparent;font-weight:600}
+.gbtn.gold:hover:not(:disabled){background:#ffdca6}
+.ghint{color:#a19f99;font-size:12.5px;margin:12px 0 0}
+.g48top{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.g48s{background:#232321;border:1px solid #33322f;border-radius:10px;padding:5px 14px;min-width:82px}
+.g48s small{display:block;color:#a19f99;font-size:11px}.g48s b{font-size:18px}
+.g48top .gnew{margin-left:auto}
+.g48{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;width:min(420px,100%);aspect-ratio:1;background:#151514;border:1px solid #2c2c2a;border-radius:16px;padding:10px;outline:none;touch-action:none}
+.g48:focus-visible{border-color:rgba(255,207,138,.5)}
+.g48c{border-radius:10px;background:#232321;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:clamp(18px,5.5vw,32px);color:#1a1405;font-variant-numeric:tabular-nums}
+.g48c.v2{background:#3a3833;color:#ecebe7}.g48c.v4{background:#4a4637;color:#ecebe7}.g48c.v8{background:#8fb3ff}.g48c.v16{background:#a7c1ff}
+.g48c.v32{background:#c4a7ff}.g48c.v64{background:#ff8fc7}.g48c.v128{background:#ffcf8a;font-size:clamp(16px,4.6vw,28px)}.g48c.v256{background:#ffc070;font-size:clamp(16px,4.6vw,28px)}
+.g48c.v512{background:#ffb05a;font-size:clamp(16px,4.6vw,28px)}.g48c.v1024,.g48c.v2048,.g48c.v4096{background:radial-gradient(circle,#fff3dc,#ffcf8a);box-shadow:0 0 22px rgba(255,207,138,.6);font-size:clamp(13px,3.8vw,22px)}
+.g48c.pop{animation:g48pop .22s ease}.g48c.merge{animation:g48merge .22s ease}
+@keyframes g48pop{from{transform:scale(.3);opacity:0}to{transform:none;opacity:1}}
+@keyframes g48merge{50%{transform:scale(1.12)}}
+.gover{display:flex;align-items:center;gap:12px;margin-top:12px;padding:12px 14px;border:1px solid rgba(255,207,138,.4);border-radius:12px;background:rgba(255,207,138,.07)}
+.gover b{font-size:15px}.gover span{color:#a19f99;font-size:13px}.gover .gbtn{margin-left:auto}
+.bj{background:radial-gradient(ellipse at 50% 30%,#1f3a2a,#13231a 70%);border:1px solid #2c3d31;border-radius:22px;padding:18px 18px 14px;max-width:720px}
+.bjrow{min-height:150px}
+.bjlab{color:#b9c9bc;font-size:12.5px;display:block;margin-bottom:8px}.bjlab span{color:#ffcf8a;font-weight:600;margin-left:6px}
+.bjhand{display:flex;gap:8px;flex-wrap:wrap;min-height:112px}
+.bjcard{position:relative;width:76px;height:108px;border-radius:9px;background:#fbf8f1;color:#1c1c1c;box-shadow:0 6px 16px rgba(0,0,0,.35);font-family:Georgia,serif;animation:bjin .3s cubic-bezier(.22,1,.36,1)}
+.bjcard.red{color:#c0392b}
+.bjcard .tl,.bjcard .br{position:absolute;font-size:14px;line-height:1.05;text-align:center;font-weight:700}
+.bjcard .tl{left:6px;top:5px}.bjcard .br{right:6px;bottom:5px;transform:rotate(180deg)}
+.bjcard .mid{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:34px}
+.bjcard.back{background:radial-gradient(circle at 50% 50%,#fff3dc 0,#ffcf8a 8%,rgba(143,179,255,.6) 22%,#1b2350 45%,#0b0d1f 75%);border:3px solid #fbf8f1}
+@keyframes bjin{from{transform:translateY(-14px) rotate(-4deg);opacity:0}to{transform:none;opacity:1}}
+.bjmsg{min-height:26px;margin:4px 0 10px;font-weight:600;font-size:15px;color:#ecebe7}
+.bjmsg.won{color:#ffcf8a}.bjmsg.lost{color:#ff9d9d}.bjmsg.push{color:#a7c1ff}
+.bjbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-top:1px solid rgba(255,255,255,.08);padding-top:12px}
+.bjchips small,.bjbet small{display:block;color:#b9c9bc;font-size:11px}.bjchips b,.bjbet b{font-size:17px}.bjchips b{color:#ffcf8a}
+.bjbtns{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+.gbtn.chip{border-radius:999px;background:#2a3a2f;border-color:#3e5544}
+.chlobby{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;max-width:640px}
+.chcard{background:#232321;border:1px solid #33322f;border-radius:16px;padding:16px}
+.chcard b{font-size:15px}.chcard p{color:#a19f99;font-size:13px;margin:6px 0 12px}
+.chjoin{display:flex;gap:8px}
+.chjoin input{flex:1;min-width:0;background:#2a2a28;border:1px solid #3a3a37;border-radius:10px;color:#ecebe7;font:600 16px "Inter",system-ui,sans-serif;letter-spacing:.18em;padding:8px 12px;outline:0;text-transform:uppercase}
+.chjoin input:focus{border-color:#55534e}
+.chrejoin{grid-column:1/-1;background:none;border:1px dashed rgba(255,207,138,.45);color:#ffcf8a;border-radius:12px;padding:10px;font:inherit;font-size:13.5px;cursor:pointer}
+.cherr{grid-column:1/-1;color:#ff9d9d;font-size:13px;margin:0;min-height:1em}
+.chwrap{display:grid;grid-template-columns:minmax(0,560px) minmax(220px,300px);gap:20px;align-items:start}
+.chboard{order:-1;container-type:inline-size;display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr);width:100%;aspect-ratio:1;border-radius:10px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+.chsq{position:relative;min-width:0;min-height:0;aspect-ratio:1;border:0;padding:0;margin:0;display:flex;align-items:center;justify-content:center;cursor:pointer;font:inherit}
+.chsq.lt{background:#ecdcb8}.chsq.dk{background:#b58863}
+.chsq.last{box-shadow:inset 0 0 0 100px rgba(255,207,138,.38)}
+.chsq.sel{box-shadow:inset 0 0 0 100px rgba(143,179,255,.5)}
+.chsq.check{background:radial-gradient(circle,#ff6b6b 0,#e04848 45%,transparent 75%)}
+.chsq.dot:after{content:"";position:absolute;width:28%;height:28%;border-radius:50%;background:rgba(20,30,60,.35)}
+.chsq.cap:after{content:"";position:absolute;inset:4%;border-radius:50%;border:5px solid rgba(20,30,60,.35)}
+.chsq .pc{font-size:10.4cqw;line-height:1;font-family:"Segoe UI Symbol","Noto Sans Symbols 2","Apple Symbols","DejaVu Sans",serif;font-variant-emoji:text;pointer-events:none;position:relative;z-index:1}
+.pc.w{color:#fffaf0;text-shadow:0 0 1px #000,0 0 1px #000,0 1px 2px rgba(0,0,0,.6),1px 0 0 #2a2116,-1px 0 0 #2a2116,0 1px 0 #2a2116,0 -1px 0 #2a2116}
+.pc.b{color:#1d1a16;text-shadow:0 1px 1px rgba(255,255,255,.25)}
+.chsq .rk,.chsq .fl{position:absolute;font-style:normal;font-size:2.2cqw;font-weight:700;opacity:.75}
+.chsq .rk{left:3px;top:2px}.chsq .fl{right:3px;bottom:1px}
+.chsq.lt .rk,.chsq.lt .fl{color:#b58863}.chsq.dk .rk,.chsq.dk .fl{color:#ecdcb8}
+.chside{min-width:0;display:flex;flex-direction:column;gap:12px}
+.chcode{display:flex;align-items:center;gap:10px;background:#232321;border:1px solid rgba(255,207,138,.4);border-radius:14px;padding:10px 12px}
+.chcode small{color:#a19f99;font-size:11px;display:block}.chcode b{font-size:22px;letter-spacing:.16em;color:#ffcf8a}
+.chcode .copy{margin-left:auto;padding:5px 10px;font-size:12px}
+.chplayers div{display:flex;align-items:center;gap:8px;font-size:14px;padding:4px 0;color:#c9c7c1}
+.chplayers div.me{color:#fff;font-weight:600}.chplayers div.me:after{content:"you";font-size:10.5px;font-weight:600;color:#1a1405;background:#ffcf8a;border-radius:999px;padding:1px 7px}
+.chplayers i{width:13px;height:13px;border-radius:50%;display:inline-block;border:1px solid #6b6a66}.chplayers .pw{background:#fffaf0}.chplayers .pb{background:#1d1a16}
+.chstatus{font-weight:600;font-size:15px;color:#ffcf8a;min-height:22px}
+.chpromo{display:flex;align-items:center;gap:6px}.chpromo small{color:#a19f99;margin-right:4px}
+.chpromo .gbtn{font-size:26px;padding:2px 10px;background:#ecdcb8}
+.chmoves{margin:0;padding:8px 8px 8px 30px;max-height:220px;overflow-y:auto;background:#1a1a19;border:1px solid #2c2c2a;border-radius:12px;font:13px ui-monospace,Menlo,monospace;color:#c9c7c1;white-space:pre}
+.chmoves:empty{display:none}
+.chacts{display:flex;gap:8px;flex-wrap:wrap}
+@media (max-width:900px){.chwrap{grid-template-columns:minmax(0,560px)}}
+@media (max-width:760px){#gamesView{padding:14px 12px 30px}.bjcard{width:62px;height:90px}.bjcard .mid{font-size:28px}}
 </style>
 </head>
 <body>
@@ -2718,6 +2810,330 @@ const novaGraphs = {store: new Map(), n: 0};
   document.addEventListener("visibilitychange", () => { if (!document.hidden) check(); });
   window.novaAnnounce = {check, show};
   check();
+})();
+
+/* ---------- games: chess (online with a room code), blackjack, 2048 ---------- */
+(() => {
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  };
+  const escH = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
+  const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; };
+
+  // the page and the sidebar button
+  const view = h("section", "", '<div class="ghead"><button type="button" class="gback" hidden>‹ All games</button><h2 class="gtitle">Games</h2></div><div class="gtiles"></div><div class="garea" hidden></div>');
+  view.id = "gamesView"; view.hidden = true;
+  $("neuronView").after(view);
+  const back = view.querySelector(".gback"), title = view.querySelector(".gtitle"), tiles = view.querySelector(".gtiles"), area = view.querySelector(".garea");
+  const btn = h("button", "rbtn", '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="7" width="19" height="11" rx="5.5"/><path d="M7 10.5v4M5 12.5h4"/><circle cx="15.5" cy="11.5" r="1" fill="currentColor"/><circle cx="17.5" cy="13.5" r="1" fill="currentColor"/></svg><span>Games</span>');
+  btn.type = "button"; btn.id = "rGames"; btn.title = "Games"; btn.setAttribute("aria-label", "Games");
+  $("rNeuron").after(btn);
+
+  const OTHERS = ["chatView", "neuronView", "adminView"];
+  let current = null;
+  function stopGame() { if (current && current.stop) current.stop(); current = null; }
+  function openGames() {
+    if (typeof closePops === "function") closePops();
+    OTHERS.forEach(id => { if ($(id)) $(id).hidden = true; });
+    ["rNeuron", "rAdmin"].forEach(id => $(id) && $(id).classList.remove("on"));
+    view.hidden = false; btn.classList.add("on");
+    $("appView").classList.remove("sb-open");
+    showHub();
+  }
+  btn.onclick = e => { e.stopPropagation(); openGames(); };
+  const mo = new MutationObserver(() => { if (!view.hidden && OTHERS.some(id => $(id) && !$(id).hidden)) { view.hidden = true; btn.classList.remove("on"); stopGame(); } });
+  OTHERS.forEach(id => $(id) && mo.observe($(id), {attributes: true, attributeFilter: ["hidden"]}));
+
+  const GAMES = [
+    {id: "chess", name: "Chess", icon: "♞", cls: "c1", sub: () => "Play a friend with a room code", start: startChess},
+    {id: "bj", name: "Blackjack", icon: "🂡", cls: "c2", sub: () => `Beat the dealer · ${store.get("nova-bj-chips", 1000).toLocaleString()} chips`, start: startBlackjack},
+    {id: "2048", name: "2048", icon: "🔢", cls: "c3", sub: () => { const b = store.get("nova-2048-best", 0); return b ? `Best ${b.toLocaleString()}` : "Slide and merge"; }, start: start2048},
+  ];
+  function showHub() {
+    stopGame();
+    back.hidden = true; title.textContent = "Games"; area.hidden = true; area.innerHTML = ""; tiles.hidden = false; tiles.innerHTML = "";
+    for (const g of GAMES) {
+      const t = h("button", "gtile " + g.cls);
+      t.type = "button";
+      t.innerHTML = '<span class="gic"></span><b></b><small></small>';
+      t.querySelector(".gic").textContent = g.icon; t.querySelector("b").textContent = g.name; t.querySelector("small").textContent = g.sub();
+      t.onclick = () => { tiles.hidden = true; area.hidden = false; area.innerHTML = ""; back.hidden = false; title.textContent = g.name; current = g.start(area) || null; };
+      tiles.appendChild(t);
+    }
+  }
+  back.onclick = showHub;
+
+  /* ===== 2048 ===== */
+  function start2048(root) {
+    root.innerHTML = '<div class="g48top"><div class="g48s"><small>Score</small><b class="sc">0</b></div><div class="g48s"><small>Best</small><b class="bs">0</b></div><button type="button" class="gbtn gnew">New game</button></div><div class="g48" tabindex="0" aria-label="2048 board. Use the arrow keys or swipe."></div><p class="ghint">Arrow keys or WASD on a computer, swipe on a phone. Merge tiles to reach 2048.</p><div class="gover" hidden></div>';
+    const board = root.querySelector(".g48"), sc = root.querySelector(".sc"), bs = root.querySelector(".bs"), over = root.querySelector(".gover");
+    let grid, score, won;
+    const empty = () => { const e = []; grid.forEach((r, i) => r.forEach((v, j) => { if (!v) e.push([i, j]); })); return e; };
+    const addTile = () => { const e = empty(); if (!e.length) return null; const [i, j] = e[Math.floor(Math.random() * e.length)]; grid[i][j] = Math.random() < .9 ? 2 : 4; return i * 4 + j; };
+    function draw(fresh = -1, merged = []) {
+      board.innerHTML = "";
+      grid.forEach((r, i) => r.forEach((v, j) => {
+        const c = h("div", "g48c" + (v ? " v" + Math.min(v, 4096) : "") + (i * 4 + j === fresh ? " pop" : "") + (merged.includes(i * 4 + j) ? " merge" : ""));
+        c.textContent = v || ""; board.appendChild(c);
+      }));
+      sc.textContent = score.toLocaleString();
+      const best = Math.max(store.get("nova-2048-best", 0), score); store.set("nova-2048-best", best); bs.textContent = best.toLocaleString();
+    }
+    function reset() { grid = [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]; score = 0; won = false; over.hidden = true; addTile(); draw(addTile()); board.focus(); }
+    function move(dir) { // 0 left, 1 right, 2 up, 3 down
+      if (!over.hidden) return;
+      let moved = false; const merged = [];
+      for (let k = 0; k < 4; k++) {
+        const idx = [0, 1, 2, 3].map(t => dir < 2 ? [k, dir === 0 ? t : 3 - t] : [dir === 2 ? t : 3 - t, k]);
+        const vals = idx.map(([i, j]) => grid[i][j]).filter(Boolean), out = [];
+        for (let t = 0; t < vals.length; t++) {
+          if (vals[t] === vals[t + 1]) {
+            const v = vals[t] * 2; out.push(v); score += v; if (v === 2048 && won === false) won = true;
+            const [mi, mj] = idx[out.length - 1]; merged.push(mi * 4 + mj); t++;
+          } else out.push(vals[t]);
+        }
+        idx.forEach(([i, j], t) => { const v = out[t] || 0; if (grid[i][j] !== v) moved = true; grid[i][j] = v; });
+      }
+      if (!moved) return;
+      draw(addTile(), merged);
+      if (won === true) { won = null; over.hidden = false; over.innerHTML = '<b>2048! You did it</b><button type="button" class="gbtn gold">Keep going</button>'; over.querySelector("button").onclick = () => { over.hidden = true; board.focus(); }; }
+      else if (!empty().length && !canMove()) { over.hidden = false; over.innerHTML = `<b>No more moves</b><span>Score ${score.toLocaleString()}</span><button type="button" class="gbtn gold">Try again</button>`; over.querySelector("button").onclick = reset; }
+    }
+    const canMove = () => grid.some((r, i) => r.some((v, j) => (j < 3 && v === r[j + 1]) || (i < 3 && v === grid[i + 1][j])));
+    const keys = e => {
+      if (view.hidden || e.target.closest("input,textarea")) return;
+      const d = {ArrowLeft: 0, a: 0, ArrowRight: 1, d: 1, ArrowUp: 2, w: 2, ArrowDown: 3, s: 3}[e.key];
+      if (d !== undefined) { e.preventDefault(); move(d); }
+    };
+    document.addEventListener("keydown", keys);
+    let sx = 0, sy = 0;
+    board.addEventListener("touchstart", e => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, {passive: true});
+    board.addEventListener("touchend", e => {
+      const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
+      if (Math.max(Math.abs(dx), Math.abs(dy)) < 24) return;
+      move(Math.abs(dx) > Math.abs(dy) ? (dx < 0 ? 0 : 1) : (dy < 0 ? 2 : 3));
+    });
+    board.addEventListener("touchmove", e => e.preventDefault(), {passive: false});
+    root.querySelector(".gnew").onclick = reset;
+    reset();
+    return {stop() { document.removeEventListener("keydown", keys); }};
+  }
+
+  /* ===== Blackjack ===== */
+  function startBlackjack(root) {
+    root.innerHTML = '<div class="bj"><div class="bjrow"><small class="bjlab">Dealer <span class="dv"></span></small><div class="bjhand dealer"></div></div><div class="bjmsg" aria-live="polite"></div><div class="bjrow"><small class="bjlab">You <span class="pv"></span></small><div class="bjhand player"></div></div>' +
+      '<div class="bjbar"><div class="bjchips"><small>Chips</small><b class="ch"></b></div><div class="bjbet"><small>Bet</small><b class="bt">0</b></div><div class="bjbtns"></div></div></div>';
+    const dEl = root.querySelector(".dealer"), pEl = root.querySelector(".player"), msg = root.querySelector(".bjmsg"), btns = root.querySelector(".bjbtns");
+    const dv = root.querySelector(".dv"), pv = root.querySelector(".pv"), ch = root.querySelector(".ch"), bt = root.querySelector(".bt");
+    let chips = store.get("nova-bj-chips", 1000), bet = 0, shoe = [], dealer = [], player = [], phase = "bet", lastBet = store.get("nova-bj-last", 50);
+    const SUITS = ["♠", "♥", "♦", "♣"], RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
+    function newShoe() { shoe = []; for (let d = 0; d < 6; d++) for (const s of SUITS) for (const r of RANKS) shoe.push({r, s}); for (let i = shoe.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [shoe[i], shoe[j]] = [shoe[j], shoe[i]]; } }
+    const draw = () => { if (shoe.length < 60) newShoe(); return shoe.pop(); };
+    function total(hand) { let t = 0, aces = 0; for (const c of hand) { if (c.r === "A") { t += 11; aces++; } else t += ["J", "Q", "K"].includes(c.r) ? 10 : +c.r; } while (t > 21 && aces) { t -= 10; aces--; } return t; }
+    const isBJ = hand => hand.length === 2 && total(hand) === 21;
+    function card(c, hidden) {
+      const e = h("div", "bjcard" + (hidden ? " back" : "") + (!hidden && (c.s === "♥" || c.s === "♦") ? " red" : ""));
+      if (!hidden) e.innerHTML = `<span class="tl">${c.r}<br>${c.s}</span><span class="mid">${c.s}</span><span class="br">${c.r}<br>${c.s}</span>`;
+      return e;
+    }
+    function render() {
+      const hide = phase === "play";
+      dEl.innerHTML = ""; dealer.forEach((c, i) => dEl.appendChild(card(c, hide && i === 1)));
+      pEl.innerHTML = ""; player.forEach(c => pEl.appendChild(card(c)));
+      dv.textContent = dealer.length ? (hide ? total([dealer[0]]) + " + ?" : total(dealer)) : "";
+      pv.textContent = player.length ? total(player) : "";
+      ch.textContent = chips.toLocaleString(); bt.textContent = (phase === "done" ? lastBet : bet).toLocaleString();
+      store.set("nova-bj-chips", chips);
+      btns.innerHTML = "";
+      const b = (label, fn, cls = "", dis = false) => { const x = h("button", "gbtn " + cls, label); x.type = "button"; x.disabled = dis; x.onclick = fn; btns.appendChild(x); };
+      if (phase === "bet" || phase === "done") {
+        if (chips < 10 && bet === 0) { b("Get 1,000 more chips", () => { chips += 1000; msg.textContent = "Here's 1,000 more chips. Good luck!"; render(); }, "gold"); return; }
+        for (const v of [10, 50, 100, 500]) b("+" + v, () => { if (phase === "done") { reset(); } if (chips >= v) { chips -= v; bet += v; render(); } }, "chip", chips < v && phase !== "done");
+        b("Clear", () => { if (phase === "done") reset(); chips += bet; bet = 0; render(); }, "", bet === 0);
+        b(phase === "done" ? `Deal again (${lastBet})` : "Deal", () => {
+          if (phase === "done") { reset(); if (chips >= lastBet) { chips -= lastBet; bet = lastBet; } }
+          if (bet > 0) deal(); else { msg.textContent = "Not enough chips for that bet. Pick a smaller one."; render(); }
+        }, "gold", phase === "bet" && bet === 0);
+      } else if (phase === "play") {
+        b("Hit", hit, "gold"); b("Stand", stand);
+        b("Double", double, "", player.length !== 2 || chips < bet);
+      }
+    }
+    function reset() { dealer = []; player = []; bet = 0; phase = "bet"; msg.textContent = "Place your bet."; msg.className = "bjmsg"; }
+    function deal() {
+      lastBet = bet; store.set("nova-bj-last", bet);
+      player = [draw(), draw()]; dealer = [draw(), draw()]; phase = "play"; msg.textContent = "";
+      if (isBJ(player) || isBJ(dealer)) return finish();
+      render();
+    }
+    function hit() { player.push(draw()); if (total(player) > 21) return finish(); if (total(player) === 21) return stand(); render(); }
+    function stand() { while (total(dealer) < 17) dealer.push(draw()); finish(); }
+    function double() { chips -= bet; bet *= 2; player.push(draw()); if (total(player) > 21) return finish(); stand(); }
+    function finish() {
+      phase = "done";
+      const p = total(player), d = total(dealer);
+      let win = 0, text;
+      if (isBJ(player) && !isBJ(dealer)) { win = Math.floor(bet * 2.5); text = "Blackjack! You win " + Math.floor(bet * 1.5); }
+      else if (isBJ(dealer) && !isBJ(player)) text = "Dealer has blackjack.";
+      else if (p > 21) text = "Bust! Over 21.";
+      else if (d > 21) { win = bet * 2; text = "Dealer busts. You win " + bet + "!"; }
+      else if (p > d) { win = bet * 2; text = "You win " + bet + "!"; }
+      else if (p === d) { win = bet; text = "Push. Your bet comes back."; }
+      else text = "Dealer wins.";
+      chips += win;
+      msg.textContent = text; msg.className = "bjmsg " + (win > bet ? "won" : win === bet && win ? "push" : "lost");
+      bet = 0;
+      render();
+    }
+    newShoe(); reset(); render();
+    return {stop() {}};
+  }
+
+  /* ===== Chess, online with a room code ===== */
+  function loadChess() {
+    if (window.Chess) return Promise.resolve();
+    return new Promise((ok, fail) => {
+      const s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/chess.js@0.10.3/chess.js";
+      s.onload = () => window.Chess ? ok() : fail(new Error("Chess didn't load"));
+      s.onerror = () => fail(new Error("Couldn't load the chess rules. Check your internet and try again."));
+      document.head.appendChild(s);
+    });
+  }
+  function startChess(root) {
+    let room = null, game = null, color = "w", ply = 0, sel = null, poll = 0, stopped = false, gameNo = 0, pendingPromo = null, busyMove = false;
+    const GLYPH = {k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟"};
+    const VS = "︎";
+    const lobby = () => {
+      const saved = store.get("nova-chess-room", null);
+      root.innerHTML = '<div class="chlobby"><div class="chcard"><b>Start a game</b><p>Get a room code and send it to a friend. They join from their own device.</p><button type="button" class="gbtn gold chnew">Create room</button></div>' +
+        '<div class="chcard"><b>Join a game</b><p>Type the code your friend gave you.</p><div class="chjoin"><input maxlength="6" placeholder="ROOM CODE" aria-label="Room code" autocapitalize="characters"><button type="button" class="gbtn gold">Join</button></div></div>' +
+        (saved ? `<button type="button" class="chrejoin">Rejoin room ${saved}</button>` : "") + '<p class="cherr" role="alert"></p></div>';
+      const err = root.querySelector(".cherr"), inp = root.querySelector("input");
+      const go = async (action, code) => {
+        err.textContent = "";
+        try {
+          await loadChess();
+          const d = await api("/api/games", {method: "POST", body: JSON.stringify({action, code})});
+          enter(d.room);
+        } catch (e) { if (!handleAuthError(e)) err.textContent = e.message; if (e.status === 404) store.set("nova-chess-room", null); }
+      };
+      root.querySelector(".chnew").onclick = () => go("create");
+      root.querySelector(".chjoin button").onclick = () => { const c = inp.value.trim().toUpperCase(); if (c.length >= 4) go("join", c); else err.textContent = "Room codes have 5 letters and numbers."; };
+      inp.addEventListener("keydown", e => { if (e.key === "Enter") root.querySelector(".chjoin button").click(); });
+      inp.addEventListener("input", () => { inp.value = inp.value.toUpperCase().replace(/[^A-Z0-9]/g, ""); });
+      const rj = root.querySelector(".chrejoin"); if (rj) rj.onclick = () => go("join", saved);
+    };
+    function enter(r) {
+      room = r; store.set("nova-chess-room", r.code);
+      root.innerHTML = '<div class="chwrap"><div class="chside"><div class="chcode"><small>Room code</small><b></b><button type="button" class="gbtn copy">Copy</button></div><div class="chplayers"></div><div class="chstatus" aria-live="polite"></div><div class="chpromo" hidden></div><ol class="chmoves"></ol><div class="chacts"></div></div><div class="chboard" role="grid" aria-label="Chess board"></div></div>';
+      root.querySelector(".chcode b").textContent = r.code;
+      root.querySelector(".copy").onclick = e => { navigator.clipboard?.writeText(r.code).then(() => { e.target.textContent = "Copied"; setTimeout(() => e.target.textContent = "Copy", 1200); }, () => {}); };
+      sync(r, true);
+      clearInterval(poll);
+      poll = setInterval(refresh, 1600);
+    }
+    async function refresh() {
+      if (stopped || document.hidden || view.hidden || !room || busyMove) return;
+      try { const d = await api("/api/games?code=" + room.code); sync(d.room); }
+      catch (e) { if (e.status === 404) { clearInterval(poll); store.set("nova-chess-room", null); setStatus("This room expired. Go back and start a new one."); } }
+    }
+    function sync(r, force) {
+      const reset = force || r.game !== gameNo;
+      room = r; color = r.color || "w";
+      if (reset) { game = new Chess(); ply = 0; gameNo = r.game; sel = null; }
+      while (ply < r.moves.length) {
+        const m = r.moves[ply];
+        const ok = game.move({from: m.slice(0, 2), to: m.slice(2, 4), promotion: m[4] || "q"});
+        if (!ok) { game = new Chess(); ply = 0; for (const mm of r.moves.slice(0, r.moves.length)) { game.move({from: mm.slice(0, 2), to: mm.slice(2, 4), promotion: mm[4] || "q"}); ply++; } break; }
+        ply++;
+      }
+      paint();
+    }
+    const setStatus = t => { const s = root.querySelector(".chstatus"); if (s) s.textContent = t; };
+    function paint() {
+      const boardEl = root.querySelector(".chboard"); if (!boardEl) return;
+      const pl = root.querySelector(".chplayers");
+      pl.innerHTML = `<div class="${color === "w" ? "me" : ""}"><i class="pw"></i>${escH(room.white || "Waiting…")}</div><div class="${color === "b" ? "me" : ""}"><i class="pb"></i>${escH(room.black || "Waiting for a friend…")}</div>`;
+      const turn = game.turn(), myTurn = room.status === "playing" && turn === color;
+      if (room.status === "waiting") setStatus("Send your friend the room code. The game starts when they join.");
+      else if (room.status === "over") {
+        const r = room.result || {};
+        setStatus(r.type === "checkmate" ? (r.winner === color ? "Checkmate. You win! 🎉" : "Checkmate. You lost.") : r.type === "resign" ? (r.winner === color ? "Your opponent resigned. You win!" : "You resigned.") : "It's a draw.");
+      } else setStatus((myTurn ? "Your move" : "Their move") + (game.in_check() ? " · Check!" : ""));
+      const hist = game.history(), ol = root.querySelector(".chmoves"); ol.innerHTML = "";
+      for (let i = 0; i < hist.length; i += 2) { const li = h("li"); li.textContent = hist[i] + (hist[i + 1] ? "   " + hist[i + 1] : ""); ol.appendChild(li); }
+      ol.scrollTop = ol.scrollHeight;
+      const acts = root.querySelector(".chacts"); acts.innerHTML = "";
+      const b = (label, fn, cls = "") => { const x = h("button", "gbtn " + cls, label); x.type = "button"; x.onclick = fn; acts.appendChild(x); };
+      if (room.status === "playing") b("Resign", async () => { if (!confirm("Resign this game?")) return; try { sync((await api("/api/games", {method: "POST", body: JSON.stringify({action: "resign", code: room.code})})).room); } catch (e) { setStatus(e.message); } });
+      if (room.status === "over") b(room.rematch.includes(color) ? "Waiting for them…" : (room.rematch.length ? "Accept rematch" : "Rematch"), async () => { try { sync((await api("/api/games", {method: "POST", body: JSON.stringify({action: "rematch", code: room.code})})).room); } catch (e) { setStatus(e.message); } }, "gold");
+      b("Leave room", () => { store.set("nova-chess-room", null); clearInterval(poll); lobby(); });
+      const last = game.history({verbose: true}).slice(-1)[0];
+      const targets = sel ? game.moves({square: sel, verbose: true}).map(m => m.to) : [];
+      boardEl.innerHTML = "";
+      const files = "abcdefgh";
+      for (let rr = 0; rr < 8; rr++) for (let ff = 0; ff < 8; ff++) {
+        const r = color === "w" ? 7 - rr : rr, f = color === "w" ? ff : 7 - ff, sq = files[f] + (r + 1);
+        const p = game.get(sq), d = h("button", "chsq " + ((r + f) % 2 ? "lt" : "dk"));
+        d.type = "button"; d.dataset.sq = sq;
+        if (last && (last.from === sq || last.to === sq)) d.classList.add("last");
+        if (sel === sq) d.classList.add("sel");
+        if (targets.includes(sq)) d.classList.add(p ? "cap" : "dot");
+        if (p && p.type === "k" && p.color === turn && game.in_check()) d.classList.add("check");
+        if (p) { const s = h("span", "pc " + (p.color === "w" ? "w" : "b")); s.textContent = GLYPH[p.type] + VS; d.appendChild(s); }
+        if (ff === 0) d.appendChild(h("i", "rk", String(r + 1)));
+        if (rr === 7) d.appendChild(h("i", "fl", files[f]));
+        d.setAttribute("aria-label", sq + (p ? " " + (p.color === "w" ? "white " : "black ") + {k: "king", q: "queen", r: "rook", b: "bishop", n: "knight", p: "pawn"}[p.type] : ""));
+        d.onclick = () => clickSq(sq);
+        boardEl.appendChild(d);
+      }
+    }
+    function clickSq(sq) {
+      if (!room || room.status !== "playing" || game.turn() !== color || pendingPromo || busyMove) return;
+      const p = game.get(sq);
+      if (sel) {
+        const mv = game.moves({square: sel, verbose: true}).find(m => m.to === sq);
+        if (mv) {
+          if (mv.flags.includes("p")) return askPromo(sel, sq);
+          return makeMove(sel, sq, "");
+        }
+      }
+      sel = p && p.color === color ? (sel === sq ? null : sq) : null;
+      paint();
+    }
+    function askPromo(from, to) {
+      pendingPromo = true;
+      const box = root.querySelector(".chpromo"); box.hidden = false; box.innerHTML = "<small>Promote to</small>";
+      for (const t of ["q", "r", "b", "n"]) {
+        const x = h("button", "gbtn pc " + color); x.type = "button"; x.textContent = GLYPH[t] + VS;
+        x.onclick = () => { box.hidden = true; pendingPromo = null; makeMove(from, to, t); };
+        box.appendChild(x);
+      }
+    }
+    async function makeMove(from, to, promo) {
+      const before = ply;
+      const ok = game.move({from, to, promotion: promo || "q"});
+      if (!ok) return;
+      ply++; sel = null; paint();
+      let end = null;
+      if (game.in_checkmate()) end = {type: "checkmate"};
+      else if (game.in_stalemate()) end = {type: "stalemate"};
+      else if (game.in_draw() || game.in_threefold_repetition()) end = {type: "draw"};
+      busyMove = true;
+      try {
+        const d = await api("/api/games", {method: "POST", body: JSON.stringify({action: "move", code: room.code, from, to, promotion: promo, ply: before, end})});
+        busyMove = false; sync(d.room);
+      } catch (e) {
+        busyMove = false;
+        setStatus(e.message);
+        try { sync((await api("/api/games?code=" + room.code)).room, true); } catch {}
+      }
+    }
+    lobby();
+    return {stop() { stopped = true; clearInterval(poll); }};
+  }
 })();
 </script>
 </body>
