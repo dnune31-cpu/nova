@@ -529,6 +529,35 @@ form#f{width:calc(100% - 20px)}
 .tpop button:hover,.tpop button:focus-visible{background:#30302d;outline:none}
 .tpop .tdanger,.tpop .tdanger svg{color:#ff9d9d}
 .titleedit{min-width:0;width:min(420px,60vw);background:var(--c-input,#2a2a28);border:1px solid #55534e;border-radius:9px;color:var(--c-text,#ecebe7);font:inherit;font-size:15.5px;padding:5px 9px;outline:0}
+
+/* galaxy lens (screen sharing) */
+@property --lensA{syntax:"<angle>";inherits:false;initial-value:0deg}
+#chatView{position:relative}
+#lens{position:absolute;right:24px;bottom:var(--lensB,150px);width:118px;height:118px;border-radius:50%;z-index:15;cursor:zoom-in;outline:none;transition:width .45s cubic-bezier(.22,1,.36,1),height .45s cubic-bezier(.22,1,.36,1),border-radius .45s cubic-bezier(.22,1,.36,1);animation:lensIn .6s cubic-bezier(.34,1.56,.64,1)}
+#lens.big{width:min(400px,calc(100% - 48px));height:min(250px,45vh);border-radius:22px;cursor:zoom-out}
+#lens:focus-visible{box-shadow:0 0 0 2px var(--gold)}
+#lens .lring{position:absolute;inset:0;border-radius:inherit;background:conic-gradient(from var(--lensA),#ffcf8a,#8fb3ff 30%,rgba(143,179,255,0) 55%,rgba(255,207,138,0) 75%,#ffcf8a);animation:lensSpin 6s linear infinite;box-shadow:0 0 28px rgba(255,207,138,.28),0 10px 30px rgba(0,0,0,.45)}
+#lens video{position:absolute;inset:5px;width:calc(100% - 10px);height:calc(100% - 10px);border-radius:inherit;object-fit:cover;background:#0b0d1f;border:3px solid var(--c-bg,#1f1f1e);box-sizing:border-box}
+#lens.big video{object-fit:contain;border-radius:17px}
+#lens .lflash{position:absolute;inset:5px;border-radius:inherit;background:radial-gradient(circle,rgba(255,246,228,.95),rgba(255,207,138,.4) 60%,rgba(255,207,138,0));opacity:0;pointer-events:none}
+#lens.flash .lflash{animation:lensFlash .7s ease-out}
+#lens.flash .lring{animation:lensSpin 6s linear infinite,lensPulse .7s ease-out}
+#lens .lx{position:absolute;right:0;top:0;width:24px;height:24px;border-radius:50%;background:#262624;border:1px solid var(--c-line2,#3a3a37);color:var(--c-text,#ecebe7);font-size:11px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;opacity:.85}
+#lens.big .lx{right:8px;top:8px}
+#lens .lx:hover{opacity:1;color:#ff9d9d}
+#lens .ltag{position:absolute;left:50%;bottom:-10px;transform:translateX(-50%);display:flex;align-items:center;gap:6px;background:#262624;border:1px solid var(--c-line2,#3a3a37);border-radius:999px;font-size:11.5px;padding:3px 10px;white-space:nowrap;color:var(--c-text,#ecebe7);font-family:"Inter",system-ui,sans-serif;pointer-events:none}
+#lens .ltag i{width:7px;height:7px;border-radius:50%;background:#ff5f57;box-shadow:0 0 0 3px rgba(255,95,87,.2);animation:breathe 1.6s ease-in-out infinite}
+#lens .ls{position:absolute;width:3px;height:3px;border-radius:50%;background:#fff3dc;box-shadow:0 0 6px #ffcf8a;animation:lensTwinkle 2.4s ease-in-out infinite;pointer-events:none}
+#lens .s1{left:-14px;top:22%}#lens .s2{right:-10px;bottom:30%;animation-delay:.8s}#lens .s3{left:30%;top:-12px;animation-delay:1.6s}
+#lens.big .ls{display:none}
+#bLens[aria-pressed=true]{color:var(--gold)!important;background:rgba(255,207,138,.14)!important}
+.user .pics img[alt="Screen snapshot"]{border:1px solid rgba(255,207,138,.4)}
+@keyframes lensSpin{to{--lensA:360deg}}
+@keyframes lensIn{from{opacity:0;transform:scale(.4) rotate(-40deg)}to{opacity:1;transform:none}}
+@keyframes lensFlash{0%{opacity:.9}100%{opacity:0}}
+@keyframes lensPulse{40%{box-shadow:0 0 50px rgba(255,220,160,.7),0 10px 30px rgba(0,0,0,.45)}}
+@keyframes lensTwinkle{50%{opacity:.2;transform:scale(.5)}}
+@media (max-width:760px){#lens{width:92px;height:92px;right:14px}}
 </style>
 </head>
 <body>
@@ -2151,6 +2180,93 @@ document.addEventListener("keydown", e => {
     const items = [...pop.querySelectorAll("button")], i = items.indexOf(document.activeElement);
     items[(i + (e.key === "ArrowDown" ? 1 : items.length - 1)) % items.length].focus();
   });
+})();
+
+/* ---------- galaxy lens: let Nova see your screen ---------- */
+(() => {
+  const can = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
+  const view = $("chatView");
+  const tb = document.createElement("button");
+  tb.type = "button"; tb.className = "tool"; tb.id = "bLens";
+  tb.title = can ? "Watch my screen" : "Screen sharing works in Safari or Chrome on a computer";
+  tb.setAttribute("aria-label", "Watch my screen"); tb.setAttribute("aria-pressed", "false");
+  tb.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.2"/><path d="M12 1.8v2.4M12 19.8v2.4M1.8 12h2.4M19.8 12h2.4"/></svg>';
+  $("bLink").after(tb);
+
+  const lens = document.createElement("div");
+  lens.id = "lens"; lens.hidden = true;
+  lens.setAttribute("role", "button"); lens.tabIndex = 0;
+  lens.setAttribute("aria-label", "Your shared screen. Press to make it bigger or smaller.");
+  lens.title = "Nova takes a snapshot of this each time you send";
+  lens.innerHTML = '<div class="lring"></div><video muted playsinline autoplay></video><div class="lflash"></div>' +
+    '<button type="button" class="lx" aria-label="Stop sharing" title="Stop sharing">✕</button>' +
+    '<span class="ltag"><i></i>Watching</span><b class="ls s1"></b><b class="ls s2"></b><b class="ls s3"></b>';
+  view.appendChild(lens);
+  const video = lens.querySelector("video");
+  let stream = null;
+
+  // keep the lens floating just above the message box
+  const place = () => {
+    const v = view.getBoundingClientRect(), f = form.getBoundingClientRect();
+    if (v.height) lens.style.setProperty("--lensB", Math.round(v.bottom - f.top + 16) + "px");
+  };
+  if (window.ResizeObserver) new ResizeObserver(place).observe(form);
+  addEventListener("resize", place);
+
+  function stop() {
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    stream = null; video.srcObject = null;
+    lens.hidden = true; lens.classList.remove("big");
+    tb.setAttribute("aria-pressed", "false"); tb.title = "Watch my screen";
+    if ("ph" in q.dataset) q.placeholder = q.dataset.ph;
+  }
+  async function start() {
+    if (!can) { showError("Screen sharing works in Safari or Chrome on a Mac or PC, not on phones or iPads."); return; }
+    showError("");
+    try {
+      stream = await navigator.mediaDevices.getDisplayMedia({video: true, audio: false, selfBrowserSurface: "exclude", surfaceSwitching: "include"});
+    } catch (err) {
+      stream = null;
+      if (err && err.name === "NotAllowedError") {
+        showError("Screen sharing didn't start. If you didn't cancel it, allow your browser in System Settings → Privacy & Security → Screen Recording, then try again.");
+      } else showError("Screen sharing didn't start. Try again.");
+      return;
+    }
+    const track = stream.getVideoTracks()[0];
+    track.addEventListener("ended", stop);
+    video.srcObject = stream;
+    video.play().catch(() => {});
+    lens.hidden = false; place();
+    tb.setAttribute("aria-pressed", "true"); tb.title = "Stop watching my screen";
+    if (!("ph" in q.dataset)) q.dataset.ph = q.placeholder;
+    q.placeholder = "Ask about your screen…";
+    q.focus();
+  }
+  tb.onclick = () => { if (stream) stop(); else start(); };
+  lens.querySelector(".lx").onclick = e => { e.stopPropagation(); stop(); };
+  const grow2 = () => { lens.classList.toggle("big"); };
+  lens.addEventListener("click", grow2);
+  lens.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); grow2(); } });
+
+  // one snapshot of the shared screen rides along with each message
+  function snap() {
+    const w = video.videoWidth, h = video.videoHeight;
+    if (!w || !h) return null;
+    const k = Math.min(1, 1568 / Math.max(w, h));
+    const c = document.createElement("canvas");
+    c.width = Math.round(w * k); c.height = Math.round(h * k);
+    c.getContext("2d").drawImage(video, 0, 0, c.width, c.height);
+    const url = c.toDataURL("image/jpeg", 0.85);
+    return {type: "image", media_type: "image/jpeg", data: url.split(",")[1], preview: url, name: "Screen snapshot", screen: true};
+  }
+  document.addEventListener("submit", e => {
+    if (e.target !== form || busy || !stream) return;
+    if (pending.attachments.length >= MAX_ATTACH) return;
+    const s = snap();
+    if (!s) return;
+    pending.attachments.push(s);
+    lens.classList.remove("flash"); void lens.offsetWidth; lens.classList.add("flash");
+  }, true);
 })();
 </script>
 </body>
