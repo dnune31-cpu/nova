@@ -506,6 +506,29 @@ form#f{width:calc(100% - 20px)}
 .empty canvas{width:100px;height:100px}
 .brand canvas{width:32px;height:32px}
 .card canvas{width:112px;height:112px}
+
+/* streaming, stop button, chat title menu */
+.msg.ai.live,.msg.ai.done{animation:none}
+.caret{display:inline-block;width:.5em;height:.5em;margin-left:.2em;border-radius:50%;background:var(--gold);vertical-align:middle;box-shadow:0 0 8px rgba(255,207,138,.7);animation:breathe 1s ease-in-out infinite}
+#stopBtn{flex:none;margin-left:6px;width:36px;height:36px;border-radius:12px;border:1px solid rgba(255,207,138,.32);background:#16182a;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;animation:pop .25s cubic-bezier(.22,1,.36,1)}
+#stopBtn i{width:11px;height:11px;border-radius:3px;background:#ffe2b8;box-shadow:0 0 10px rgba(255,207,138,.5)}
+#stopBtn:hover{border-color:rgba(255,207,138,.6);background:#1c1f38}
+#stopBtn.pressed{opacity:.5;cursor:default}
+.tmenu{position:relative;min-width:0;display:flex;align-items:center}
+.tbtn{display:flex;align-items:center;gap:2px;min-width:0;background:none;border:0;color:var(--c-text,#ecebe7);border-radius:9px;padding:5px 6px 5px 4px;cursor:default;font:inherit}
+.tmenu.has .tbtn{cursor:pointer}
+.tmenu.has .tbtn:hover,.tbtn[aria-expanded=true]{background:var(--c-hover,#272725)}
+.tbtn:active{transform:none}
+.tbtn #chatTitle{display:block;padding:0 2px}
+.tchev{display:none;width:16px;height:16px;color:var(--c-muted,#a19f99);flex:none}
+.tchev svg{width:16px;height:16px;display:block}
+.tmenu.has .tchev{display:block}
+.tpop{position:absolute;top:calc(100% + 6px);left:0;z-index:45;min-width:170px;background:#262624;border:1px solid var(--c-line2,#3a3a37);border-radius:12px;padding:5px;box-shadow:0 10px 30px rgba(0,0,0,.4);animation:pop .2s cubic-bezier(.22,1,.36,1);transform-origin:top left}
+.tpop button{display:flex;align-items:center;gap:10px;width:100%;background:none;border:0;color:var(--c-text,#ecebe7);font:inherit;font-size:14px;text-align:left;padding:8px 10px;border-radius:8px;cursor:pointer}
+.tpop button svg{width:16px;height:16px;flex:none;color:var(--c-muted,#a19f99)}
+.tpop button:hover,.tpop button:focus-visible{background:#30302d;outline:none}
+.tpop .tdanger,.tpop .tdanger svg{color:#ff9d9d}
+.titleedit{min-width:0;width:min(420px,60vw);background:var(--c-input,#2a2a28);border:1px solid #55534e;border-radius:9px;color:var(--c-text,#ecebe7);font:inherit;font-size:15.5px;padding:5px 9px;outline:0}
 </style>
 </head>
 <body>
@@ -1023,42 +1046,134 @@ function grow() { q.style.height = "auto"; q.style.height = Math.min(q.scrollHei
 q.addEventListener("input", () => { grow(); showError(""); });
 q.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); } });
 
+let streamStop = null;
 form.addEventListener("submit", async e => {
-  e.preventDefault();
-  if (busy) return;
-  const text = q.value.trim();
-  if (!text && !pending.attachments.length && !pending.links.length) { showError("Type a message or add something first."); return; }
-  const model = $("model").value;
-  const body = JSON.stringify({
-    chatId, model, content: text,
-    attachments: pending.attachments.map(({preview, ...rest}) => rest), links: pending.links,
-  });
-  if (body.length > 4_000_000) { showError("That's too much to send at once. Remove a photo or file and try again."); return; }
-  busy = true; send.disabled = true; showError("");
-  const saved = pending, msg = {content: text, attachments: pending.attachments, links: pending.links};
-  pending = {attachments: [], links: []}; drawTray(); q.value = ""; grow();
-  const userEl = add("user", msg);
-  const thinking = add("assistant", "");
-  const ig = igniteLoader(thinking, model);
-  spinTarget = 5;
-  try {
-    const d = await api("/api/chat", {method: "POST", body});
-    await ig.finish();
-    thinking.remove();
-    add("assistant", d.reply, {model});
-    const isNew = chatId !== d.chatId;
-    chatId = d.chatId; $("chatTitle").textContent = d.title;
-    const existing = chats.find(c => c.id === chatId);
-    if (existing) { existing.updated = Date.now(); chats.sort((a, b) => b.updated - a.updated); }
-    else if (isNew) chats.unshift({id: chatId, title: d.title, updated: Date.now()});
-  } catch (err) {
-    ig.stop(); thinking.remove(); userEl.remove();
-    if (handleAuthError(err)) return;
-    add("assistant", err.message + ". Your message wasn't sent, so try again.", {err: true});
-    q.value = text; grow(); pending = saved; drawTray();
-  } finally {
-    busy = false; send.disabled = false; spinTarget = 1; if (me) q.focus();
-  }
+e.preventDefault();
+if (busy) return;
+const text = q.value.trim();
+if (!text && !pending.attachments.length && !pending.links.length) { showError("Type a message or add something first."); return; }
+const model = $("model").value;
+const rid = Array.from(crypto.getRandomValues(new Uint8Array(8)), b => b.toString(16).padStart(2, "0")).join("");
+const body = JSON.stringify({
+chatId, model, content: text, stream: true, rid,
+attachments: pending.attachments.map(({preview, ...rest}) => rest), links: pending.links,
+});
+if (body.length > 4_000_000) { showError("That's too much to send at once. Remove a photo or file and try again."); return; }
+busy = true; send.disabled = true; showError("");
+const saved = pending, msg = {content: text, attachments: pending.attachments, links: pending.links};
+pending = {attachments: [], links: []}; drawTray(); q.value = ""; grow();
+const userEl = add("user", msg);
+const thinking = add("assistant", "");
+const ig = igniteLoader(thinking, model);
+spinTarget = 5;
+
+// streaming state
+const ctl = new AbortController();
+let started = null, live = null, opening = null, acc = "", paintT = 0, stopAsked = false;
+const stopTimer = setTimeout(() => { if (busy && !stopAsked) setStopMode(true); }, 650); // let the shooting star fly first
+streamStop = () => {
+if (stopAsked) return;
+stopAsked = true; setStopMode(true, true);
+api("/api/chat", {method: "POST", body: JSON.stringify({stop: rid})}).catch(() => {});
+setTimeout(() => ctl.abort(), 8000); // the server should answer well before this
+};
+const nearBottom = () => log.scrollHeight - log.scrollTop - log.clientHeight < 90;
+const paintNow = () => {
+paintT = 0;
+if (!live || !live.isConnected) return;
+const b = live.querySelector(".body"), stick = nearBottom();
+b.innerHTML = renderMath(acc);
+const caret = document.createElement("span"); caret.className = "caret";
+let tgt = b.lastElementChild;
+while (tgt && /^(UL|OL|BLOCKQUOTE)$/.test(tgt.tagName) && tgt.lastElementChild) tgt = tgt.lastElementChild;
+(tgt && /^(P|LI|H[1-6])$/.test(tgt.tagName) ? tgt : b).appendChild(caret);
+if (stick) log.scrollTop = log.scrollHeight;
+};
+const paint = () => { if (!paintT) paintT = setTimeout(() => requestAnimationFrame(paintNow), 50); };
+const reveal = () => {
+if (opening) return;
+opening = ig.finish().then(() => {
+thinking.remove();
+if (!userEl.isConnected) return;
+const stick = nearBottom();
+live = add("assistant", ""); live.classList.add("live");
+if (!stick) log.scrollTop -= 1;
+paintNow();
+});
+};
+const finish = async (reply, info) => {
+if (opening) await opening; else ig.stop();
+clearTimeout(paintT); paintT = 0;
+thinking.remove();
+const here = userEl.isConnected;
+const keep = log.scrollTop, stick = nearBottom();
+if (live) live.remove();
+if (here) {
+const fin = add("assistant", reply, {model}); fin.classList.add("done");
+if (!stick) log.scrollTop = keep;
+}
+if (info?.chatId) {
+const isNew = !chats.some(c => c.id === info.chatId);
+if (here) { chatId = info.chatId; $("chatTitle").textContent = info.title; }
+const existing = chats.find(c => c.id === info.chatId);
+if (existing) { existing.updated = Date.now(); chats.sort((a, b) => b.updated - a.updated); }
+else if (isNew) chats.unshift({id: info.chatId, title: info.title, updated: Date.now()});
+renderChatList();
+}
+};
+
+try {
+const r = await fetch("/api/chat", {method: "POST", credentials: "same-origin", headers: {"Content-Type": "application/json"}, body, signal: ctl.signal});
+if (!r.ok) {
+let d = {}; try { d = await r.json(); } catch {}
+const er = new Error(d.error || "Something went wrong"); er.status = r.status; throw er;
+}
+if (!(r.headers.get("content-type") || "").includes("ndjson")) { // older server: the whole answer at once
+const d = await r.json();
+await finish(d.reply, d);
+} else {
+const reader = r.body.getReader(), dec = new TextDecoder();
+let buf = "", done = null;
+const handle = ev => {
+if (ev.t === "start") started = ev;
+else if (ev.t === "d" || ev.t === "r") {
+if (stopAsked) return; // freeze what's on screen once Stop is pressed
+acc = ev.t === "d" ? acc + ev.d : ev.text;
+if (live) paint(); else reveal();
+} else if (ev.t === "done") done = ev;
+else if (ev.t === "error") throw new Error(ev.error || "Something went wrong");
+};
+for (;;) {
+const {value, done: end} = await reader.read();
+if (end) break;
+buf += dec.decode(value, {stream: true});
+let i;
+while ((i = buf.indexOf("\n")) >= 0) {
+const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
+if (line) handle(JSON.parse(line));
+}
+}
+if (buf.trim()) handle(JSON.parse(buf));
+if (!done) throw new Error("The answer got cut off");
+await finish(done.reply, done);
+}
+} catch (err) {
+if (err.name === "AbortError" && stopAsked) { // Stop was pressed and the server never wrapped up
+await finish(acc ? acc + "\n\n*(Stopped)*" : "*(Stopped before answering.)*", started);
+loadChats();
+} else {
+if (opening) await opening.catch(() => {});
+ig.stop(); thinking.remove(); if (live) live.remove(); userEl.remove();
+if (!handleAuthError(err)) {
+add("assistant", err.message + ". Your message wasn't sent, so try again.", {err: true});
+q.value = text; grow(); pending = saved; drawTray();
+}
+}
+} finally {
+clearTimeout(stopTimer);
+busy = false; send.disabled = false; spinTarget = 1; streamStop = null; setStopMode(false);
+if (me) q.focus();
+}
 });
 
 /* ---------- admin ---------- */
@@ -1933,6 +2048,109 @@ function igniteLoader(el, model) {
 (async () => {
   try { const d = await api("/api/auth"); d.user ? enterApp(d.user) : showAuth(); }
   catch (err) { showAuth(err.message); }
+})();
+
+/* ---------- stop button + chat title menu ---------- */
+const stopBtn = document.createElement("button");
+stopBtn.type = "button"; stopBtn.id = "stopBtn"; stopBtn.hidden = true;
+stopBtn.title = "Stop"; stopBtn.setAttribute("aria-label", "Stop the answer");
+stopBtn.innerHTML = "<i></i>";
+send.after(stopBtn);
+function setStopMode(on, pressed) {
+  send.hidden = !!on; stopBtn.hidden = !on;
+  stopBtn.disabled = !!pressed; stopBtn.classList.toggle("pressed", !!pressed);
+}
+stopBtn.onclick = () => { if (streamStop) streamStop(); };
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && streamStop && !stopBtn.hidden && !(e.target.closest && e.target.closest("#settings,.titleedit"))) streamStop();
+});
+
+(() => {
+  const title = $("chatTitle");
+  const wrap = document.createElement("div");
+  wrap.className = "tmenu";
+  title.replaceWith(wrap);
+  const btn = document.createElement("button");
+  btn.type = "button"; btn.className = "tbtn"; btn.id = "titleBtn";
+  btn.setAttribute("aria-haspopup", "menu"); btn.setAttribute("aria-expanded", "false");
+  btn.title = "Rename or delete this chat";
+  const chev = document.createElement("span");
+  chev.className = "tchev"; chev.setAttribute("aria-hidden", "true");
+  chev.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 10 5 5 5-5"/></svg>';
+  btn.append(title, chev);
+  const pop = document.createElement("div");
+  pop.className = "tpop"; pop.setAttribute("role", "menu"); pop.hidden = true;
+  pop.innerHTML = '<button type="button" role="menuitem" data-act="rename"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/></svg>Rename</button>' +
+    '<button type="button" role="menuitem" data-act="delete" class="tdanger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>Delete</button>';
+  wrap.append(btn, pop);
+
+  const sync = () => { const has = !!chatId; btn.disabled = !has; wrap.classList.toggle("has", has); if (!has) close(); };
+  function close() { pop.hidden = true; btn.setAttribute("aria-expanded", "false"); }
+  new MutationObserver(sync).observe(title, {childList: true, characterData: true, subtree: true});
+  sync();
+
+  btn.onclick = e => {
+    e.stopPropagation();
+    if (!chatId) return;
+    const open = pop.hidden; closePops(); close();
+    if (open) { pop.hidden = false; btn.setAttribute("aria-expanded", "true"); pop.querySelector("button").focus(); }
+  };
+  document.addEventListener("click", e => { if (!wrap.contains(e.target)) close(); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") close(); });
+
+  function rename() {
+    close();
+    const id = chatId, old = title.textContent;
+    const inp = document.createElement("input");
+    inp.className = "titleedit"; inp.value = old; inp.maxLength = 60;
+    inp.setAttribute("aria-label", "Chat name");
+    btn.hidden = true; wrap.prepend(inp); inp.focus(); inp.select();
+    let done = false;
+    const finish = async save => {
+      if (done) return; done = true;
+      const t = inp.value.replace(/\s+/g, " ").trim().slice(0, 60);
+      inp.remove(); btn.hidden = false;
+      if (!save || !t || t === old) return;
+      if (chatId === id) title.textContent = t;
+      const c = chats.find(x => x.id === id); if (c) c.title = t;
+      renderChatList();
+      try { await api(`/api/chats?id=${id}`, {method: "PATCH", body: JSON.stringify({title: t})}); }
+      catch (err) {
+        if (handleAuthError(err)) return;
+        if (chatId === id) title.textContent = old;
+        if (c) c.title = old;
+        renderChatList(); alert(err.message);
+      }
+    };
+    inp.addEventListener("keydown", e => {
+      if (e.key === "Enter") { e.preventDefault(); finish(true); }
+      else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); finish(false); }
+    });
+    inp.addEventListener("blur", () => finish(true));
+  }
+  async function remove() {
+    close();
+    if (busy) return;
+    const id = chatId;
+    if (!confirm(`Delete "${title.textContent}"? This can't be undone.`)) return;
+    try {
+      await api(`/api/chats?id=${id}`, {method: "DELETE"});
+      chats = chats.filter(x => x.id !== id);
+      if (chatId === id) newChat();
+      renderChatList();
+    } catch (err) { if (!handleAuthError(err)) alert(err.message); }
+  }
+  pop.addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    e.stopPropagation();
+    if (b.dataset.act === "rename") rename(); else remove();
+  });
+  pop.addEventListener("keydown", e => {
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+    e.preventDefault();
+    const items = [...pop.querySelectorAll("button")], i = items.indexOf(document.activeElement);
+    items[(i + (e.key === "ArrowDown" ? 1 : items.length - 1)) % items.length].focus();
+  });
 })();
 </script>
 </body>
