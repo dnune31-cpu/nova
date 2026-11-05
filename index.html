@@ -3845,7 +3845,7 @@ function startWordBomb(root) {
     root.innerHTML = '<div class="chlobby"><div class="chcard"><b>Start a game</b><p>Get a room code and share it with up to 7 friends. You can also play alone for practice.</p><button type="button" class="gbtn gold wbnew">Create room</button></div>' +
       '<div class="chcard"><b>Join a game</b><p>Type the code your friend gave you.</p><div class="chjoin"><input maxlength="6" placeholder="ROOM CODE" aria-label="Room code" autocapitalize="characters"><button type="button" class="gbtn gold">Join</button></div></div>' +
       (saved ? `<button type="button" class="chrejoin">Rejoin room ${escW(saved)}</button>` : "") + '<p class="cherr" role="alert"></p>' +
-      '<div class="wbrules"><b>How to play</b><span>When the bomb points at you, type a real English word that contains the letters shown (like <em>CLI</em> → <em>CLIMB</em>) and press Enter. Each word can only be used once. The fuse is hidden and resets after every good word, but every round it gets shorter and the letters get harder. If it blows up on you, you lose a heart (you start with 3). Good words fill your power bar, and longer words with rare letters fill it faster. A full bar gives you an extra heart. Last one standing wins.</span></div></div>';
+      '<div class="wbrules"><b>How to play</b><span>When the bomb points at you, type a real English word that contains the letters shown (like <em>CLI</em> → <em>CLIMB</em>) and press Enter. Each word can only be used once. Everyone gets a go at the same letters for the whole round, but if someone blows up, the letters switch. The fuse is hidden and resets after every good word, and each round it gets a little shorter and the letters a little harder. If it blows up on you, you lose a heart (you start with 3). Good words fill your power bar, and longer words with rare letters fill it faster. A full bar gives you an extra heart. Last one standing wins.</span></div></div>';
     const errEl = root.querySelector(".cherr"), inp = root.querySelector("input");
     const go = async (action, c) => {
       errEl.textContent = "";
@@ -4118,7 +4118,7 @@ function startWordBomb(root) {
   function roundBanner(n) {
     const t = root.querySelector(".wbtable"); if (!t) return;
     const b = document.createElement("div"); b.className = "wbbanner";
-    b.innerHTML = `<b>Round ${n}</b><span>Faster fuse · harder letters</span>`;
+    b.innerHTML = `<b>Round ${n}</b><span>New letters · slightly faster</span>`;
     t.appendChild(b); setTimeout(() => b.remove(), 1900);
   }
   function showOver() {
