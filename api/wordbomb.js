@@ -3,8 +3,9 @@ import { redis, getJSON, getAuth } from "./_lib.js";
 
 // Word Bomb: party word game for 1 to 8 friends with a room code.
 // On your turn, type a real word that contains the letters shown before the bomb goes off.
-// The fuse is random and hidden, and resets after every good word. Each round the fuse gets shorter
-// and the letters get harder. Good words fill your power bar; a full bar is an extra life.
+// The fuse is random and hidden, and resets after every good word. Everyone gets a go at the same letters
+// for a whole round, unless someone blows up (then the letters switch). Each round the fuse gets a little
+// shorter and the letters a little harder. Good words fill your power bar; a full bar is an extra life.
 const TTL = 6 * 3600;
 const LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const START_LIVES = 3, MAX_LIVES = 5, MAX_PLAYERS = 8;
@@ -12,7 +13,7 @@ const SCRABBLE = { a: 1, b: 3, c: 3, d: 2, e: 1, f: 4, g: 2, h: 4, i: 1, j: 8, k
 // how much a word fills your power bar (out of 100): longer words and rare letters count more
 const wordPoints = w => Math.max(5, Math.min(40, Math.round([...w].reduce((t, ch) => t + (SCRABBLE[ch] || 1), 0) * 1.1 + Math.max(0, w.length - 5) * 2)));
 // the fuse for each bomb: a random length that shrinks every round
-function fuseRange(round) { const f = Math.pow(0.88, round - 1); return [Math.max(3500, Math.round(10000 * f)), Math.max(6000, Math.round(17000 * f))]; }
+function fuseRange(round) { const f = Math.pow(0.95, round - 1); return [Math.max(5000, Math.round(12000 * f)), Math.max(8000, Math.round(20000 * f))]; }
 const WORD_URLS = [
   "https://raw.githubusercontent.com/dolph/dictionary/master/enable1.txt",
   "https://cdn.jsdelivr.net/gh/dolph/dictionary@master/enable1.txt",
@@ -54,7 +55,7 @@ function loadWords() {
   return loading;
 }
 function newPrompt(round) { // harder letters show up more often as the rounds go on
-  const r = round - 1, w = [Math.max(0.05, 1 - r * 0.18), 0.6, Math.min(1.4, r * 0.2)];
+  const r = round - 1, w = [Math.max(0.1, 1 - r * 0.06), 0.5 + Math.min(0.3, r * 0.03), Math.min(1.2, r * 0.06)];
   let x = Math.random() * (w[0] + w[1] + w[2]), t = 0;
   while (t < 2 && x > w[t]) { x -= w[t]; t++; }
   const tier = TIERS[t];
@@ -122,7 +123,8 @@ function endTurn(room) {
   if (room.roundTurns >= Math.max(1, room.players.filter(inGame).length)) { room.round = (room.round || 1) + 1; room.roundTurns = 0; return true; }
   return false;
 }
-function newTurn(room, i) { room.turn = i; room.turnId = (room.turnId || 0) + 1; room.turnStart = Date.now(); room.prompt = newPrompt(room.round || 1); }
+// newLetters = false keeps the same letters for the next player
+function newTurn(room, i, newLetters = true) { room.turn = i; room.turnId = (room.turnId || 0) + 1; room.turnStart = Date.now(); if (newLetters || !room.prompt) room.prompt = newPrompt(room.round || 1); }
 function checkOver(room) {
   const alive = room.players.map((p, i) => [p, i]).filter(([p]) => inGame(p));
   if (alive.length === 0 || (!room.solo && alive.length <= 1)) {
@@ -151,8 +153,9 @@ function acceptWord(room, me, w) {
   let bonus = false, full = false;
   if (p.power >= 100) { p.power = 0; full = true; bonus = p.lives < MAX_LIVES; if (bonus) p.lives++; }
   const e = { type: "word", by: me, word: w, prompt: room.prompt, pts, bonus, full };
-  if (endTurn(room)) e.round = room.round;
-  newTurn(room, nextAlive(room, me));
+  const roundUp = endTurn(room);
+  if (roundUp) e.round = room.round;
+  newTurn(room, nextAlive(room, me), roundUp); // same letters for everyone until the round ends
   newBomb(room); // a good word resets the bomb
   event(room, e);
 }
@@ -296,7 +299,7 @@ export default async function handler(req, res) {
         } else {
           const p = room.players[me]; p.left = true; p.alive = false;
           if (!room.players.some(x => !x.bot && !x.left)) { await redis("DEL", key(code), tkey(code)); return [200, { ok: true }]; }
-          if (room.status === "playing" && !checkOver(room) && room.turn === me) { newTurn(room, nextAlive(room, me)); newBomb(room); }
+          if (room.status === "playing" && !checkOver(room) && room.turn === me) { newTurn(room, nextAlive(room, me), false); newBomb(room); }
         }
         event(room, { type: "leave", by: me });
         await save(room);
