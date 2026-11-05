@@ -13,6 +13,13 @@ const WORD_URLS = [
   "https://raw.githubusercontent.com/dolph/dictionary/master/enable1.txt",
   "https://cdn.jsdelivr.net/gh/dolph/dictionary@master/enable1.txt",
 ];
+const LEVELS = ["easy", "medium", "hard"];
+const BOT_NAMES = ["Byte", "Pixel", "Bolt", "Chip", "Gizmo", "Sprocket", "Widget"];
+const BOT = { // think = pause before typing, per = ms per letter, fail = chance it freezes up, len = word lengths it likes
+  easy: { think: [2200, 4800], per: 260, fail: 0.25, len: [3, 6] },
+  medium: { think: [1300, 3000], per: 170, fail: 0.1, len: [4, 8] },
+  hard: { think: [600, 1500], per: 105, fail: 0.03, len: [5, 11] },
+};
 const key = c => `wb:${c}`;
 const tkey = c => `wb:${c}:t`;
 const clean = c => String(c || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
@@ -50,6 +57,52 @@ function example(prompt, used) { // a word that would have worked (shown after a
   return null;
 }
 
+/* ----- bots ----- */
+const between = ([a, b]) => a + crypto.randomInt(b - a + 1);
+function botWord(prompt, used, lv) {
+  const [a, b] = BOT[lv].len, start = crypto.randomInt(WORDS.length);
+  let fallback = null;
+  for (let k = 0; k < WORDS.length; k++) {
+    const w = WORDS[(start + k) % WORDS.length];
+    if (!w.includes(prompt) || used.includes(w)) continue;
+    if (w.length >= a && w.length <= b) return w;
+    if (!fallback) fallback = w;
+  }
+  return fallback;
+}
+// a bot plans its turn once (what to type and when), then the word goes in when the time comes
+function botStep(room) {
+  if (room.status !== "playing") return false;
+  const i = room.turn, p = room.players[i];
+  if (!p || !p.bot) return false;
+  const now = Date.now(), plan = room.botPlan;
+  if (!plan || plan.turnId !== room.turnId) {
+    const c = BOT[p.bot] || BOT.medium, fail = Math.random() < c.fail;
+    const word = botWord(room.prompt, room.used, p.bot);
+    const typeAt = now + between(c.think);
+    room.botPlan = fail || !word
+      ? { turnId: room.turnId, word: null, text: word ? word.slice(0, Math.max(room.prompt.length, Math.ceil(word.length / 2))) : room.prompt, typeAt, per: c.per * 1.6 }
+      : { turnId: room.turnId, word, text: word, typeAt, per: c.per, doneAt: typeAt + word.length * c.per + 300 };
+    return true;
+  }
+  if (plan.word && now >= plan.doneAt) { acceptWord(room, i, plan.word); return true; }
+  return false;
+}
+const botNeeds = room => {
+  if (room.status !== "playing") return false;
+  const p = room.players[room.turn];
+  if (!p || !p.bot) return false;
+  const plan = room.botPlan;
+  return !plan || plan.turnId !== room.turnId || (plan.word && Date.now() >= plan.doneAt);
+};
+function botTyping(room) { // what the bot has typed so far, letter by letter
+  const p = room.players[room.turn], plan = room.botPlan;
+  if (!p?.bot || !plan || plan.turnId !== room.turnId) return null;
+  const n = Math.max(0, Math.min(plan.text.length, Math.floor((Date.now() - plan.typeAt) / plan.per)));
+  return { text: plan.text.slice(0, n).toUpperCase(), bad: null };
+}
+const humansFirst = room => { room.players.sort((a, b) => (a.bot ? 1 : 0) - (b.bot ? 1 : 0)); };
+
 /* ----- game helpers ----- */
 function event(room, e) { room.seq = (room.seq || 0) + 1; room.event = { seq: room.seq, ...e, at: Date.now() }; }
 const inGame = p => p.alive && !p.left;
@@ -80,6 +133,18 @@ function tick(room) {
   event(room, e);
   return true;
 }
+function acceptWord(room, me, w) {
+  const p = room.players[me];
+  room.used.push(w); p.last = w; p.words = (p.words || 0) + 1;
+  let letters = new Set(p.letters || ""); for (const ch of w) if (ALPHA.includes(ch)) letters.add(ch);
+  let bonus = false;
+  if (letters.size >= ALPHA.length) { letters = new Set(); bonus = p.lives < MAX_LIVES; if (bonus) p.lives++; }
+  p.letters = [...letters].sort().join("");
+  const e = { type: "word", by: me, word: w, prompt: room.prompt, bonus, full: !letters.size };
+  newTurn(room, nextAlive(room, me));
+  room.bomb.deadline = Math.max(room.bomb.deadline, Date.now() + MIN_TURN);
+  event(room, e);
+}
 function stage(room) {
   if (room.status !== "playing") return 0;
   const f = (Date.now() - room.bomb.start) / room.bomb.total;
@@ -90,10 +155,10 @@ function view(room, email, typing) {
   const me = room.players.findIndex(p => p.email === email);
   return {
     code: room.code, status: room.status, me, host: room.players[0]?.email === email,
-    players: room.players.map((p, i) => ({ name: p.name, lives: p.lives ?? START_LIVES, letters: p.letters || "", alive: p.alive !== false, left: !!p.left, last: p.last || "", words: p.words || 0, me: i === me })),
+    players: room.players.map((p, i) => ({ name: p.name, lives: p.lives ?? START_LIVES, letters: p.letters || "", alive: p.alive !== false, left: !!p.left, last: p.last || "", words: p.words || 0, bot: p.bot || null, me: i === me })),
     turn: room.turn ?? 0, turnId: room.turnId || 0, prompt: room.prompt || null, stage: stage(room),
     usedCount: (room.used || []).length, winner: room.winner ?? null, event: room.event || null, seq: room.seq || 0, game: room.game || 1,
-    typing: typing && typing.turnId === room.turnId ? { text: typing.text || "", bad: typing.bad || null } : null,
+    typing: botTyping(room) || (typing && typing.turnId === room.turnId ? { text: typing.text || "", bad: typing.bad || null } : null),
     alpha: ALPHA, maxLives: MAX_LIVES,
   };
 }
@@ -124,9 +189,15 @@ export default async function handler(req, res) {
       const code = clean(req.query?.code);
       let [room, typing] = await load(code);
       if (!room) return res.status(404).json({ error: "That room doesn't exist anymore." });
-      if (room.status === "playing" && Date.now() >= room.bomb.deadline) {
+      if (room.status === "playing" && (Date.now() >= room.bomb.deadline || botNeeds(room))) {
         await loadWords();
-        room = await withLock(code, async () => { const r = await getJSON(key(code)); if (r && tick(r)) await save(r); return r; });
+        room = await withLock(code, async () => {
+          const r = await getJSON(key(code)); if (!r) return r;
+          let changed = tick(r);
+          changed = botStep(r) || changed;
+          if (changed) await save(r);
+          return r;
+        });
         if (!room) return res.status(404).json({ error: "That room doesn't exist anymore." });
       }
       return res.status(200).json({ room: view(room, email, typing) });
@@ -165,18 +236,38 @@ export default async function handler(req, res) {
           if (room.players.filter(p => !p.left).length >= MAX_PLAYERS) return [409, { error: "That room is full (8 players)." }];
           if (room.status === "over") room.players = room.players.filter(p => !p.left);
           room.players.push({ email, name });
-          event(room, { type: "join", by: room.players.length - 1 });
+          humansFirst(room);
+          event(room, { type: "join", by: room.players.findIndex(p => p.email === email) });
           await save(room);
         }
         return reply(200);
       }
       if (me < 0) return [403, { error: "You're not in this room." }];
 
+      if (action === "addbot" || action === "removebot") {
+        if (me !== 0) return reply(403, { error: "Only the host can add bots." });
+        if (room.status === "playing") return reply(400, { error: "Wait until this round ends." });
+        if (action === "addbot") {
+          if (room.players.filter(p => !p.left).length >= MAX_PLAYERS) return reply(400, { error: "The room is full." });
+          const lv = LEVELS.includes(req.body.level) ? req.body.level : "medium";
+          const used = new Set(room.players.map(p => p.name));
+          room.players.push({ email: "bot:" + crypto.randomBytes(4).toString("hex"), name: BOT_NAMES.find(n => !used.has(n)) || "Bot", bot: lv });
+          event(room, { type: "join", by: room.players.length - 1 });
+        } else {
+          const i = Number(req.body.index);
+          if (!room.players[i]?.bot) return reply(400, { error: "That's not a bot." });
+          room.players.splice(i, 1);
+        }
+        await save(room);
+        return reply(200);
+      }
       if (action === "start") {
         if (me !== 0) return reply(403, { error: "Only the host can start." });
         if (room.status === "playing") return reply(400, { error: "The game already started." });
         await loadWords();
         room.players = room.players.filter(p => !p.left);
+        humansFirst(room);
+        room.botPlan = null;
         room.players.forEach(p => { p.lives = START_LIVES; p.letters = ""; p.words = 0; p.alive = true; p.last = ""; });
         room.solo = room.players.length === 1;
         if (room.status === "over") room.game = (room.game || 1) + 1;
@@ -189,9 +280,11 @@ export default async function handler(req, res) {
       if (action === "leave") {
         if (room.status === "lobby") {
           room.players.splice(me, 1);
-          if (!room.players.length) { await redis("DEL", key(code), tkey(code)); return [200, { ok: true }]; }
+          humansFirst(room);
+          if (!room.players.some(p => !p.bot)) { await redis("DEL", key(code), tkey(code)); return [200, { ok: true }]; }
         } else {
           const p = room.players[me]; p.left = true; p.alive = false;
+          if (!room.players.some(x => !x.bot && !x.left)) { await redis("DEL", key(code), tkey(code)); return [200, { ok: true }]; }
           if (room.status === "playing" && !checkOver(room) && room.turn === me) { newTurn(room, nextAlive(room, me)); room.bomb.deadline = Math.max(room.bomb.deadline, Date.now() + MIN_TURN); }
         }
         event(room, { type: "leave", by: me });
@@ -214,16 +307,7 @@ export default async function handler(req, res) {
           const msg = { notword: "Not in the dictionary", prompt: `Needs "${room.prompt.toUpperCase()}"`, used: "Already used" }[bad];
           return reply(400, { error: msg, code: bad });
         }
-        const p = room.players[me];
-        room.used.push(w); p.last = w; p.words = (p.words || 0) + 1;
-        let letters = new Set(p.letters || ""); for (const ch of w) if (ALPHA.includes(ch)) letters.add(ch);
-        let bonus = false;
-        if (letters.size >= ALPHA.length) { letters = new Set(); bonus = p.lives < MAX_LIVES; if (bonus) p.lives++; }
-        p.letters = [...letters].sort().join("");
-        const e = { type: "word", by: me, word: w, prompt: room.prompt, bonus, full: !letters.size };
-        newTurn(room, nextAlive(room, me));
-        room.bomb.deadline = Math.max(room.bomb.deadline, Date.now() + MIN_TURN);
-        event(room, e);
+        acceptWord(room, me, w);
         await save(room);
         return reply(200);
       }
