@@ -857,9 +857,9 @@ form#f{width:calc(100% - 20px)}
 .wbq{position:absolute;left:50%;top:27%;transform:translate(-50%,-50%);text-align:center;font-weight:800;font-size:15px;text-shadow:0 2px 0 rgba(0,0,0,.35);z-index:2;white-space:nowrap}
 .wbq.off{opacity:0}
 .wbtiles{display:flex;gap:5px;justify-content:center;margin-top:6px}
-.wbtiles i{font-style:normal;width:34px;height:36px;border-radius:8px;background:#1f6fe0;border:3px solid #0b0b14;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;animation:wbTile .35s cubic-bezier(.34,1.56,.64,1) both}
-.wbtiles.pop i{animation:wbTile .35s cubic-bezier(.34,1.56,.64,1) both}
-@keyframes wbTile{from{transform:scale(.3) rotate(-12deg);opacity:0}}
+.wbtiles{perspective:400px}
+.wbtiles i{font-style:normal;width:34px;height:36px;border-radius:8px;background:#1f6fe0;border:3px solid #0b0b14;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;animation:wbTile .5s cubic-bezier(.34,1.56,.64,1) both;box-shadow:0 3px 0 #0b0b14}
+@keyframes wbTile{from{transform:rotateX(-100deg) translateY(-8px);opacity:0}}
 .wbcenter{position:absolute;left:50%;top:52%;width:0;height:0;z-index:1;transition:opacity .3s}
 .wbcenter.hide{opacity:.35}
 .wbring{position:absolute;left:-66px;top:-66px;width:132px;height:132px;border-radius:50%;border:9px solid rgba(0,0,0,.18)}
@@ -886,7 +886,7 @@ form#f{width:calc(100% - 20px)}
 .wbnm{font-size:13px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .wbhearts{font-size:13px;color:#ff5a36;letter-spacing:1px;min-height:15px;line-height:1.1}
 .wbpl.dead .wbhearts{color:#aab3e6;font-size:11px;letter-spacing:0}
-.wbav{width:50px;height:50px;border-radius:12px;background:var(--k);border:3px solid #0b0b14;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:#0b0b14;text-shadow:none;transition:transform .25s}
+.wbav{width:50px;height:50px;border-radius:12px;background:var(--k);border:3px solid #0b0b14;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:#0b0b14;text-shadow:none;transition:transform .35s cubic-bezier(.34,1.56,.64,1),box-shadow .35s}
 .wbav.sm{width:28px;height:28px;font-size:13px;border-radius:8px;flex:none}
 .wbpl.turn .wbav{transform:scale(1.1);box-shadow:0 0 0 4px #f4d03f}
 .wbav{margin:5px 0}
@@ -906,8 +906,34 @@ form#f{width:calc(100% - 20px)}
 @keyframes wbYes{from{transform:scale(1.5)}}
 .wbheartpop{position:absolute;left:50%;top:18px;color:#ff5a36;font-size:22px;animation:wbHeart 1s ease-out forwards;pointer-events:none}
 @keyframes wbHeart{to{transform:translate(-50%,-50px) scale(1.6) rotate(20deg);opacity:0}}
-.wbabc{position:absolute;left:12px;top:10px;display:grid;grid-template-columns:repeat(7,14px);gap:2px;font-size:10.5px;font-weight:800;color:rgba(255,255,255,.2)}
-.wbabc i{font-style:normal;text-align:center}.wbabc i.on{color:#f4d03f}
+.wbround{position:absolute;left:14px;top:10px;display:flex;flex-direction:column;gap:1px;font-weight:900;line-height:1.1}
+.wbround b{font-size:14px}.wbround span{font-size:15px;color:#ff7a2e;letter-spacing:-1px;transition:color .3s}
+/* power bar: fills with good words, full = extra heart */
+.wbpow{width:52px;height:7px;border-radius:99px;background:rgba(0,0,0,.35);border:2px solid #0b0b14;overflow:hidden;margin-top:1px}
+.wbpow i{display:block;height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,#5ee0e6,#4ee08a,#f4d03f);transition:width .7s cubic-bezier(.22,1,.36,1)}
+.wbpow.full{animation:wbFull .9s ease}.wbpow.full i{background:#fff}
+@keyframes wbFull{30%{transform:scale(1.35);box-shadow:0 0 14px #f4d03f}}
+.wbhearts i{font-style:normal;display:inline-block;transition:transform .2s}
+.wbhearts i.new{animation:wbHeartIn .6s cubic-bezier(.34,1.56,.64,1)}
+@keyframes wbHeartIn{0%{transform:scale(0) rotate(-30deg)}60%{transform:scale(1.6)}}
+.wbfloat{position:absolute;left:50%;top:6px;font-weight:900;font-size:16px;pointer-events:none;white-space:nowrap;animation:wbFloat 1.3s cubic-bezier(.22,1,.36,1) forwards;-webkit-text-stroke:1px #0b0b14;z-index:5}
+.wbfloat.pts{color:#4ee08a}.wbfloat.life{color:#ff5a36;font-size:20px}
+@keyframes wbFloat{0%{transform:translate(-50%,8px) scale(.6);opacity:0}20%{transform:translate(-50%,-14px) scale(1.15);opacity:1}100%{transform:translate(-50%,-48px) scale(1);opacity:0}}
+.wbfly{position:absolute;z-index:6;font-weight:900;font-size:16px;letter-spacing:1px;color:#4ee08a;-webkit-text-stroke:1px #0b0b14;pointer-events:none;white-space:nowrap}
+.wbbomb svg{animation:wbBeat var(--beat,1s) ease-in-out infinite;transform-origin:58px 66px}
+@keyframes wbBeat{0%,100%{transform:scale(1)}14%{transform:scale(1.07)}28%{transform:scale(.98)}42%{transform:scale(1.04)}60%{transform:scale(1)}}
+.wbspark{animation-duration:calc(var(--beat,1s) / 4)!important}
+.wbcenter.fresh .wbring{animation:wbFresh .7s ease-out}
+@keyframes wbFresh{from{border-color:#4ee08a;box-shadow:0 0 0 0 rgba(78,224,138,.7)}to{box-shadow:0 0 0 34px rgba(78,224,138,0)}}
+.wbshock{position:absolute;left:0;top:0;pointer-events:none}
+.wbshock b{position:absolute;left:-40px;top:-40px;width:80px;height:80px;border-radius:50%;border:6px solid #ffe066;animation:wbShock .8s cubic-bezier(.2,.8,.3,1) forwards}
+.wbshock i{position:absolute;left:-5px;top:-5px;width:10px;height:10px;border-radius:50%;background:var(--k);box-shadow:0 0 8px var(--k);animation:wbSparkFly .9s cubic-bezier(.2,.8,.3,1) forwards}
+@keyframes wbShock{to{transform:scale(4.5);opacity:0;border-width:1px}}
+@keyframes wbSparkFly{to{transform:rotate(var(--a)) translateX(var(--d)) scale(.2);opacity:0}}
+.wbbanner{position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);z-index:15;text-align:center;pointer-events:none;animation:wbBanner 1.9s cubic-bezier(.22,1,.36,1) forwards}
+.wbbanner b{display:block;font-size:40px;font-weight:900;color:#f4d03f;-webkit-text-stroke:2px #0b0b14;text-shadow:0 4px 0 #0b0b14}
+.wbbanner span{display:inline-block;margin-top:4px;background:#0b0b14;color:#ff7a2e;font-weight:800;font-size:13px;border-radius:999px;padding:4px 12px}
+@keyframes wbBanner{0%{transform:translate(-50%,-50%) scale(.3);opacity:0}15%{transform:translate(-50%,-50%) scale(1.1);opacity:1}25%{transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{transform:translate(-50%,-80%) scale(.95);opacity:0}}
 /* typing bar */
 .wbbar{display:flex;align-items:center;gap:8px;padding:10px 14px 14px;flex-wrap:wrap;justify-content:center}
 .wbinp{flex:1;max-width:420px;min-width:180px;height:44px;border-radius:12px;border:3px solid #0b0b14;background:#fff;color:#0b0b14;font-size:18px;font-weight:800;letter-spacing:2px;padding:0 14px;outline:none}
@@ -925,7 +951,7 @@ form#f{width:calc(100% - 20px)}
 .wbconf i{position:absolute;width:8px;height:12px;border-radius:2px;background:var(--k);animation:wbConf 1.1s ease-out forwards}
 @keyframes wbConf{from{transform:rotate(var(--x)) translateY(0)}to{transform:rotate(var(--x)) translateY(calc(-1*var(--d))) rotate(200deg);opacity:0}}
 @media (max-width:560px){.wbav{width:40px;height:40px;font-size:16px}.wbword{font-size:13px;max-width:110px}.wbnm{font-size:11.5px;max-width:80px}.wbbomb{left:-46px;top:-50px;width:92px;height:92px}.wbring{left:-54px;top:-54px;width:108px;height:108px}.wbarrow{width:108px}.wbarrow:before{left:30px;width:52px}}
-@media (prefers-reduced-motion:reduce){.wbbomb.wob,.wbbomb.shake,.wbspark{animation:none}}
+@media (prefers-reduced-motion:reduce){.wbbomb.wob,.wbbomb.shake,.wbspark,.wbbomb svg,.wbtiles i,.wbbanner{animation:none!important}}
 
 /* add-bot menu + difficulty chips */
 .botchip{font-size:10.5px;font-weight:800;border-radius:999px;padding:2px 8px;color:#0b0b14;white-space:nowrap;flex:none}
@@ -3819,7 +3845,7 @@ function startWordBomb(root) {
     root.innerHTML = '<div class="chlobby"><div class="chcard"><b>Start a game</b><p>Get a room code and share it with up to 7 friends. You can also play alone for practice.</p><button type="button" class="gbtn gold wbnew">Create room</button></div>' +
       '<div class="chcard"><b>Join a game</b><p>Type the code your friend gave you.</p><div class="chjoin"><input maxlength="6" placeholder="ROOM CODE" aria-label="Room code" autocapitalize="characters"><button type="button" class="gbtn gold">Join</button></div></div>' +
       (saved ? `<button type="button" class="chrejoin">Rejoin room ${escW(saved)}</button>` : "") + '<p class="cherr" role="alert"></p>' +
-      '<div class="wbrules"><b>How to play</b><span>When the bomb points at you, type a real English word that contains the letters shown (like <em>CLI</em> → <em>CLIMB</em>) and press Enter. Each word can only be used once. The fuse is random and hidden, so be quick. If it blows up on you, you lose a heart. Use every letter from A to V across your words to win a heart back. Last one standing wins.</span></div></div>';
+      '<div class="wbrules"><b>How to play</b><span>When the bomb points at you, type a real English word that contains the letters shown (like <em>CLI</em> → <em>CLIMB</em>) and press Enter. Each word can only be used once. The fuse is hidden and resets after every good word, but every round it gets shorter and the letters get harder. If it blows up on you, you lose a heart (you start with 3). Good words fill your power bar, and longer words with rare letters fill it faster. A full bar gives you an extra heart. Last one standing wins.</span></div></div>';
     const errEl = root.querySelector(".cherr"), inp = root.querySelector("input");
     const go = async (action, c) => {
       errEl.textContent = "";
@@ -3876,7 +3902,7 @@ function startWordBomb(root) {
     }
     body.innerHTML = `<div class="wbtable"><div class="wbq"><span>Type a word containing:</span><div class="wbtiles"></div></div>
       <div class="wbcenter"><div class="wbring"></div><div class="wbarrow"></div><div class="wbbomb">${bombSVG()}</div></div>
-      <div class="wbseatsT"></div><div class="wbabc" title="Use all of these letters to win a heart back"></div></div>
+      <div class="wbseatsT"></div><div class="wbround" aria-live="polite"><b>Round 1</b><span></span></div></div>
       <div class="wbbar"><input class="wbinp" maxlength="30" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" aria-label="Your word"><button type="button" class="gbtn gold wbgo">Enter</button><span class="wbmsg" role="status"></span></div>`;
     const inp = body.querySelector(".wbinp");
     inp.addEventListener("input", () => {
@@ -3929,14 +3955,21 @@ function startWordBomb(root) {
     const key = room.players.length + ":" + room.me;
     if (seatKey !== key) {
       seatKey = key;
-      holder.innerHTML = room.players.map((p, i) => { const s = seatPos(i); return `<div class="wbpl" data-i="${i}" style="left:${s.x}%;top:${s.y}%"><span class="wbcrown"></span><b class="wbnm">${escW(p.name)}</b><span class="wbhearts"></span><span class="wbav" style="--k:${p.bot ? "#9aa5d8" : SEATC[i % 8]}">${p.bot ? "🤖" : escW(p.name[0] || "?").toUpperCase()}</span><span class="wbword"></span></div>`; }).join("");
+      holder.innerHTML = room.players.map((p, i) => { const s = seatPos(i); return `<div class="wbpl" data-i="${i}" style="left:${s.x}%;top:${s.y}%"><span class="wbcrown"></span><b class="wbnm">${escW(p.name)}</b><span class="wbhearts"></span><span class="wbpow" title="Power bar: fill it to earn a heart"><i></i></span><span class="wbav" style="--k:${p.bot ? "#9aa5d8" : SEATC[i % 8]}">${p.bot ? "🤖" : escW(p.name[0] || "?").toUpperCase()}</span><span class="wbword"></span></div>`; }).join("");
     }
     room.players.forEach((p, i) => {
       const el = holder.querySelector(`[data-i="${i}"]`); if (!el) return;
       el.classList.toggle("turn", playing && room.turn === i);
       el.classList.toggle("dead", !p.alive || p.left);
       el.classList.toggle("me", p.me);
-      el.querySelector(".wbhearts").innerHTML = p.left ? "left" : !p.alive ? "out" : "♥".repeat(p.lives);
+      const hearts = el.querySelector(".wbhearts"), hk = p.left ? "left" : !p.alive ? "out" : String(p.lives);
+      if (hearts.dataset.k !== hk) { // only redraw hearts when they change, so new ones pop in
+        const had = Number(hearts.dataset.k) || 0;
+        hearts.innerHTML = p.left ? "left" : !p.alive ? "out" : Array.from({length: p.lives}, (_, k) => `<i class="${hearts.dataset.k && k >= had ? "new" : ""}">♥</i>`).join("");
+        hearts.dataset.k = hk;
+      }
+      const bar = el.querySelector(".wbpow i"); if (bar && !bar.dataset.hold) bar.style.width = Math.min(100, p.power || 0) + "%";
+      el.querySelector(".wbpow").hidden = !p.alive || p.left;
       el.querySelector(".wbcrown").textContent = room.status === "over" && room.winner === i ? "👑" : "";
       const w = el.querySelector(".wbword");
       if (playing && room.turn === i) {
@@ -3957,9 +3990,12 @@ function startWordBomb(root) {
     if (faceEl.dataset.s !== String(st) && !center.classList.contains("boom")) { faceEl.dataset.s = st; faceEl.innerHTML = FACES[st]; }
     center.querySelector(".wbbomb").classList.toggle("shake", playing && st === 2);
     center.querySelector(".wbbomb").classList.toggle("wob", playing && st === 1);
-    // my letters
+    // round + bomb speed (the bomb's heartbeat speeds up each round)
     const me = room.players[room.me];
-    body.querySelector(".wbabc").innerHTML = me ? [...room.alpha].map(c => `<i class="${me.letters.includes(c) ? "on" : ""}">${c.toUpperCase()}</i>`).join("") : "";
+    const rd = body.querySelector(".wbround");
+    rd.querySelector("b").textContent = "Round " + (room.round || 1);
+    rd.querySelector("span").textContent = "»".repeat(Math.min(6, room.round || 1));
+    center.style.setProperty("--beat", Math.max(0.32, (room.beat || 10000) / 10000).toFixed(2) + "s");
     // input
     const inp = body.querySelector(".wbinp"), go = body.querySelector(".wbgo");
     const mine = myTurn();
@@ -4023,10 +4059,21 @@ function startWordBomb(root) {
     if (ev.type === "join" && room.status === "lobby" && !room.players[ev.by]?.bot) { toast(`${room.players[ev.by]?.name || "Someone"} joined`); return; }
     if (ev.type === "leave") { toast(`${old?.players[ev.by]?.name || "Someone"} left`); return; }
     if (ev.type === "word") {
-      const w = root.querySelector(`.wbpl[data-i="${ev.by}"] .wbword`);
-      if (w) { w.innerHTML = highlight(ev.word.toUpperCase(), ev.prompt) + " ✓"; w.className = "wbword ok"; setTimeout(() => { w.classList.remove("ok"); update(room); }, 1100); }
-      const t = root.querySelector(".wbtiles"); if (t) { t.classList.remove("pop"); void t.offsetWidth; t.classList.add("pop"); }
-      if (ev.full) toast(ev.bonus ? `${nm(ev.by)} used every letter: +1 ♥` : `${nm(ev.by)} used every letter!`, "gold");
+      const seat = root.querySelector(`.wbpl[data-i="${ev.by}"]`), w = seat?.querySelector(".wbword");
+      if (w) {
+        w.innerHTML = highlight(ev.word.toUpperCase(), ev.prompt) + " ✓"; w.className = "wbword ok";
+        flyToBomb(w, ev.word.toUpperCase());
+        setTimeout(() => { w.classList.remove("ok"); update(room); }, 1100);
+      }
+      if (seat) floatText(seat, "+" + ev.pts, "pts");
+      const center = root.querySelector(".wbcenter"); if (center && !reduce) { center.classList.remove("fresh"); void center.offsetWidth; center.classList.add("fresh"); }
+      if (ev.full && seat) { // power bar filled: show it full, then the extra heart
+        const bar = seat.querySelector(".wbpow i");
+        if (bar) { bar.dataset.hold = 1; bar.style.width = "100%"; seat.querySelector(".wbpow").classList.add("full"); setTimeout(() => { delete bar.dataset.hold; seat.querySelector(".wbpow").classList.remove("full"); update(room); }, 900); }
+        setTimeout(() => floatText(seat, ev.bonus ? "+1 ♥" : "Max hearts!", "life"), 350);
+        toast(ev.bonus ? `⚡ ${nm(ev.by)} filled the power bar: +1 ♥` : `⚡ ${nm(ev.by)} filled the power bar`, "gold");
+      }
+      if (ev.round) setTimeout(() => roundBanner(ev.round), 500);
       return;
     }
     if (ev.type === "boom") {
@@ -4041,8 +4088,38 @@ function startWordBomb(root) {
       const seat = root.querySelector(`.wbpl[data-i="${ev.by}"]`);
       if (seat) { const h = document.createElement("span"); h.className = "wbheartpop"; h.textContent = "♥"; seat.appendChild(h); setTimeout(() => h.remove(), 1000); seat.classList.remove("hit"); void seat.offsetWidth; seat.classList.add("hit"); }
       const table = root.querySelector(".wbtable"); if (table && !reduce) { table.classList.remove("quake"); void table.offsetWidth; table.classList.add("quake"); }
-      toast(`💥 ${nm(ev.by)} blew up${ev.out ? (ev.by === room.me ? " and you're out" : " and is out") : ""}!` + (ev.example ? `  Could've said ${ev.example.toUpperCase()}` : ""), "big");
+      if (center && !reduce) { // shockwave and sparks flying out of the bomb
+        const fx = document.createElement("div"); fx.className = "wbshock";
+        fx.innerHTML = "<b></b>" + Array.from({length: 14}, (_, k) => `<i style="--a:${k * (360 / 14) + Math.random() * 12}deg;--d:${90 + Math.random() * 90}px;--k:${["#ffe066", "#ff7a2e", "#ff5a36", "#fff"][k % 4]}"></i>`).join("");
+        center.appendChild(fx); setTimeout(() => fx.remove(), 1000);
+      }
+      toast(`💥 ${nm(ev.by)} blew up${ev.out ? (ev.by === room.me ? " and you're out" : " and is out") : ""}!`, "big");
+      if (ev.round) setTimeout(() => roundBanner(ev.round), 1200);
     }
+  }
+  function floatText(seat, text, cls) {
+    const f = document.createElement("span"); f.className = "wbfloat " + cls; f.textContent = text;
+    seat.appendChild(f); setTimeout(() => f.remove(), 1300);
+  }
+  function flyToBomb(el, text) { // the word you typed zooms into the bomb
+    const table = root.querySelector(".wbtable"), center = root.querySelector(".wbcenter");
+    if (!table || !center || reduce) return;
+    const tr = table.getBoundingClientRect(), a = el.getBoundingClientRect(), b = center.getBoundingClientRect();
+    const f = document.createElement("span"); f.className = "wbfly"; f.textContent = text;
+    f.style.left = (a.left - tr.left + a.width / 2) + "px"; f.style.top = (a.top - tr.top + a.height / 2) + "px";
+    table.appendChild(f);
+    const dx = b.left - a.left - a.width / 2, dy = b.top - a.top - a.height / 2;
+    f.animate([
+      {transform: "translate(-50%,-50%) scale(1)", opacity: 1},
+      {transform: `translate(calc(-50% + ${dx * 0.5}px), calc(-50% + ${dy * 0.5 - 40}px)) scale(1.15)`, opacity: 1, offset: 0.45},
+      {transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(0.2)`, opacity: 0}
+    ], {duration: 650, easing: "cubic-bezier(.45,0,.25,1)", fill: "forwards"}).finished.then(() => f.remove(), () => f.remove());
+  }
+  function roundBanner(n) {
+    const t = root.querySelector(".wbtable"); if (!t) return;
+    const b = document.createElement("div"); b.className = "wbbanner";
+    b.innerHTML = `<b>Round ${n}</b><span>Faster fuse · harder letters</span>`;
+    t.appendChild(b); setTimeout(() => b.remove(), 1900);
   }
   function showOver() {
     const t = root.querySelector(".wbtable"); if (!t || t.querySelector(".wbover")) return;
