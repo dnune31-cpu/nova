@@ -852,7 +852,7 @@ form#f{width:calc(100% - 20px)}
 .wbtoast.big{background:#ff5a36}.wbtoast.gold{background:#f5e131;color:#1a1405}
 @keyframes wbToast{0%{opacity:0;transform:translateY(-8px) scale(.9)}10%{opacity:1;transform:none}85%{opacity:1}100%{opacity:0;transform:translateY(-6px)}}
 /* table */
-.wbtable{position:relative;z-index:1;height:min(600px,70vh);min-height:460px}
+.wbtable{position:relative;z-index:1;height:clamp(560px,74vh,660px)}
 .wbtable.quake{animation:wbQuake .45s}
 @keyframes wbQuake{20%{transform:translate(-6px,3px)}40%{transform:translate(5px,-4px)}60%{transform:translate(-4px,2px)}80%{transform:translate(3px,-1px)}}
 .wbround{position:absolute;left:14px;top:8px;display:flex;align-items:baseline;gap:6px;font-weight:900}
@@ -929,7 +929,7 @@ form#f{width:calc(100% - 20px)}
 @keyframes wbSparkFly{to{transform:rotate(var(--a)) translateX(var(--d)) scale(.2);opacity:0}}
 /* "Type an English word containing:" + letter tiles, on the side away from the arrow */
 .wbq{position:absolute;left:50%;top:calc(50% - 128px);transform:translate(-50%,-50%);z-index:3;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;transition:top .35s cubic-bezier(.3,1.2,.5,1);max-width:94%}
-.wbq.below{top:calc(50% + 112px)}
+.wbq.below{top:calc(50% + 100px)}
 .wblabel{font-size:15px;font-weight:900;white-space:nowrap;text-shadow:0 2px 0 rgba(0,0,40,.45)}
 .wb.waiting .wblabel{font-size:19px;color:#c9f0ff}
 .wbsub{font-size:12px;font-weight:700;color:#c9d1ff;min-height:0}
@@ -3927,7 +3927,7 @@ function startWordBomb(root) {
   function seatPos(i) {
     const n = room.players.length, me = Math.max(0, room.me), rel = ((i - me) % n + n) % n;
     const a = 90 + rel * 360 / n, r = a * Math.PI / 180;
-    return {a, x: 50 + Math.cos(r) * 37, y: 50 + Math.sin(r) * 39};
+    return {a, x: 50 + Math.cos(r) * 37, y: 50 + Math.sin(r) * 37};
   }
 
   // the letter tiles in the middle: the prompt, or what the current player is typing, letter by letter
