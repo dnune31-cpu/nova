@@ -3,12 +3,16 @@ import { redis, getJSON, getAuth } from "./_lib.js";
 
 // Word Bomb: party word game for 1 to 8 friends with a room code.
 // On your turn, type a real word that contains the letters shown before the bomb goes off.
-// The fuse is random and hidden. The server checks words and handles explosions.
+// The fuse is random and hidden, and resets after every good word. Each round the fuse gets shorter
+// and the letters get harder. Good words fill your power bar; a full bar is an extra life.
 const TTL = 6 * 3600;
 const LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-const ALPHA = "abcdefghijlmnopqrstuv"; // use all of these to earn a life back
-const START_LIVES = 2, MAX_LIVES = 3, MAX_PLAYERS = 8;
-const FUSE_MIN = 12000, FUSE_MAX = 30000, MIN_TURN = 3500;
+const START_LIVES = 3, MAX_LIVES = 5, MAX_PLAYERS = 8;
+const SCRABBLE = { a: 1, b: 3, c: 3, d: 2, e: 1, f: 4, g: 2, h: 4, i: 1, j: 8, k: 5, l: 1, m: 3, n: 1, o: 1, p: 3, q: 10, r: 1, s: 1, t: 1, u: 1, v: 4, w: 4, x: 8, y: 4, z: 10 };
+// how much a word fills your power bar (out of 100): longer words and rare letters count more
+const wordPoints = w => Math.max(5, Math.min(40, Math.round([...w].reduce((t, ch) => t + (SCRABBLE[ch] || 1), 0) * 1.1 + Math.max(0, w.length - 5) * 2)));
+// the fuse for each bomb: a random length that shrinks every round
+function fuseRange(round) { const f = Math.pow(0.88, round - 1); return [Math.max(3500, Math.round(10000 * f)), Math.max(6000, Math.round(17000 * f))]; }
 const WORD_URLS = [
   "https://raw.githubusercontent.com/dolph/dictionary/master/enable1.txt",
   "https://cdn.jsdelivr.net/gh/dolph/dictionary@master/enable1.txt",
@@ -26,7 +30,7 @@ const clean = c => String(c || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 /* ----- word list (loaded once per server instance) ----- */
-let WORDS = null, DICT = null, PROMPTS = null, loading = null;
+let WORDS = null, DICT = null, TIERS = null, loading = null;
 function loadWords() {
   if (DICT) return Promise.resolve();
   if (!loading) loading = (async () => {
@@ -43,18 +47,18 @@ function loadWords() {
       for (let n = 2; n <= 3; n++) for (let i = 0; i + n <= w.length; i++) seen.add(w.slice(i, i + n));
       for (const s of seen) counts.set(s, (counts.get(s) || 0) + 1);
     }
-    PROMPTS = [...counts].filter(([, c]) => c >= 600).map(([s]) => s);
+    // letter groups sorted by how many words have them: easy ones are common, hard ones are rare
+    const all = [...counts];
+    TIERS = [all.filter(([, c]) => c >= 2500), all.filter(([, c]) => c >= 1000 && c < 2500), all.filter(([, c]) => c >= 400 && c < 1000)].map(t => t.map(([x]) => x));
   })();
   return loading;
 }
-const newPrompt = () => PROMPTS[crypto.randomInt(PROMPTS.length)];
-function example(prompt, used) { // a word that would have worked (shown after an explosion)
-  const start = crypto.randomInt(WORDS.length);
-  for (let k = 0; k < WORDS.length; k++) {
-    const w = WORDS[(start + k) % WORDS.length];
-    if (w.length <= 9 && w.includes(prompt) && !used.includes(w)) return w;
-  }
-  return null;
+function newPrompt(round) { // harder letters show up more often as the rounds go on
+  const r = round - 1, w = [Math.max(0.05, 1 - r * 0.18), 0.6, Math.min(1.4, r * 0.2)];
+  let x = Math.random() * (w[0] + w[1] + w[2]), t = 0;
+  while (t < 2 && x > w[t]) { x -= w[t]; t++; }
+  const tier = TIERS[t];
+  return tier[crypto.randomInt(tier.length)];
 }
 
 /* ----- bots ----- */
@@ -111,8 +115,14 @@ function nextAlive(room, from) {
   for (let s = 1; s <= n; s++) { const i = (from + s) % n; if (inGame(room.players[i])) return i; }
   return from;
 }
-function newBomb(room) { const t = FUSE_MIN + crypto.randomInt(FUSE_MAX - FUSE_MIN + 1); room.bomb = { start: Date.now(), total: t, deadline: Date.now() + t }; }
-function newTurn(room, i) { room.turn = i; room.turnId = (room.turnId || 0) + 1; room.turnStart = Date.now(); room.prompt = newPrompt(); }
+function newBomb(room) { const [a, b] = fuseRange(room.round || 1), t = a + crypto.randomInt(b - a + 1); room.bomb = { start: Date.now(), total: t, deadline: Date.now() + t }; }
+// a round ends once everyone still in has had a turn
+function endTurn(room) {
+  room.roundTurns = (room.roundTurns || 0) + 1;
+  if (room.roundTurns >= Math.max(1, room.players.filter(inGame).length)) { room.round = (room.round || 1) + 1; room.roundTurns = 0; return true; }
+  return false;
+}
+function newTurn(room, i) { room.turn = i; room.turnId = (room.turnId || 0) + 1; room.turnStart = Date.now(); room.prompt = newPrompt(room.round || 1); }
 function checkOver(room) {
   const alive = room.players.map((p, i) => [p, i]).filter(([p]) => inGame(p));
   if (alive.length === 0 || (!room.solo && alive.length <= 1)) {
@@ -127,8 +137,8 @@ function tick(room) {
   const i = room.turn, p = room.players[i];
   p.lives = Math.max(0, p.lives - 1);
   if (p.lives === 0) p.alive = false;
-  const e = { type: "boom", by: i, prompt: room.prompt, example: example(room.prompt, room.used), out: !p.alive };
-  if (!checkOver(room)) { newTurn(room, p.alive ? nextAlive(room, i) : nextAlive(room, i)); newBomb(room); }
+  const e = { type: "boom", by: i, prompt: room.prompt, out: !p.alive };
+  if (!checkOver(room)) { if (endTurn(room)) e.round = room.round; newTurn(room, nextAlive(room, i)); newBomb(room); }
   else e.win = true;
   event(room, e);
   return true;
@@ -136,13 +146,14 @@ function tick(room) {
 function acceptWord(room, me, w) {
   const p = room.players[me];
   room.used.push(w); p.last = w; p.words = (p.words || 0) + 1;
-  let letters = new Set(p.letters || ""); for (const ch of w) if (ALPHA.includes(ch)) letters.add(ch);
-  let bonus = false;
-  if (letters.size >= ALPHA.length) { letters = new Set(); bonus = p.lives < MAX_LIVES; if (bonus) p.lives++; }
-  p.letters = [...letters].sort().join("");
-  const e = { type: "word", by: me, word: w, prompt: room.prompt, bonus, full: !letters.size };
+  const pts = wordPoints(w);
+  p.power = (p.power || 0) + pts;
+  let bonus = false, full = false;
+  if (p.power >= 100) { p.power = 0; full = true; bonus = p.lives < MAX_LIVES; if (bonus) p.lives++; }
+  const e = { type: "word", by: me, word: w, prompt: room.prompt, pts, bonus, full };
+  if (endTurn(room)) e.round = room.round;
   newTurn(room, nextAlive(room, me));
-  room.bomb.deadline = Math.max(room.bomb.deadline, Date.now() + MIN_TURN);
+  newBomb(room); // a good word resets the bomb
   event(room, e);
 }
 function stage(room) {
@@ -155,11 +166,11 @@ function view(room, email, typing) {
   const me = room.players.findIndex(p => p.email === email);
   return {
     code: room.code, status: room.status, me, host: room.players[0]?.email === email,
-    players: room.players.map((p, i) => ({ name: p.name, lives: p.lives ?? START_LIVES, letters: p.letters || "", alive: p.alive !== false, left: !!p.left, last: p.last || "", words: p.words || 0, bot: p.bot || null, me: i === me })),
+    players: room.players.map((p, i) => ({ name: p.name, lives: p.lives ?? START_LIVES, power: p.power || 0, alive: p.alive !== false, left: !!p.left, last: p.last || "", words: p.words || 0, bot: p.bot || null, me: i === me })),
     turn: room.turn ?? 0, turnId: room.turnId || 0, prompt: room.prompt || null, stage: stage(room),
     usedCount: (room.used || []).length, winner: room.winner ?? null, event: room.event || null, seq: room.seq || 0, game: room.game || 1,
     typing: botTyping(room) || (typing && typing.turnId === room.turnId ? { text: typing.text || "", bad: typing.bad || null } : null),
-    alpha: ALPHA, maxLives: MAX_LIVES,
+    round: room.round || 1, beat: room.status === "playing" ? fuseRange(room.round || 1)[0] : 0, maxLives: MAX_LIVES,
   };
 }
 async function save(room) { await redis("SET", key(room.code), JSON.stringify(room), "EX", String(TTL)); }
@@ -268,10 +279,10 @@ export default async function handler(req, res) {
         room.players = room.players.filter(p => !p.left);
         humansFirst(room);
         room.botPlan = null;
-        room.players.forEach(p => { p.lives = START_LIVES; p.letters = ""; p.words = 0; p.alive = true; p.last = ""; });
+        room.players.forEach(p => { p.lives = START_LIVES; p.power = 0; p.words = 0; p.alive = true; p.last = ""; });
         room.solo = room.players.length === 1;
         if (room.status === "over") room.game = (room.game || 1) + 1;
-        room.used = []; room.winner = null; room.status = "playing";
+        room.used = []; room.winner = null; room.status = "playing"; room.round = 1; room.roundTurns = 0;
         newTurn(room, crypto.randomInt(room.players.length)); newBomb(room);
         event(room, { type: "start" });
         await save(room);
@@ -285,7 +296,7 @@ export default async function handler(req, res) {
         } else {
           const p = room.players[me]; p.left = true; p.alive = false;
           if (!room.players.some(x => !x.bot && !x.left)) { await redis("DEL", key(code), tkey(code)); return [200, { ok: true }]; }
-          if (room.status === "playing" && !checkOver(room) && room.turn === me) { newTurn(room, nextAlive(room, me)); room.bomb.deadline = Math.max(room.bomb.deadline, Date.now() + MIN_TURN); }
+          if (room.status === "playing" && !checkOver(room) && room.turn === me) { newTurn(room, nextAlive(room, me)); newBomb(room); }
         }
         event(room, { type: "leave", by: me });
         await save(room);
