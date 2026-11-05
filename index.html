@@ -926,6 +926,28 @@ form#f{width:calc(100% - 20px)}
 @keyframes wbConf{from{transform:rotate(var(--x)) translateY(0)}to{transform:rotate(var(--x)) translateY(calc(-1*var(--d))) rotate(200deg);opacity:0}}
 @media (max-width:560px){.wbav{width:40px;height:40px;font-size:16px}.wbword{font-size:13px;max-width:110px}.wbnm{font-size:11.5px;max-width:80px}.wbbomb{left:-46px;top:-50px;width:92px;height:92px}.wbring{left:-54px;top:-54px;width:108px;height:108px}.wbarrow{width:108px}.wbarrow:before{left:30px;width:52px}}
 @media (prefers-reduced-motion:reduce){.wbbomb.wob,.wbbomb.shake,.wbspark{animation:none}}
+
+/* add-bot menu + difficulty chips */
+.botchip{font-size:10.5px;font-weight:800;border-radius:999px;padding:2px 8px;color:#0b0b14;white-space:nowrap;flex:none}
+.botchip.easy{background:#4ee08a}.botchip.medium{background:#f4d03f}.botchip.hard{background:#ff6a5a}
+.botadd{position:relative;display:inline-block}
+.botaddbtn{border-style:dashed!important}
+.botmenu{position:absolute;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%);background:#0b0b14;border:2px solid #2f3a80;border-radius:14px;padding:6px;width:236px;box-shadow:0 10px 30px rgba(0,0,0,.5);z-index:40;text-align:left}
+.botmenu button{display:flex;align-items:center;gap:8px;width:100%;border:0;background:none;color:#fff;font:inherit;font-size:13px;padding:8px 10px;border-radius:9px;cursor:pointer}
+.botmenu button:hover,.botmenu button:focus-visible{background:rgba(255,255,255,.09);outline:none}
+.botmenu em{font-style:normal;color:#aab3e6;font-size:11.5px;margin-left:auto}
+.botx{margin-left:4px;border:0;background:none;color:#aab3e6;font-size:17px;cursor:pointer;line-height:1;padding:1px 5px;border-radius:6px}
+.botx:hover,.botx:focus-visible{color:#fff;background:rgba(255,255,255,.12)}
+.wbseat .botchip,.ncseat .botchip{margin-left:auto}
+.wbseats{grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
+.ncseats{grid-template-columns:repeat(2,minmax(190px,1fr));max-width:430px}
+.ncacts,.wbacts{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;align-items:center}
+/* chess: play vs bot */
+.chlv{display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 10px}
+.chlv button{border:1px solid #3a3a37;background:none;color:#c9c7c1;font:inherit;font-size:12.5px;font-weight:600;border-radius:999px;padding:5px 11px;cursor:pointer}
+.chlv button.on{border-color:transparent;color:#0b0b14}
+.chlv button.on.easy{background:#4ee08a}.chlv button.on.medium{background:#f4d03f}.chlv button.on.hard{background:#ff6a5a}.chlv button.on.side{background:#ffcf8a}
+.chbotlv{display:flex;align-items:center;gap:8px}
 </style>
 </head>
 <body>
@@ -3215,14 +3237,70 @@ const novaGraphs = {store: new Map(), n: 0};
       document.head.appendChild(s);
     });
   }
+  /* ----- chess bot (runs in the browser) ----- */
+  const CPV = {p: 100, n: 320, b: 330, r: 500, q: 900, k: 0};
+  function chessEval(g, endgame) { // score from white's side
+    let s = 0; const b = g.board();
+    for (let r = 0; r < 8; r++) for (let f = 0; f < 8; f++) {
+      const p = b[r][f]; if (!p) continue;
+      const cd = 3.5 - Math.max(Math.abs(3.5 - r), Math.abs(3.5 - f)); // 0 at the edge, 3 in the middle
+      let v = CPV[p.type];
+      if (p.type === "n" || p.type === "b") v += cd * 9;
+      else if (p.type === "p") { const adv = p.color === "w" ? 6 - r : r - 1; v += adv * (endgame ? 14 : 5) + (f >= 2 && f <= 5 ? cd * 5 : 0); }
+      else if (p.type === "q") v += cd * 2;
+      else if (p.type === "k") v += endgame ? cd * 10 : -cd * 8;
+      s += p.color === "w" ? v : -v;
+    }
+    return s;
+  }
+  const mvOrder = m => (m.captured ? CPV[m.captured] * 10 - CPV[m.piece] : 0) + (m.promotion ? 800 : 0);
+  function chessSearch(g, depth, alpha, beta, sign, endgame, clock) {
+    if (depth === 0 || Date.now() > clock) return sign * chessEval(g, endgame);
+    const moves = g.moves({verbose: true});
+    if (!moves.length) return g.in_check() ? -100000 - depth : 0;
+    moves.sort((a, b) => mvOrder(b) - mvOrder(a));
+    for (const m of moves) {
+      g.move(m); const v = -chessSearch(g, depth - 1, -beta, -alpha, -sign, endgame, clock); g.undo();
+      if (v >= beta) return v;
+      if (v > alpha) alpha = v;
+    }
+    return alpha;
+  }
+  function chessBotMove(g, level) {
+    const moves = g.moves({verbose: true}); if (!moves.length) return null;
+    if (level === "easy" && Math.random() < 0.3) return moves[Math.floor(Math.random() * moves.length)];
+    let mat = 0; for (const row of g.board()) for (const p of row) if (p && p.type !== "k" && p.type !== "p") mat += CPV[p.type];
+    const endgame = mat < 2600, depth = level === "hard" ? 3 : level === "medium" ? 2 : 1;
+    const noise = level === "hard" ? 4 : level === "medium" ? 20 : 70, sign = g.turn() === "w" ? 1 : -1, clock = Date.now() + 2500;
+    moves.sort((a, b) => mvOrder(b) - mvOrder(a));
+    let pick = moves[0];
+    for (let d = 1; d <= depth; d++) { // look 1 move ahead, then 2, then 3 while there's time
+      moves.sort((a, b) => (b === pick) - (a === pick));
+      let best = null, bestV = -Infinity, bestRaw = -Infinity, late = false;
+      for (const m of moves) {
+        g.move(m);
+        const raw = -chessSearch(g, d - 1, -Infinity, -(bestRaw - noise), -sign, endgame, clock);
+        g.undo();
+        if (d > 1 && Date.now() > clock) { late = true; break; }
+        const v = raw + Math.random() * noise;
+        if (raw > bestRaw) bestRaw = raw;
+        if (v > bestV) { bestV = v; best = m; }
+      }
+      if (late) break;
+      if (best) pick = best;
+    }
+    return pick;
+  }
   function startChess(root) {
-    let room = null, game = null, color = "w", ply = 0, sel = null, poll = 0, stopped = false, gameNo = 0, pendingPromo = null, busyMove = false;
+    let room = null, game = null, color = "w", ply = 0, sel = null, poll = 0, stopped = false, gameNo = 0, pendingPromo = null, busyMove = false, bot = null;
     const GLYPH = {k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟"};
     const VS = "︎";
     const lobby = () => {
+      bot = null; clearInterval(poll);
       const saved = store.get("nova-chess-room", null);
       root.innerHTML = '<div class="chlobby"><div class="chcard"><b>Start a game</b><p>Get a room code and send it to a friend. They join from their own device.</p><button type="button" class="gbtn gold chnew">Create room</button></div>' +
         '<div class="chcard"><b>Join a game</b><p>Type the code your friend gave you.</p><div class="chjoin"><input maxlength="6" placeholder="ROOM CODE" aria-label="Room code" autocapitalize="characters"><button type="button" class="gbtn gold">Join</button></div></div>' +
+        '<div class="chcard"><b>Play vs bot</b><p>Practice against the computer.</p><div class="chlv chbotlv"><button type="button" data-lv="easy" class="easy">Easy</button><button type="button" data-lv="medium" class="medium on">Medium</button><button type="button" data-lv="hard" class="hard">Hard</button></div><div class="chlv"><button type="button" data-side="w" class="side on">White</button><button type="button" data-side="b" class="side">Black</button><button type="button" data-side="r" class="side">Random</button></div><button type="button" class="gbtn gold chbotgo">Play</button></div>' +
         (saved ? `<button type="button" class="chrejoin">Rejoin room ${saved}</button>` : "") + '<p class="cherr" role="alert"></p></div>';
       const err = root.querySelector(".cherr"), inp = root.querySelector("input");
       const go = async (action, code) => {
@@ -3238,6 +3316,14 @@ const novaGraphs = {store: new Map(), n: 0};
       inp.addEventListener("keydown", e => { if (e.key === "Enter") root.querySelector(".chjoin button").click(); });
       inp.addEventListener("input", () => { inp.value = inp.value.toUpperCase().replace(/[^A-Z0-9]/g, ""); });
       const rj = root.querySelector(".chrejoin"); if (rj) rj.onclick = () => go("join", saved);
+      const pickOn = q => root.querySelectorAll(q).forEach(b => b.onclick = () => root.querySelectorAll(q).forEach(x => x.classList.toggle("on", x === b)));
+      pickOn("[data-lv]"); pickOn("[data-side]");
+      root.querySelector(".chbotgo").onclick = async () => {
+        err.textContent = "";
+        try { await loadChess(); } catch (e) { err.textContent = e.message; return; }
+        const lv = root.querySelector("[data-lv].on")?.dataset.lv || "medium", side = root.querySelector("[data-side].on")?.dataset.side || "w";
+        enterBot(lv, side === "r" ? (Math.random() < 0.5 ? "w" : "b") : side);
+      };
     };
     function enter(r) {
       room = r; store.set("nova-chess-room", r.code);
@@ -3275,15 +3361,17 @@ const novaGraphs = {store: new Map(), n: 0};
       else if (room.status === "over") {
         const r = room.result || {};
         setStatus(r.type === "checkmate" ? (r.winner === color ? "Checkmate. You win! 🎉" : "Checkmate. You lost.") : r.type === "resign" ? (r.winner === color ? "Your opponent resigned. You win!" : "You resigned.") : "It's a draw.");
-      } else setStatus((myTurn ? "Your move" : "Their move") + (game.in_check() ? " · Check!" : ""));
+      } else setStatus((myTurn ? "Your move" : bot ? "Bot is thinking…" : "Their move") + (game.in_check() ? " · Check!" : ""));
       const hist = game.history(), ol = root.querySelector(".chmoves"); ol.innerHTML = "";
       for (let i = 0; i < hist.length; i += 2) { const li = h("li"); li.textContent = hist[i] + (hist[i + 1] ? "   " + hist[i + 1] : ""); ol.appendChild(li); }
       ol.scrollTop = ol.scrollHeight;
       const acts = root.querySelector(".chacts"); acts.innerHTML = "";
       const b = (label, fn, cls = "") => { const x = h("button", "gbtn " + cls, label); x.type = "button"; x.onclick = fn; acts.appendChild(x); };
+      if (bot) botActs(b); else {
       if (room.status === "playing") b("Resign", async () => { if (!confirm("Resign this game?")) return; try { sync((await api("/api/games", {method: "POST", body: JSON.stringify({action: "resign", code: room.code})})).room); } catch (e) { setStatus(e.message); } });
       if (room.status === "over") b(room.rematch.includes(color) ? "Waiting for them…" : (room.rematch.length ? "Accept rematch" : "Rematch"), async () => { try { sync((await api("/api/games", {method: "POST", body: JSON.stringify({action: "rematch", code: room.code})})).room); } catch (e) { setStatus(e.message); } }, "gold");
       b("Leave room", () => { store.set("nova-chess-room", null); clearInterval(poll); lobby(); });
+      }
       const last = game.history({verbose: true}).slice(-1)[0];
       const targets = sel ? game.moves({square: sel, verbose: true}).map(m => m.to) : [];
       boardEl.innerHTML = "";
@@ -3303,6 +3391,48 @@ const novaGraphs = {store: new Map(), n: 0};
         d.onclick = () => clickSq(sq);
         boardEl.appendChild(d);
       }
+    }
+    /* ----- playing against the bot (no server needed) ----- */
+    function enterBot(level, side) {
+      clearInterval(poll); store.set("nova-chess-room", null);
+      const label = {easy: "Easy", medium: "Medium", hard: "Hard"}[level] || "Medium";
+      bot = {level, side, label};
+      room = {code: null, status: "playing", moves: [], rematch: [], game: 1, result: null, white: side === "w" ? "You" : "🤖 Bot", black: side === "b" ? "You" : "🤖 Bot"};
+      color = side; game = new Chess(); ply = 0; sel = null; pendingPromo = null; busyMove = false;
+      root.innerHTML = '<div class="chwrap"><div class="chside"><div class="chcode"><small>Playing</small><b>vs Bot</b></div><div class="chplayers"></div><div class="chstatus" aria-live="polite"></div><div class="chpromo" hidden></div><ol class="chmoves"></ol><div class="chacts"></div></div><div class="chboard" role="grid" aria-label="Chess board"></div></div>';
+      root.querySelector(".chcode").insertAdjacentHTML("beforeend", `<span class="botchip ${level}">${label}</span>`);
+      paint();
+      if (side === "b") setTimeout(botTurn, 500);
+    }
+    function botEnd() {
+      let r = null;
+      if (game.in_checkmate()) r = {type: "checkmate", winner: game.turn() === "w" ? "b" : "w"};
+      else if (game.in_stalemate()) r = {type: "stalemate"};
+      else if (game.in_draw() || game.in_threefold_repetition()) r = {type: "draw"};
+      if (r) { room.status = "over"; room.result = r; }
+      return !!r;
+    }
+    function botTurn() {
+      if (stopped || !bot || room.status !== "playing" || game.turn() === color) return;
+      busyMove = true; paint();
+      setTimeout(() => {
+        if (stopped || !bot) return;
+        const m = chessBotMove(game, bot.level);
+        if (m) { game.move(m); room.moves.push(m.from + m.to); ply++; }
+        busyMove = false; botEnd(); paint();
+      }, 80);
+    }
+    function botUserMove(from, to, promo) {
+      const ok = game.move({from, to, promotion: promo || "q"});
+      if (!ok) return;
+      room.moves.push(from + to); ply++; sel = null;
+      if (!botEnd()) setTimeout(botTurn, 250);
+      paint();
+    }
+    function botActs(b) {
+      if (room.status === "playing") b("Resign", () => { if (!confirm("Resign this game?")) return; room.status = "over"; room.result = {type: "resign", winner: color === "w" ? "b" : "w"}; paint(); });
+      else b("Play again", () => enterBot(bot.level, bot.side === "w" ? "b" : "w"), "gold");
+      b("Leave", () => lobby());
     }
     function clickSq(sq) {
       if (!room || room.status !== "playing" || game.turn() !== color || pendingPromo || busyMove) return;
@@ -3327,6 +3457,7 @@ const novaGraphs = {store: new Map(), n: 0};
       }
     }
     async function makeMove(from, to, promo) {
+      if (bot) return botUserMove(from, to, promo);
       const before = ply;
       const ok = game.move({from, to, promotion: promo || "q"});
       if (!ok) return;
@@ -3349,6 +3480,22 @@ const novaGraphs = {store: new Map(), n: 0};
     return {stop() { stopped = true; clearInterval(poll); }};
   }
 })();
+
+/* ---------- shared: "+ Add bot" menu and difficulty chips (Word Bomb, Nova Cards) ---------- */
+const NOVA_BOT_LV = {easy: ["Easy", "slow, makes mistakes"], medium: ["Medium", "a fair fight"], hard: ["Hard", "fast, rarely misses"]};
+function novaBotChip(lv) { return `<span class="botchip ${lv}">${(NOVA_BOT_LV[lv] || NOVA_BOT_LV.medium)[0]}</span>`; }
+function novaBotAdd(onPick) {
+  const wrap = document.createElement("span"); wrap.className = "botadd";
+  wrap.innerHTML = `<button type="button" class="gbtn botaddbtn" aria-haspopup="menu" aria-expanded="false">+ Add bot</button><div class="botmenu" role="menu" hidden>` +
+    Object.entries(NOVA_BOT_LV).map(([k, [n, d]]) => `<button type="button" role="menuitem" data-lv="${k}"><span class="botchip ${k}">${n}</span><em>${d}</em></button>`).join("") + "</div>";
+  const btn = wrap.firstChild, menu = wrap.lastChild;
+  const outside = e => { if (!wrap.contains(e.target)) close(); };
+  const close = () => { menu.hidden = true; btn.setAttribute("aria-expanded", "false"); document.removeEventListener("click", outside, true); };
+  btn.onclick = () => { if (!menu.hidden) return close(); menu.hidden = false; btn.setAttribute("aria-expanded", "true"); document.addEventListener("click", outside, true); menu.querySelector("button").focus(); };
+  menu.addEventListener("keydown", e => { if (e.key === "Escape") { close(); btn.focus(); } });
+  menu.querySelectorAll("[data-lv]").forEach(b => b.onclick = () => { close(); onPick(b.dataset.lv); });
+  return wrap;
+}
 
 /* ---------- Nova Cards: UNO-style card game for 2 to 4 friends (planets look) ---------- */
 function startNovaCards(root) {
@@ -3445,10 +3592,15 @@ function startNovaCards(root) {
     if (room.status === "lobby") {
       body.innerHTML = '<div class="nclobby"><h3>Waiting room</h3><div class="ncseats"></div><p class="ncwait"></p><div class="ncacts"></div></div>';
       const seats = body.querySelector(".ncseats");
-      room.players.forEach((p, i) => { const d = document.createElement("div"); d.className = "ncseat in"; d.innerHTML = `<span class="ncav" style="--k:${SEATC[i]}"></span><b>${esc2(p.name)}</b>${i === 0 ? "<small>host</small>" : ""}${p.me ? "<small class='you'>you</small>" : ""}`; seats.appendChild(d); });
+      room.players.forEach((p, i) => { const d = document.createElement("div"); d.className = "ncseat in"; d.innerHTML = `<span class="ncav" style="--k:${SEATC[i]}"></span><b>${p.bot ? "🤖 " : ""}${esc2(p.name)}</b>${p.bot ? novaBotChip(p.bot) + (room.host ? `<button type="button" class="botx" data-i="${i}" aria-label="Remove ${esc2(p.name)}">×</button>` : "") : i === 0 ? "<small>host</small>" : ""}${p.me ? "<small class='you'>you</small>" : ""}`; seats.appendChild(d); });
+      seats.querySelectorAll(".botx").forEach(b => b.onclick = () => act("removebot", {index: +b.dataset.i}));
       for (let i = room.players.length; i < 4; i++) { const d = document.createElement("div"); d.className = "ncseat empty"; d.innerHTML = '<span class="ncav"></span><b>Open seat</b>'; seats.appendChild(d); }
-      body.querySelector(".ncwait").textContent = room.players.length < 2 ? "Send the room code to a friend. You need at least 2 players." : room.host ? "Everyone in? Start the game." : "Waiting for the host to start…";
-      if (room.host) { const b = document.createElement("button"); b.className = "gbtn gold"; b.textContent = "Start game"; b.disabled = room.players.length < 2; b.onclick = () => act("start"); body.querySelector(".ncacts").appendChild(b); }
+      body.querySelector(".ncwait").textContent = room.players.length < 2 ? "Send the room code to a friend or add a bot. You need at least 2 players." : room.host ? "Everyone in? Start the game." : "Waiting for the host to start…";
+      if (room.host) {
+        const acts = body.querySelector(".ncacts");
+        if (room.players.length < 4) acts.appendChild(novaBotAdd(level => act("addbot", {level})));
+        const b = document.createElement("button"); b.className = "gbtn gold"; b.textContent = "Start game"; b.disabled = room.players.length < 2; b.onclick = () => act("start"); acts.appendChild(b);
+      }
       return;
     }
     const myTurn = room.status === "playing" && room.turn === room.me;
@@ -3462,7 +3614,7 @@ function startNovaCards(root) {
       s.className = `ncopp ${pos}` + (room.turn === i && room.status === "playing" ? " turn" : "") + (p.left ? " gone" : "");
       s.dataset.i = i;
       const n = dealing ? 0 : p.count, show = Math.min(n, 9);
-      s.innerHTML = `<div class="ncfan">${Array.from({length: show}, (_, k) => back(` style="--r:${(k - (show - 1) / 2) * 7}deg"`)).join("")}</div><div class="ncname"><span class="ncav" style="--k:${SEATC[i]}"></span><b>${esc2(p.name)}</b><em>${p.left ? "left" : n}</em></div>` + (p.called && p.count === 1 ? '<span class="ncbub">NOVA!</span>' : "");
+      s.innerHTML = `<div class="ncfan">${Array.from({length: show}, (_, k) => back(` style="--r:${(k - (show - 1) / 2) * 7}deg"`)).join("")}</div><div class="ncname"><span class="ncav" style="--k:${SEATC[i]}"></span><b>${p.bot ? "🤖 " : ""}${esc2(p.name)}</b><em>${p.left ? "left" : n}</em></div>` + (p.called && p.count === 1 ? '<span class="ncbub">NOVA!</span>' : "");
       opps.appendChild(s);
     });
     // deck + pile
@@ -3754,11 +3906,16 @@ function startWordBomb(root) {
     const body = root.querySelector(".wbbody"); if (!body) return;
     if (room.status === "lobby") {
       const seats = body.querySelector(".wbseats");
-      seats.innerHTML = room.players.map((p, i) => `<div class="wbseat"><span class="wbav sm" style="--k:${SEATC[i % 8]}">${escW(p.name[0] || "?").toUpperCase()}</span><b>${escW(p.name)}</b>${i === 0 ? "<small>host</small>" : ""}${p.me ? "<small class='you'>you</small>" : ""}</div>`).join("");
-      body.querySelector(".wbnote").textContent = room.host ? (room.players.length < 2 ? "Send the room code to friends, or start now to practice alone." : "Everyone in? Start the game.") : "Waiting for the host to start…";
+      seats.innerHTML = room.players.map((p, i) => `<div class="wbseat${p.bot ? " bot" : ""}"><span class="wbav sm" style="--k:${p.bot ? "#9aa5d8" : SEATC[i % 8]}">${p.bot ? "🤖" : escW(p.name[0] || "?").toUpperCase()}</span><b>${escW(p.name)}</b>${p.bot ? novaBotChip(p.bot) + (room.host ? `<button type="button" class="botx" data-i="${i}" aria-label="Remove ${escW(p.name)}">×</button>` : "") : i === 0 ? "<small>host</small>" : ""}${p.me ? "<small class='you'>you</small>" : ""}</div>`).join("");
+      seats.querySelectorAll(".botx").forEach(b => b.onclick = () => act("removebot", {index: +b.dataset.i}));
+      body.querySelector(".wbnote").textContent = room.host ? (room.players.length < 2 ? "Add bots, send the room code to friends, or start now to practice alone." : "Everyone in? Start the game.") : "Waiting for the host to start…";
       const acts = body.querySelector(".wbacts");
-      if (room.host && !acts.firstChild) { const b = document.createElement("button"); b.className = "gbtn gold"; b.textContent = "Start game"; b.onclick = () => act("start"); acts.appendChild(b); }
-      if (acts.firstChild) acts.firstChild.textContent = room.players.length < 2 ? "Practice alone" : "Start game";
+      if (room.host && !acts.firstChild) {
+        acts.appendChild(novaBotAdd(level => act("addbot", {level})));
+        const b = document.createElement("button"); b.className = "gbtn gold wbstart"; b.onclick = () => act("start"); acts.appendChild(b);
+      }
+      const sb = acts.querySelector(".wbstart"); if (sb) sb.textContent = room.players.length < 2 ? "Practice alone" : "Start game";
+      const ab = acts.querySelector(".botaddbtn"); if (ab) ab.disabled = room.players.length >= 8;
       return;
     }
     const playing = room.status === "playing";
@@ -3772,7 +3929,7 @@ function startWordBomb(root) {
     const key = room.players.length + ":" + room.me;
     if (seatKey !== key) {
       seatKey = key;
-      holder.innerHTML = room.players.map((p, i) => { const s = seatPos(i); return `<div class="wbpl" data-i="${i}" style="left:${s.x}%;top:${s.y}%"><span class="wbcrown"></span><b class="wbnm">${escW(p.name)}</b><span class="wbhearts"></span><span class="wbav" style="--k:${SEATC[i % 8]}">${escW(p.name[0] || "?").toUpperCase()}</span><span class="wbword"></span></div>`; }).join("");
+      holder.innerHTML = room.players.map((p, i) => { const s = seatPos(i); return `<div class="wbpl" data-i="${i}" style="left:${s.x}%;top:${s.y}%"><span class="wbcrown"></span><b class="wbnm">${escW(p.name)}</b><span class="wbhearts"></span><span class="wbav" style="--k:${p.bot ? "#9aa5d8" : SEATC[i % 8]}">${p.bot ? "🤖" : escW(p.name[0] || "?").toUpperCase()}</span><span class="wbword"></span></div>`; }).join("");
     }
     room.players.forEach((p, i) => {
       const el = holder.querySelector(`[data-i="${i}"]`); if (!el) return;
@@ -3848,9 +4005,9 @@ function startWordBomb(root) {
       inp.select();
     }
   }
-  async function act(action) {
+  async function act(action, extra = {}) {
     if (sending) return; sending = true;
-    try { const d = await api("/api/wordbomb", {method: "POST", body: JSON.stringify({action, code})}); sending = false; if (d.room) apply(d.room); }
+    try { const d = await api("/api/wordbomb", {method: "POST", body: JSON.stringify({action, code, ...extra})}); sending = false; if (d.room) apply(d.room); }
     catch (e) { sending = false; if (!handleAuthError(e)) toast(e.message); }
   }
 
@@ -3863,7 +4020,7 @@ function startWordBomb(root) {
   const nm = i => i === room.me ? "You" : room.players[i]?.name || "Someone";
   function handleEvent(ev, old) {
     if (ev.type === "start") { toast("Go! 💣", "big"); return; }
-    if (ev.type === "join" && room.status === "lobby") { toast(`${room.players[ev.by]?.name || "Someone"} joined`); return; }
+    if (ev.type === "join" && room.status === "lobby" && !room.players[ev.by]?.bot) { toast(`${room.players[ev.by]?.name || "Someone"} joined`); return; }
     if (ev.type === "leave") { toast(`${old?.players[ev.by]?.name || "Someone"} left`); return; }
     if (ev.type === "word") {
       const w = root.querySelector(`.wbpl[data-i="${ev.by}"] .wbword`);
