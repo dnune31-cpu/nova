@@ -9,6 +9,7 @@ import { redis, getJSON, getAuth } from "./_lib.js";
 const TTL = 6 * 3600;
 const LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const START_LIVES = 3, MAX_LIVES = 5, MAX_PLAYERS = 8;
+const REVEAL = 1500; // short "New letters!" pause before new letters show up (the fuse waits too)
 const SCRABBLE = { a: 1, b: 3, c: 3, d: 2, e: 1, f: 4, g: 2, h: 4, i: 1, j: 8, k: 5, l: 1, m: 3, n: 1, o: 1, p: 3, q: 10, r: 1, s: 1, t: 1, u: 1, v: 4, w: 4, x: 8, y: 4, z: 10 };
 // how much a word fills your power bar (out of 100): longer words and rare letters count more
 const wordPoints = w => Math.max(5, Math.min(40, Math.round([...w].reduce((t, ch) => t + (SCRABBLE[ch] || 1), 0) * 1.1 + Math.max(0, w.length - 5) * 2)));
@@ -84,7 +85,7 @@ function botStep(room) {
   if (!plan || plan.turnId !== room.turnId) {
     const c = BOT[p.bot] || BOT.medium, fail = Math.random() < c.fail;
     const word = botWord(room.prompt, room.used, p.bot);
-    const typeAt = now + between(c.think);
+    const typeAt = Math.max(now, room.reveal || 0) + between(c.think);
     room.botPlan = fail || !word
       ? { turnId: room.turnId, word: null, text: word ? word.slice(0, Math.max(room.prompt.length, Math.ceil(word.length / 2))) : room.prompt, typeAt, per: c.per * 1.6 }
       : { turnId: room.turnId, word, text: word, typeAt, per: c.per, doneAt: typeAt + word.length * c.per + 300 };
@@ -100,6 +101,11 @@ const botNeeds = room => {
   const plan = room.botPlan;
   return !plan || plan.turnId !== room.turnId || (plan.word && Date.now() >= plan.doneAt);
 };
+function botPlanView(room) { // lets browsers animate the bot's typing smoothly on their own
+  const p = room.players[room.turn], plan = room.botPlan;
+  if (room.status !== "playing" || !p?.bot || !plan || plan.turnId !== room.turnId) return null;
+  return { turnId: plan.turnId, text: plan.text.toUpperCase(), startIn: plan.typeAt - Date.now(), per: plan.per };
+}
 function botTyping(room) { // what the bot has typed so far, letter by letter
   const p = room.players[room.turn], plan = room.botPlan;
   if (!p?.bot || !plan || plan.turnId !== room.turnId) return null;
@@ -116,7 +122,10 @@ function nextAlive(room, from) {
   for (let s = 1; s <= n; s++) { const i = (from + s) % n; if (inGame(room.players[i])) return i; }
   return from;
 }
-function newBomb(room) { const [a, b] = fuseRange(room.round || 1), t = a + crypto.randomInt(b - a + 1); room.bomb = { start: Date.now(), total: t, deadline: Date.now() + t }; }
+function newBomb(room) { // the fuse starts after the "New letters!" pause
+  const [a, b] = fuseRange(room.round || 1), t = a + crypto.randomInt(b - a + 1), start = Math.max(Date.now(), room.reveal || 0);
+  room.bomb = { start, total: t, deadline: start + t };
+}
 // a round ends once everyone still in has had a turn
 function endTurn(room) {
   room.roundTurns = (room.roundTurns || 0) + 1;
@@ -124,7 +133,7 @@ function endTurn(room) {
   return false;
 }
 // newLetters = false keeps the same letters for the next player
-function newTurn(room, i, newLetters = true) { room.turn = i; room.turnId = (room.turnId || 0) + 1; room.turnStart = Date.now(); if (newLetters || !room.prompt) room.prompt = newPrompt(room.round || 1); }
+function newTurn(room, i, newLetters = true) { room.turn = i; room.turnId = (room.turnId || 0) + 1; room.turnStart = Date.now(); if (newLetters || !room.prompt) { room.prompt = newPrompt(room.round || 1); room.reveal = Date.now() + REVEAL; } }
 function checkOver(room) {
   const alive = room.players.map((p, i) => [p, i]).filter(([p]) => inGame(p));
   if (alive.length === 0 || (!room.solo && alive.length <= 1)) {
@@ -159,6 +168,10 @@ function acceptWord(room, me, w) {
   newBomb(room); // a good word resets the bomb
   event(room, e);
 }
+function heat(room) { // how much of the fuse has burned (0 to 1)
+  if (room.status !== "playing") return 0;
+  return Math.max(0, Math.min(1, (Date.now() - room.bomb.start) / room.bomb.total));
+}
 function stage(room) {
   if (room.status !== "playing") return 0;
   const f = (Date.now() - room.bomb.start) / room.bomb.total;
@@ -171,6 +184,9 @@ function view(room, email, typing) {
     code: room.code, status: room.status, me, host: room.players[0]?.email === email,
     players: room.players.map((p, i) => ({ name: p.name, lives: p.lives ?? START_LIVES, power: p.power || 0, alive: p.alive !== false, left: !!p.left, last: p.last || "", words: p.words || 0, bot: p.bot || null, me: i === me })),
     turn: room.turn ?? 0, turnId: room.turnId || 0, prompt: room.prompt || null, stage: stage(room),
+    heat: Math.round(heat(room) * 1000) / 1000, heatRate: room.status === "playing" ? Math.round(1e6 / room.bomb.total) / 1000 : 0,
+    revealIn: room.status === "playing" ? Math.max(0, (room.reveal || 0) - Date.now()) : 0,
+    botType: botPlanView(room),
     usedCount: (room.used || []).length, winner: room.winner ?? null, event: room.event || null, seq: room.seq || 0, game: room.game || 1,
     typing: botTyping(room) || (typing && typing.turnId === room.turnId ? { text: typing.text || "", bad: typing.bad || null } : null),
     round: room.round || 1, beat: room.status === "playing" ? fuseRange(room.round || 1)[0] : 0, maxLives: MAX_LIVES,
@@ -310,6 +326,7 @@ export default async function handler(req, res) {
       if (action === "word") {
         if (tick(room)) { await save(room); return reply(400, { error: "Too slow! 💥", code: "boom" }); }
         if (room.turn !== me) return reply(400, { error: "It's not your turn." });
+        if (Date.now() < (room.reveal || 0)) return reply(400, { error: "Wait for the new letters!", code: "wait" });
         const w = String(req.body.word || "").trim().toLowerCase();
         let bad = null;
         if (!/^[a-z]{2,30}$/.test(w)) bad = "notword";
