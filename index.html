@@ -991,6 +991,23 @@ form#f{width:calc(100% - 20px)}
 .wbtiles i.spin{background:#0a1272;color:#7f8cff;border-color:#050a45;animation:none}
 /* a word loaded before your turn */
 .wbinp.armed{border-color:#7dffb0!important;box-shadow:0 0 0 4px rgba(125,255,176,.22)!important;color:#7dffb0}
+/* full screen */
+.wbtop .wbfs{margin-left:auto}.wbtop .wbfs+.wbleave{margin-left:0}
+.wb:fullscreen{max-width:none;width:100%;height:100%;border-radius:0;display:flex;flex-direction:column}
+.wb:-webkit-full-screen{max-width:none;width:100%;height:100%;border-radius:0;display:flex;flex-direction:column}
+.wb.wbfull{position:fixed;inset:0;z-index:9999;max-width:none;height:100vh;height:100dvh;border-radius:0;display:flex;flex-direction:column}
+.wb:fullscreen .wbtable{flex:1;height:auto;min-height:0}
+.wb:-webkit-full-screen .wbtable{flex:1;height:auto;min-height:0}
+.wb.wbfull .wbtable{flex:1;height:auto;min-height:0}
+@media (min-width:1100px) and (min-height:700px){
+  .wb:fullscreen .wbcenter{scale:1.25}.wb:fullscreen .wbav{width:70px;height:70px;font-size:28px}.wb:fullscreen .wbtiles i{min-width:30px;height:33px;font-size:19px}.wb:fullscreen .wblabel{font-size:18px}
+  .wb.wbfull .wbcenter{scale:1.25}.wb.wbfull .wbav{width:70px;height:70px;font-size:28px}.wb.wbfull .wbtiles i{min-width:30px;height:33px;font-size:19px}.wb.wbfull .wblabel{font-size:18px}
+}
+/* typeable username */
+.wbnick{grid-column:1/-1;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#121a5c;border:1px solid #2a3490;border-radius:14px;padding:10px 14px}
+.wbnick span{font-size:13px;font-weight:700;color:#d5dbff}
+.wbnick input{flex:1;min-width:160px;height:38px;border-radius:999px;border:2px solid rgba(255,255,255,.18);background:rgba(0,4,60,.45);color:#fff;font:inherit;font-size:15px;font-weight:800;padding:0 14px;outline:none}
+.wbnick input:focus{border-color:#f5e131}
 /* add-bot menu + difficulty chips */
 .botchip{font-size:10.5px;font-weight:800;border-radius:999px;padding:2px 8px;color:#0b0b14;white-space:nowrap;flex:none}
 .botchip.easy{background:#4ee08a}.botchip.medium{background:#f4d03f}.botchip.hard{background:#ff6a5a}
@@ -3879,16 +3896,19 @@ function startWordBomb(root) {
 
   /* ----- lobby (create / join) ----- */
   function lobby() {
+    if (typeof exitFull === "function" && root.querySelector(".wb")) exitFull();
     clearInterval(poll); pollMs = 0; room = null; code = null; seq = -1; lastJson = ""; seatKey = ""; mode = "";
     const saved = get("nova-wb-room", null);
-    root.innerHTML = '<div class="chlobby"><div class="chcard"><b>Start a game</b><p>Get a room code and share it with up to 7 friends. You can also add bots or play alone for practice.</p><button type="button" class="gbtn gold wbnew">Create room</button></div>' +
+    root.innerHTML = '<div class="chlobby"><label class="wbnick"><span>Your name in the game</span><input maxlength="16" placeholder="Type a username" aria-label="Your username" autocomplete="nickname" spellcheck="false"></label><div class="chcard"><b>Start a game</b><p>Get a room code and share it with up to 7 friends. You can also add bots or play alone for practice.</p><button type="button" class="gbtn gold wbnew">Create room</button></div>' +
       '<div class="chcard"><b>Join a game</b><p>Type the code your friend gave you.</p><div class="chjoin"><input maxlength="6" placeholder="ROOM CODE" aria-label="Room code" autocapitalize="characters"><button type="button" class="gbtn gold">Join</button></div></div>' +
       (saved ? `<button type="button" class="chrejoin">Rejoin room ${escW(saved)}</button>` : "") + '<p class="cherr" role="alert"></p>' +
       '<div class="wbrules"><b>How to play</b><span>When the bomb points at you, type a real English word that contains the letters shown (like <em>CLI</em> → <em>CLIMB</em>) and press Enter. Each word can only be used once. Everyone gets a go at the same letters for the whole round, but if someone blows up, the letters switch. The fuse is hidden and resets after every good word, and each round it gets a little shorter and the letters a little harder. If it blows up on you, you lose a heart (you start with 3). Good words fill your power bar, and longer words with rare letters fill it faster. A full bar gives you an extra heart. Last one standing wins.</span></div></div>';
-    const errEl = root.querySelector(".cherr"), inp = root.querySelector("input");
+    const errEl = root.querySelector(".cherr"), inp = root.querySelector(".chjoin input"), nickEl = root.querySelector(".wbnick input");
+    nickEl.value = get("nova-wb-nick", "");
+    nickEl.addEventListener("input", () => set("nova-wb-nick", nickEl.value.trim()));
     const go = async (action, c) => {
       errEl.textContent = "";
-      try { const d = await api("/api/wordbomb", {method: "POST", body: JSON.stringify({action, code: c})}); enter(d.room); }
+      try { const d = await api("/api/wordbomb", {method: "POST", body: JSON.stringify({action, code: c, nick: nickEl.value.trim()})}); enter(d.room); }
       catch (e) { if (!handleAuthError(e)) errEl.textContent = e.message; if (e.status === 404) set("nova-wb-room", null); }
     };
     root.querySelector(".wbnew").onclick = () => go("create");
@@ -3900,7 +3920,7 @@ function startWordBomb(root) {
 
   function enter(r) {
     code = r.code; set("nova-wb-room", code);
-    root.innerHTML = `<div class="wb"><div class="wbtop"><div class="wbcode"><small>Room</small><b></b><button type="button" class="wbpill sm copy">Copy</button></div><button type="button" class="wbpill sm wbleave">Leave</button></div>
+    root.innerHTML = `<div class="wb"><div class="wbtop"><div class="wbcode"><small>Room</small><b></b><button type="button" class="wbpill sm copy">Copy</button></div><button type="button" class="wbpill sm wbfs" aria-label="Full screen">⛶ Full screen</button><button type="button" class="wbpill sm wbleave">Leave</button></div>
       <div class="wbtable">
         <div class="wbround" aria-live="polite"><b>Round 1</b><span></span></div>
         <div class="wbseatsT"></div>
@@ -3912,6 +3932,7 @@ function startWordBomb(root) {
       <div class="wbfx" aria-live="polite"></div></div>`;
     root.querySelector(".wbcode b").textContent = code;
     root.querySelector(".copy").onclick = e => navigator.clipboard?.writeText(code).then(() => { e.target.textContent = "Copied"; setTimeout(() => e.target.textContent = "Copy", 1200); }, () => {});
+    root.querySelector(".wbfs").onclick = toggleFull;
     root.querySelector(".wbleave").onclick = async () => {
       if (room && room.status === "playing" && !confirm("Leave this game?")) return;
       try { await api("/api/wordbomb", {method: "POST", body: JSON.stringify({action: "leave", code})}); } catch {}
@@ -3934,6 +3955,25 @@ function startWordBomb(root) {
     });
     apply(r, true);
   }
+  /* ----- full screen (real full screen where the browser allows it, otherwise fill the window) ----- */
+  const wbEl = () => root.querySelector(".wb");
+  const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement || null;
+  const isFull = () => { const w = wbEl(); return !!w && (fsEl() === w || w.classList.contains("wbfull")); };
+  function syncFull() { const b = root.querySelector(".wbfs"); if (b) { const on = isFull(); b.textContent = on ? "✕ Exit full screen" : "⛶ Full screen"; b.setAttribute("aria-pressed", on); } }
+  async function toggleFull() {
+    const w = wbEl(); if (!w) return;
+    if (isFull()) { exitFull(); return; }
+    const req = w.requestFullscreen || w.webkitRequestFullscreen;
+    try { if (!req) throw 0; await req.call(w); } catch { w.classList.add("wbfull"); }
+    syncFull(); root.querySelector(".wbinp:not(:disabled)")?.focus({preventScroll: true});
+  }
+  function exitFull() {
+    const w = wbEl(); if (w) w.classList.remove("wbfull");
+    if (fsEl()) (document.exitFullscreen || document.webkitExitFullscreen)?.call(document)?.catch?.(() => {});
+    syncFull();
+  }
+  const onFsKey = e => { if (e.key === "Escape" && wbEl()?.classList.contains("wbfull")) exitFull(); };
+  document.addEventListener("fullscreenchange", syncFull); document.addEventListener("webkitfullscreenchange", syncFull); document.addEventListener("keydown", onFsKey);
   function disarm() { prefire = ""; const inp = root.querySelector(".wbinp"); if (inp) inp.classList.remove("armed"); }
   function setPoll(ms) { if (ms === pollMs) return; pollMs = ms; clearInterval(poll); poll = setInterval(refresh, ms); }
   async function refresh() {
@@ -4248,7 +4288,7 @@ function startWordBomb(root) {
   }
 
   lobby();
-  return {stop() { stopped = true; clearInterval(poll); clearTimeout(typeTimer); clearTimeout(revealTimer); clearTimeout(fireTimer); cancelAnimationFrame(raf); }};
+  return {stop() { stopped = true; clearInterval(poll); clearTimeout(typeTimer); clearTimeout(revealTimer); clearTimeout(fireTimer); cancelAnimationFrame(raf); if (isFull()) exitFull(); document.removeEventListener("fullscreenchange", syncFull); document.removeEventListener("webkitfullscreenchange", syncFull); document.removeEventListener("keydown", onFsKey); }};
 }
 </script>
 </body>
