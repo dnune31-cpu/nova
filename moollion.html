@@ -123,13 +123,24 @@ body{overflow:hidden;-webkit-tap-highlight-color:transparent}
 .pcode{position:absolute;left:16px;top:14px;z-index:6;padding:6px 10px;display:flex;align-items:center;gap:8px}
 .pcode small{font-size:9px;letter-spacing:2px;color:#aab3d6;text-transform:uppercase}.pcode b{font-weight:400;font-size:16px;color:#ffd23f;letter-spacing:3px}
 .pcopy{background:#2a3456;border:1px solid #070b1a;color:#fff;font-family:Silkscreen,monospace;font-size:9px;padding:3px 6px;cursor:pointer;text-transform:uppercase}
-.pq{position:absolute;left:50%;top:14px;transform:translateX(-50%);z-index:4;text-align:center;width:min(64%,760px)}
-.pq small{font-family:Silkscreen,monospace;letter-spacing:3px;font-size:11px;color:#7fe0ff;background:rgba(13,20,44,.88);padding:3px 10px;border:1px solid #070b1a;text-transform:uppercase}
-.pq h2{font-family:Silkscreen,monospace;font-weight:400;font-size:clamp(20px,3vw,34px);letter-spacing:2px;margin:10px 0 0;color:#fff6e4;text-transform:uppercase;line-height:1.15;text-shadow:3px 3px 0 #1a1033,-2px -2px 0 #1a1033,2px -2px 0 #1a1033,-2px 2px 0 #1a1033}
-.pq.reveal h2{color:#7fe0ff;animation:mPop .4s}
-.pform{position:absolute;left:50%;top:118px;transform:translateX(-50%);z-index:4;width:min(520px,86%)}
+.pq{position:absolute;left:50%;top:60px;transform:translateX(-50%);z-index:4;text-align:center;width:min(82%,840px);padding:14px 22px 16px;background:rgba(11,16,38,.9);border:3px solid #2a3a78;box-shadow:0 0 0 3px #070b1a,6px 6px 0 3px rgba(0,0,0,.35)}
+.pq small{font-family:Silkscreen,monospace;letter-spacing:3px;font-size:12px;color:#7fe0ff;text-transform:uppercase}
+.pq h2{font-family:Silkscreen,monospace;font-weight:400;font-size:clamp(26px,4.2vw,52px);letter-spacing:2px;margin:6px 0 0;color:#fff6e4;text-transform:uppercase;line-height:1.1;text-shadow:4px 4px 0 #1a1033}
+.pq.changing{border-color:#7fe0ff;animation:pShake .12s steps(2) infinite}
+.pq.changing small{color:#ffd23f;animation:pBlink .3s steps(2) infinite}
+.pq.changing h2{color:#7fe0ff;opacity:.85;text-shadow:3px 0 0 #ff4fd8,-3px 0 0 #3fe0ff;animation:pFlick .15s steps(2) infinite}
+.pq.landed{animation:pSlam .5s cubic-bezier(.34,1.56,.64,1)}
+.pq.landed h2{animation:pWhite .7s ease-out}
+.pflash{position:absolute;inset:0;background:radial-gradient(circle at 50% 22%,rgba(170,240,255,.75),rgba(127,224,255,.15) 55%,transparent 80%);animation:pFlash .7s ease-out forwards}
+@keyframes pShake{0%{transform:translate(-50%,0) rotate(-.6deg)}50%{transform:translate(calc(-50% + 4px),-2px) rotate(.6deg)}100%{transform:translate(calc(-50% - 4px),2px)}}
+@keyframes pBlink{50%{opacity:.3}}
+@keyframes pFlick{50%{opacity:.45;transform:skewX(-6deg)}}
+@keyframes pSlam{0%{transform:translateX(-50%) scale(1.25);border-color:#fff}60%{transform:translateX(-50%) scale(.96)}100%{transform:translateX(-50%) scale(1);border-color:#2a3a78}}
+@keyframes pWhite{0%{color:#fff;text-shadow:0 0 18px #bff4ff,4px 4px 0 #1a1033}100%{color:#fff6e4}}
+@keyframes pFlash{from{opacity:1}to{opacity:0}}
+.pform{position:absolute;left:50%;top:var(--pfTop,200px);transform:translateX(-50%);z-index:4;width:min(520px,86%)}
 .pform.mine{border-color:#ffd23f;box-shadow:0 0 0 2px #070b1a,0 0 22px rgba(255,210,63,.5)}
-.pmsg{position:absolute;left:50%;top:176px;transform:translateX(-50%);z-index:4;font-size:12px;color:#ffe2e8;white-space:nowrap}
+.pmsg{position:absolute;left:50%;top:calc(var(--pfTop,200px) + 58px);transform:translateX(-50%);z-index:4;font-size:12px;color:#ffe2e8;white-space:nowrap}
 .pmsg:not(:empty){background:rgba(13,20,44,.92);padding:3px 10px;border:1px solid #070b1a}
 .ptags{position:absolute;inset:0;z-index:3;pointer-events:none}
 .ptag{position:absolute;transform:translateX(-50%);text-align:center;font-family:Silkscreen,monospace;font-size:10px;letter-spacing:1px;pointer-events:auto;white-space:nowrap}
@@ -159,7 +170,8 @@ body{overflow:hidden;-webkit-tap-highlight-color:transparent}
 .moo.pdanger:before{content:"";position:absolute;inset:0;z-index:5;pointer-events:none;box-shadow:inset 0 0 90px rgba(255,60,60,.55);animation:pPulse .45s ease-in-out infinite alternate}
 @keyframes pPulse{from{opacity:.35}to{opacity:1}}
 .party .pcode[hidden],.pq[hidden],.pform[hidden]{display:none}
-@media (max-width:760px){.pq{top:58px;width:94%}.pform{top:140px}.pmsg{top:192px}.pcode{left:12px;top:12px}.ptag{font-size:8px}.ptag .bar{width:40px}.plobby{padding-top:110px}.padd{margin:6px 0 0}}
+@media (max-width:760px){.pq{top:54px;width:94%;padding:10px 12px 12px}.pq h2{font-size:clamp(20px,6.5vw,30px)}.party{--pfTop:178px}.pcode{left:12px;top:12px}.ptag{font-size:8px}.ptag .bar{width:40px}.plobby{padding-top:110px}.padd{margin:6px 0 0}}
+@media (prefers-reduced-motion:reduce){.pq.changing,.pq.changing h2,.pq.landed,.pflash{animation:none}}
 
 </style>
 </head>
@@ -598,6 +610,8 @@ function startParty(root, opts = {}) {
     good: tier => [0, 1, 2, 3, 4].slice(0, tier + 2).forEach((k, i) => tone(392 * Math.pow(1.26, k), i * 0.08, 0.13, "triangle", 0.06)),
     zap: () => { tone(900, 0, 0.5, "sawtooth", 0.05, 120); tone(1400, 0.05, 0.4, "square", 0.03, 300); },
     turn: () => { tone(520, 0, 0.08, "triangle", 0.05); tone(780, 0.08, 0.1, "triangle", 0.05); },
+    change: () => { tone(180, 0, 0.35, "sawtooth", 0.04, 720); tone(240, 0.05, 0.3, "square", 0.025, 960); },
+    land: () => { tone(110, 0, 0.25, "square", 0.06, 70); [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.04 + i * 0.06, 0.16, "triangle", 0.06)); },
   };
 
   /* ----- pixel art: cows and the UFO ----- */
@@ -619,16 +633,28 @@ function startParty(root, opts = {}) {
     for (let X = 3; X < 24; X += 3) px(X, 9, (X / 3) % 2 === blink ? (hot > 0.6 ? "#ffe14a" : "#7dffb0") : "#3a3a46");
     for (let X = cx - 3; X <= cx + 3; X++) px(X, 13, "rgb(110,230,255)");
   }
-  function drawBeam(x, cx, top, bottom, s, t) {
-    const shift = Math.floor(t * 16);
+  // the tractor beam: cyan when calm, then amber and red as time runs out, getting wider with rings and sparks
+  const mix = (a, b, k) => a.map((v, i) => Math.round(v + (b[i] - v) * k));
+  const beamColor = h => { const C = [110, 230, 255], A = [255, 205, 90], R = [255, 60, 60]; return h < 0.55 ? C : h < 0.8 ? mix(C, A, (h - 0.55) / 0.25) : mix(A, R, Math.min(1, (h - 0.8) / 0.15)); };
+  function drawBeam(x, cx, top, bottom, s, t, h = 0) {
+    const col = beamColor(h).join(","), len = Math.max(1, bottom - top), w0 = 3 + h * 2, w1 = 5 + s * 7 + h * 9, jit = h > 0.85 ? Math.round((Math.random() - 0.5) * 2) : 0;
     for (let y = top; y < bottom; y++) {
-      const k = (y - top) / Math.max(1, bottom - top), half = 3 + (4 + s * 8) * k;
+      const k = (y - top) / len, half = Math.max(1, w0 + (w1 - w0) * k + Math.sin(t * 9 + y * 0.35) * (0.4 + h));
+      const ring = (((t * (1.2 + h * 2.5) - k) % 0.33) + 0.33) % 0.33 < 0.035; // rings sliding up toward the UFO
       for (let X = -Math.round(half); X <= Math.round(half); X++) {
-        const e = Math.abs(X) / half, band = (((y + shift) % 4) + 4) % 4 === 0 ? 0.1 : 0;
-        x.fillStyle = "rgba(110,230,255," + Math.min(0.8, (0.18 + s * 0.4) * (1 - e * e * 0.7) + band).toFixed(2) + ")"; x.fillRect(Math.round(cx + X), y, 1, 1);
+        const e = Math.abs(X) / half;
+        let a = (0.16 + s * 0.38 + h * 0.15) * (1 - e * e * 0.65);
+        if (e > 0.85) a += 0.16 + h * 0.22; // bright edges
+        if (ring) a += 0.22 + h * 0.15;
+        x.fillStyle = "rgba(" + col + "," + Math.min(0.9, a).toFixed(2) + ")"; x.fillRect(Math.round(cx + X + jit), y, 1, 1);
       }
     }
-    for (let i = 0; i < 3 + s * 10; i++) { const y = top + Math.random() * (bottom - top); x.fillStyle = "#fff"; x.fillRect(Math.round(cx + (Math.random() * 2 - 1) * (3 + 6 * s)), Math.round(y), 1, 1); }
+    const spark = beamColor(Math.min(1, h + 0.1)).join(",");
+    for (let i = 0; i < 4 + s * 10 + h * 14; i++) {
+      const k = Math.random(), y = Math.round(top + k * len), half = (w0 + (w1 - w0) * k) * 0.9;
+      x.fillStyle = Math.random() < 0.25 ? "#fff" : "rgb(" + spark + ")"; x.fillRect(Math.round(cx + (Math.random() * 2 - 1) * half), y, 1, Math.random() < 0.3 ? 2 : 1);
+    }
+    if (s > 0.2) { const gw = Math.round(w1 + 3); x.fillStyle = "rgba(" + col + "," + (0.15 + h * 0.25).toFixed(2) + ")"; x.fillRect(Math.round(cx - gw), bottom - 1, gw * 2, 2); }
   }
 
   /* ----- the screen ----- */
@@ -714,7 +740,7 @@ function startParty(root, opts = {}) {
   const myTurn = () => room && room.status === "playing" && room.turn === room.me;
   // where each cow stands (canvas pixels): a line across the bottom
   const seatX = i => { const n = room.players.length, W = cv.width; return Math.round(W * (0.1 + 0.8 * (i + 0.5) / n)); };
-  const baseY = () => Math.round(cv.height * 0.8) - 9;
+  const baseY = () => Math.round(cv.height * 0.84) - 9;
   let seatsKey = "";
   function drawTags() {
     const holder = $(".ptags"), key = room.players.map(p => p.name + (p.bot || "")).join("|") + ":" + room.me + ":" + cv.width;
@@ -740,13 +766,7 @@ function startParty(root, opts = {}) {
     drawTags();
     setScene(playing ? Math.min(6, room.round) : room.status === "over" ? 6 : 1);
     const q = $(".pq"); q.hidden = !playing;
-    if (playing) {
-      const revealing = Date.now() < revealEnd;
-      q.querySelector("small").textContent = "Round " + room.round;
-      q.querySelector("h2").textContent = revealing ? "New prompt!" : room.prompt || "";
-      q.classList.toggle("reveal", revealing);
-      if (revealing) setTimeout(() => room && render(room), revealEnd - Date.now() + 20);
-    }
+    if (playing) showPrompt(); else { shownPrompt = ""; changingTo = ""; clearInterval(shuffleT); }
     // the answer box: only on your turn (you can type ahead while waiting)
     const me = room.players[room.me], alive = playing && me && me.alive && !me.left;
     form.hidden = !playing || !alive;
@@ -759,6 +779,30 @@ function startParty(root, opts = {}) {
     // menus over the stage
     if (!playing) lobbyPanel(); else if (main.innerHTML) { main.innerHTML = ""; main.className = "mmain pmain"; }
     if (!raf) raf = requestAnimationFrame(frame);
+  }
+  // a new prompt: the card shakes and glitches through random prompts, then slams onto the real one
+  let shownPrompt = "", changingTo = "", shuffleT = 0;
+  const DECOYS = ["Name a dog breed", "Name a planet", "Name a cheese", "Name a superhero", "Name a dinosaur", "Name a pasta shape", "Name a Pokémon", "Name a dessert", "Name a volcano",
+    "Name a gemstone", "Name a board game", "Name a Greek god", "Name a bone", "Name a rapper", "Name a soup", "Name an island", "Name a snake", "Name a font", "Name a knot", "Name a cloud type"];
+  function placeForm() { const q = $(".pq"); if (!q.hidden) wrap.style.setProperty("--pfTop", q.offsetTop + q.offsetHeight + 16 + "px"); }
+  function showPrompt() {
+    const q = $(".pq"), h2 = q.querySelector("h2"), sm = q.querySelector("small");
+    if (room.prompt === shownPrompt) { sm.textContent = "Round " + room.round; placeForm(); return; }
+    if (room.prompt === changingTo) return;
+    changingTo = room.prompt; clearInterval(shuffleT);
+    const land = () => {
+      clearInterval(shuffleT); shownPrompt = room.prompt; changingTo = "";
+      h2.textContent = room.prompt; sm.textContent = "Round " + room.round;
+      q.classList.remove("changing"); q.classList.remove("landed"); void q.offsetWidth; q.classList.add("landed");
+      const f = document.createElement("div"); f.className = "pflash"; $(".pfx").appendChild(f); setTimeout(() => f.remove(), 700);
+      sfx.land(); placeForm();
+    };
+    const wait = revealEnd - Date.now();
+    if (wait < 250 || reduce) return land();
+    q.classList.remove("landed"); q.classList.add("changing"); sm.textContent = "⚠ New prompt! ⚠"; sfx.change();
+    let n = 0;
+    shuffleT = setInterval(() => { h2.textContent = DECOYS[(Math.random() * DECOYS.length) | 0]; if (n++ % 2 === 0) tone(300 + Math.random() * 500, 0, 0.04, "square", 0.025); }, 75);
+    setTimeout(() => { if (changingTo === room.prompt) land(); }, wait);
   }
   function lobbyPanel() {
     const over = room.status === "over", w = over ? room.players[room.winner] : null;
@@ -822,7 +866,7 @@ function startParty(root, opts = {}) {
       return;
     }
     if (ev.type === "abduct") {
-      anim = {i: ev.by, t0: performance.now(), out: ev.out};
+      anim = {i: ev.by, t0: performance.now(), out: ev.out, from: Math.round(lifts[ev.by] || 0)};
       sfx.zap();
       setTimeout(() => pop(ev.by, ev.out ? `${esc(nm(ev.by))} got abducted!` : "-1 ♥", "#ff5a4a", "life"), 450);
       if (ev.round) setTimeout(() => banner("Round " + ev.round, "Higher up · a bit faster"), 1300);
@@ -831,47 +875,63 @@ function startParty(root, opts = {}) {
   }
 
   /* ----- every frame: the UFO, its beam, the cows, and live typing ----- */
+  const parts = []; // sparks from abductions
+  function burst(x0, y0, n, cols) { for (let k = 0; k < n; k++) { const a = Math.random() * Math.PI * 2, v = 0.6 + Math.random() * 1.8; parts.push({x: x0, y: y0, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 0.4, life: 26 + Math.random() * 14, c: cols[k % cols.length]}); } }
+  const RISE = 0.9, HOLD = 1.35, DROP = 1.95; // abduction timing (seconds)
   function frame(now) {
     raf = 0; if (stopped) return;
     raf = requestAnimationFrame(frame);
-    if (now - lastFrame < 33) return; lastFrame = now;
+    const dt = Math.min(3, (now - (lastFrame || now)) / 16.7); lastFrame = now;
     const W = cv.width, H = cv.height, t = now / 1000; cx.clearRect(0, 0, W, H);
     if (!room || !room.players.length) { // menu: a lone UFO drifting over a cow
-      const x0 = Math.round(W / 2 + Math.sin(t * 0.7) * 30), y0 = Math.round(H * 0.42);
-      drawBeam(cx, x0, y0 + 13, y0 + 46, 0.15, t); drawShip(cx, x0 - 13, y0 + Math.round(Math.sin(t * 2)), t, 0); drawCow(cx, x0 - 8, y0 + 38 + Math.round(Math.sin(t * 2.6)), false);
+      const x0 = Math.round(W / 2 + Math.sin(t * 0.7) * 30), y0 = Math.round(H * 0.5);
+      drawBeam(cx, x0, y0 + 13, y0 + 46, 0.15, t, 0); drawShip(cx, x0 - 13, y0 + Math.round(Math.sin(t * 2)), t, 0); drawCow(cx, x0 - 8, y0 + 38 + Math.round(Math.sin(t * 2.6)), false);
       return;
     }
     const playing = room.status === "playing", by = baseY(), n = room.players.length;
     const heat = playing ? Math.min(1, (room.heat || 0) + Math.max(0, Date.now() - Math.max(recvAt, revealEnd)) / 1000 * (room.heatRate || 0)) : 0;
-    const ti = playing ? room.turn : -1, tx = ti >= 0 ? seatX(ti) : Math.round(W / 2);
+    let abd = null;
+    if (anim) { const k = (now - anim.t0) / 1000; if (k > DROP + 0.1) anim = null; else abd = {i: anim.i, k, out: anim.out}; }
+    const ti = playing ? room.turn : -1, tx = abd ? seatX(abd.i) : ti >= 0 ? seatX(ti) : Math.round(W / 2);
     if (ufoX < 0) ufoX = tx;
-    ufoX += (tx - ufoX) * 0.18; ufoY = Math.round(H * 0.34 + Math.sin(t * 2) * 1.2 + (heat > 0.85 ? (Math.random() - 0.5) * 2 : 0));
-    // cows (the active one floats up the beam as time runs out)
+    ufoX += (tx - ufoX) * Math.min(1, 0.22 * dt);
+    const shake = heat > 0.8 || (abd && abd.k < RISE + 0.2) ? (Math.random() - 0.5) * (abd ? 3 : 2) : 0;
+    ufoY = Math.round(H * 0.5 + Math.sin(t * 2) * 1.2 + shake);
+    // the active cow floats up the beam faster and faster as time runs out
     lifts.length = n;
     for (let i = 0; i < n; i++) {
-      const p = room.players[i], target = i === ti && Date.now() >= revealEnd ? heat * (by - ufoY - 18) : 0;
-      lifts[i] = (lifts[i] || 0) + (target - (lifts[i] || 0)) * 0.25;
+      const target = i === ti && Date.now() >= revealEnd && !abd ? Math.pow(heat, 1.8) * (by - ufoY - 20) : 0;
+      lifts[i] = (lifts[i] || 0) + (target - (lifts[i] || 0)) * Math.min(1, 0.2 * dt);
     }
-    // the abduction: shoot up into the UFO, then drop back down (or stay gone)
-    let abd = null;
-    if (anim) { const k = (now - anim.t0) / 1000; if (k > 2.2) anim = null; else abd = {i: anim.i, k, out: anim.out}; }
-    if (playing && ti >= 0 && !abd) drawBeam(cx, Math.round(ufoX), ufoY + 13, by + 9, 0.15 + heat * 0.7, t);
-    if (abd) { const ax = seatX(abd.i); if (abd.k < 0.6) drawBeam(cx, ax, ufoY + 13, by + 9, 1, t); }
+    if (abd) { // the beam flares red and yanks the cow up, accelerating into the UFO
+      const ax = Math.round(ufoX);
+      if (abd.k < RISE + 0.15) drawBeam(cx, ax, ufoY + 13, by + 9, 1, t, 1);
+      else if (abd.k > HOLD && abd.k < DROP && !abd.out) drawBeam(cx, ax, ufoY + 13, by + 9, 0.3, t, 0);
+      if (!anim.burst && abd.k >= RISE) { anim.burst = true; burst(ax, ufoY + 10, 26, ["#ff5a4a", "#ffe14a", "#fff", "#ff9f43"]); }
+    } else if (playing && ti >= 0) drawBeam(cx, Math.round(ufoX), ufoY + 13, by + 9, 0.15 + heat * 0.75, t, heat);
     for (let i = 0; i < n; i++) {
       const p = room.players[i], x0 = seatX(i) - 8, flip = i >= n / 2;
-      let y0 = by - Math.round(lifts[i] || 0), alpha = 1;
+      let y0 = by - Math.round(lifts[i] || 0);
       if (abd && abd.i === i) {
-        if (abd.k < 0.5) y0 = Math.round(by - (by - ufoY - 6) * (abd.k / 0.5));
-        else if (abd.k < 1.2 || abd.out) continue; // inside the UFO
-        else y0 = Math.round(-12 + (by + 12) * Math.min(1, (abd.k - 1.2) / 0.6)); // dropped back down
-      } else if (playing && (!p.alive || p.left)) continue; // abducted for good
-      drawCow(cx, x0, y0, flip, alpha);
+        const start = by - (anim.from || 0), top = ufoY + 4;
+        if (abd.k < RISE) {
+          const e = Math.pow(abd.k / RISE, 2.4), wob = Math.round(Math.sin(abd.k * 34) * 1.5 * e);
+          for (let g = 3; g >= 1; g--) { const eg = Math.pow(Math.max(0, abd.k - g * 0.035) / RISE, 2.4); drawCow(cx, x0 + wob, Math.round(start - (start - top) * eg), flip, 0.12 * (4 - g)); }
+          drawCow(cx, x0 + wob, Math.round(start - (start - top) * e), flip);
+        } else if (abd.k >= HOLD && !abd.out) { // dropped back down, landing with a little bounce
+          const e = Math.min(1, (abd.k - HOLD) / (DROP - HOLD)), b = 1 - Math.pow(1 - e, 3), bounce = e > 0.85 ? Math.round(Math.sin((e - 0.85) / 0.15 * Math.PI) * 2) : 0;
+          drawCow(cx, x0, Math.round(top + (by - top) * b) - bounce, flip);
+        }
+        continue;
+      }
+      if (playing && (!p.alive || p.left)) continue; // abducted for good
+      drawCow(cx, x0, y0, flip);
     }
-    if (playing || anim) drawShip(cx, Math.round((abd ? seatX(abd.i) : ufoX) - 13), ufoY, t, heat);
-    // tags follow the line, the active one bounces
+    for (let k = parts.length - 1; k >= 0; k--) { const q = parts[k]; q.x += q.vx * dt; q.y += q.vy * dt; q.vy += 0.05 * dt; q.life -= dt; if (q.life <= 0) { parts.splice(k, 1); continue; } cx.fillStyle = q.c; cx.fillRect(Math.round(q.x), Math.round(q.y), 1, 1); }
+    if (playing || anim) drawShip(cx, Math.round(ufoX) - 13, ufoY, t, abd && abd.k < RISE + 0.3 ? 1 : heat);
     // live typing for other players and bots
     const tb = $(".ptype");
-    if (playing && !myTurn() && Date.now() >= revealEnd) {
+    if (playing && !myTurn() && Date.now() >= revealEnd && !abd) {
       let target = "", bt = room.botType;
       if (bt && bt.turnId === room.turnId) { const k = Math.floor((Date.now() - botStart.at) / bt.per); target = bt.text.slice(0, Math.max(0, Math.min(bt.text.length, k))); }
       else target = room.typing?.text || "";
