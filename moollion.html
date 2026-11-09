@@ -721,6 +721,7 @@ function startParty(root, opts = {}) {
     $(".pcode b").textContent = code; $(".pcode").hidden = false; $(".pleave").hidden = false;
     apply(r, true);
   }
+  let lastGrow = 0;
   function setPoll(ms) { if (ms === pollMs) return; pollMs = ms; clearInterval(poll); poll = setInterval(refresh, ms); }
   async function refresh() {
     if (stopped || !code || document.hidden || sending) return;
@@ -732,6 +733,7 @@ function startParty(root, opts = {}) {
     const old = room, ev = r.event; room = r; recvAt = Date.now(); revealEnd = recvAt + (r.revealIn || 0);
     if (r.botType && botStart.turnId !== r.botType.turnId) botStart = {turnId: r.botType.turnId, at: recvAt + r.botType.startIn};
     setPoll(r.status === "playing" ? 450 : 1500);
+    if (r.status !== "playing" && Date.now() - lastGrow > 45000) { lastGrow = Date.now(); api("/api/abduct?grow=1&code=" + code).catch(() => {}); } // grows the prompt bank in the background
     if (old && old.turnId !== r.turnId) { if (r.turn === r.me && r.status === "playing") sfx.turn(); }
     render(old);
     if (ev && ev.seq > seq && !first) handle(ev, old);
