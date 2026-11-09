@@ -125,6 +125,7 @@ body{overflow:hidden;-webkit-tap-highlight-color:transparent}
 .pcopy{background:#2a3456;border:1px solid #070b1a;color:#fff;font-family:Silkscreen,monospace;font-size:9px;padding:3px 6px;cursor:pointer;text-transform:uppercase}
 .pq{position:absolute;left:50%;top:60px;transform:translateX(-50%);z-index:4;text-align:center;width:min(82%,840px);padding:14px 22px 16px;background:rgba(11,16,38,.9);border:3px solid #2a3a78;box-shadow:0 0 0 3px #070b1a,6px 6px 0 3px rgba(0,0,0,.35)}
 .pq small{font-family:Silkscreen,monospace;letter-spacing:3px;font-size:12px;color:#7fe0ff;text-transform:uppercase}
+.pq[data-level="1"] small{color:#ffd23f}.pq[data-level="2"] small{color:#ff6ad5}.pq[data-level="2"]{border-color:#5a2a78}
 .pq h2{font-family:Silkscreen,monospace;font-weight:400;font-size:clamp(26px,4.2vw,52px);letter-spacing:2px;margin:6px 0 0;color:#fff6e4;text-transform:uppercase;line-height:1.1;text-shadow:4px 4px 0 #1a1033}
 .pq.changing{border-color:#7fe0ff;animation:pShake .12s steps(2) infinite}
 .pq.changing small{color:#ffd23f;animation:pBlink .3s steps(2) infinite}
@@ -796,12 +797,13 @@ function startParty(root, opts = {}) {
   function placeForm() { const q = $(".pq"); if (!q.hidden) wrap.style.setProperty("--pfTop", q.offsetTop + q.offsetHeight + 16 + "px"); }
   function showPrompt() {
     const q = $(".pq"), h2 = q.querySelector("h2"), sm = q.querySelector("small");
-    if (room.prompt === shownPrompt) { sm.textContent = "Round " + room.round; placeForm(); return; }
+    const label = "Round " + room.round + " · " + ["Easy", "Medium", "Hard"][room.level || 0];
+    if (room.prompt === shownPrompt) { sm.textContent = label; placeForm(); return; }
     if (room.prompt === changingTo) return;
     changingTo = room.prompt; clearInterval(shuffleT);
     const land = () => {
       clearInterval(shuffleT); shownPrompt = room.prompt; changingTo = "";
-      h2.textContent = room.prompt; sm.textContent = "Round " + room.round;
+      h2.textContent = room.prompt; sm.textContent = label; q.dataset.level = room.level || 0;
       q.classList.remove("changing"); q.classList.remove("landed"); void q.offsetWidth; q.classList.add("landed");
       const f = document.createElement("div"); f.className = "pflash"; $(".pfx").appendChild(f); setTimeout(() => f.remove(), 700);
       sfx.land(); placeForm();
