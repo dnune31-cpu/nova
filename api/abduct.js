@@ -72,7 +72,9 @@ async function claude(model, user, maxTokens) {
   });
   const d = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(d?.error?.message || "Claude request failed");
-  return (d.content || []).map(c => c.text || "").join("");
+  const text = (d.content || []).map(c => c.text || "").join("");
+  if (!text) throw new Error("Empty reply (" + d.stop_reason + ": " + (d.content || []).map(c => c.type).join(",") + ")");
+  return text;
 }
 function parseJSON(t, open) { const s = t.indexOf(open), e = t.lastIndexOf(open === "[" ? "]" : "}"); if (s < 0 || e < s) throw new Error("Bad JSON"); return JSON.parse(t.slice(s, e + 1)); }
 async function judge(prompt, answer) {
@@ -85,7 +87,7 @@ Reply with only JSON: {"valid": true or false, "name": "the answer's proper name
   return { valid: !!v.valid, name: String(v.name || answer).slice(0, 50), obscurity: Math.max(0, Math.min(100, Number(v.obscurity) || 0)), why: String(v.why || "").slice(0, 80) };
 }
 async function makeList(prompt) {
-  const t = await claude("haiku", `Prompt: "${prompt}"
+  const t = await claude("sonnet", `Prompt: "${prompt}"
 List 120 different correct answers, ordered from the answer the MOST people would say first, down to the most obscure answers that are still definitely correct.
 Use each answer's most common name. Put alternate names or spellings after a | (example: "Chickpea|Garbanzo bean").
 Reply with only a JSON array of strings.`, 4000);
@@ -110,11 +112,11 @@ async function bankPrompts() {
 // adds a few missing prompt lists to the bank at once (each prompt is only ever written by one request)
 async function growBank(have, n = 3) {
   const todo = SEED.filter(p => !have.includes(p)).sort(() => Math.random() - 0.5), picked = [];
-  for (const p of todo) { if (picked.length >= n) break; if (await redis("SET", "ab:g2:" + norm(p), "1", "NX", "EX", "60")) picked.push(p); }
+  for (const p of todo) { if (picked.length >= n) break; if (await redis("SET", "ab:g3:" + norm(p), "1", "NX", "EX", "60")) picked.push(p); }
   const made = await Promise.all(picked.map(async p => {
     try { const list = await makeList(p); if (list.length >= 40) { await redis("HSET", BANK, p, JSON.stringify(list)); return p; } }
     catch (e) { console.error("abduct list", e.message); }
-    await redis("SET", "ab:g2:" + norm(p), "1", "EX", "21600"); // didn't work out: leave this prompt alone for a few hours
+    await redis("SET", "ab:g3:" + norm(p), "1", "EX", "21600"); // didn't work out: leave this prompt alone for a few hours
     return null;
   }));
   return made.filter(Boolean);
