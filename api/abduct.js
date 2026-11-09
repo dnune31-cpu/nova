@@ -88,8 +88,11 @@ async function makeList(prompt) {
   const t = await claude("haiku", `Prompt: "${prompt}"
 List 120 different correct answers, ordered from the answer the MOST people would say first, down to the most obscure answers that are still definitely correct.
 Use each answer's most common name. Put alternate names or spellings after a | (example: "Chickpea|Garbanzo bean").
-Reply with only a JSON array of strings.`, 2800);
-  return parseJSON(t, "[").map(x => String(x).trim().slice(0, 80)).filter(Boolean).slice(0, 200);
+Reply with only a JSON array of strings.`, 4000);
+  let arr; try { arr = parseJSON(t, "["); } catch { // cut off mid-list: keep every complete answer
+    const s = t.indexOf("["), e = t.lastIndexOf('",'); if (s < 0 || e < s) throw new Error("Bad JSON"); arr = JSON.parse(t.slice(s, e + 1) + "]");
+  }
+  return arr.map(x => String(x).trim().slice(0, 80)).filter(Boolean).slice(0, 200);
 }
 
 /* ----- the prompt bank: prompts with ranked answer lists, shared by every room ----- */
@@ -110,7 +113,8 @@ async function growBank(have, n = 3) {
   for (const p of todo) { if (picked.length >= n) break; if (await redis("SET", "ab:gen:" + norm(p), "1", "NX", "EX", "60")) picked.push(p); }
   const made = await Promise.all(picked.map(async p => {
     try { const list = await makeList(p); if (list.length >= 40) { await redis("HSET", BANK, p, JSON.stringify(list)); return p; } }
-    catch (e) { console.error("abduct list", e.message); await redis("DEL", "ab:gen:" + norm(p)); }
+    catch (e) { console.error("abduct list", e.message); }
+    await redis("SET", "ab:gen:" + norm(p), "1", "EX", "21600"); // didn't work out: leave this prompt alone for a few hours
     return null;
   }));
   return made.filter(Boolean);
