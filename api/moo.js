@@ -1,4 +1,4 @@
-import { redis, getJSON, getAuth, MODEL_IDS } from "./_lib.js";
+import { redis, getJSON, getAuth, MODEL_IDS, isAdminEmail } from "./_lib.js";
 
 // Moo-llion: a daily word game. Everyone gets the same 7 prompts each day ("Name a dog breed").
 // The rarer your (still correct) answer, the higher your cow's balloon floats.
@@ -187,6 +187,13 @@ export default async function handler(req, res) {
     if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
     const { action } = req.body || {};
+    if (action === "reset") { // the site owner can wipe their own flight for today and play again
+      if (!auth.admin && !isAdminEmail(email)) return res.status(403).json({ error: "Only the site owner can restart a day." });
+      await redis("HDEL", K.plays(d), email);
+      const u = (await getJSON(K.user(email))) || {};
+      if (u.last === d) await redis("SET", K.user(email), JSON.stringify({ ...u, last: (u.streak || 0) > 1 ? shift(d, -1) : null, streak: Math.max(0, (u.streak || 0) - 1) }));
+      return res.status(200).json({ ok: true, state: await view(d, day, email) });
+    }
     if (action !== "answer" && action !== "skip") return res.status(400).json({ error: "Unknown action" });
     const got = await redis("SET", K.lock(email), "1", "NX", "PX", "20000");
     if (!got) return res.status(429).json({ error: "One answer at a time." });
