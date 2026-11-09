@@ -118,6 +118,48 @@ body{overflow:hidden;-webkit-tap-highlight-color:transparent}
 @media (max-width:760px){.moo{height:clamp(540px,calc(100vh - 120px),760px)}.mzone,.mruler{display:none!important}.mprog{top:58px;left:auto;right:12px;transform:none}
   .moohud{left:12px;top:12px}.mtopr{right:12px;top:12px}.mmain,.mend{padding:104px 14px 18px}.moocowwrap.air{left:-24px;top:15%;transform:scale(.7);transform-origin:0 0}.moocowwrap.center{top:14%}.mq h2{font-size:24px}.mgo{font-size:16px;letter-spacing:4px}}
 @media (prefers-reduced-motion:reduce){.moo *{animation:none!important;transition:none!important}}
+/* Alien Party (pass-the-turn mode on moollion.cc) */
+.party .pcv{position:absolute;inset:0;width:100%;height:100%;z-index:2;image-rendering:pixelated;pointer-events:none}
+.pcode{position:absolute;left:16px;top:14px;z-index:6;padding:6px 10px;display:flex;align-items:center;gap:8px}
+.pcode small{font-size:9px;letter-spacing:2px;color:#aab3d6;text-transform:uppercase}.pcode b{font-weight:400;font-size:16px;color:#ffd23f;letter-spacing:3px}
+.pcopy{background:#2a3456;border:1px solid #070b1a;color:#fff;font-family:Silkscreen,monospace;font-size:9px;padding:3px 6px;cursor:pointer;text-transform:uppercase}
+.pq{position:absolute;left:50%;top:14px;transform:translateX(-50%);z-index:4;text-align:center;width:min(64%,760px)}
+.pq small{font-family:Silkscreen,monospace;letter-spacing:3px;font-size:11px;color:#7fe0ff;background:rgba(13,20,44,.88);padding:3px 10px;border:1px solid #070b1a;text-transform:uppercase}
+.pq h2{font-family:Silkscreen,monospace;font-weight:400;font-size:clamp(20px,3vw,34px);letter-spacing:2px;margin:10px 0 0;color:#fff6e4;text-transform:uppercase;line-height:1.15;text-shadow:3px 3px 0 #1a1033,-2px -2px 0 #1a1033,2px -2px 0 #1a1033,-2px 2px 0 #1a1033}
+.pq.reveal h2{color:#7fe0ff;animation:mPop .4s}
+.pform{position:absolute;left:50%;top:118px;transform:translateX(-50%);z-index:4;width:min(520px,86%)}
+.pform.mine{border-color:#ffd23f;box-shadow:0 0 0 2px #070b1a,0 0 22px rgba(255,210,63,.5)}
+.pmsg{position:absolute;left:50%;top:176px;transform:translateX(-50%);z-index:4;font-size:12px;color:#ffe2e8;white-space:nowrap}
+.pmsg:not(:empty){background:rgba(13,20,44,.92);padding:3px 10px;border:1px solid #070b1a}
+.ptags{position:absolute;inset:0;z-index:3;pointer-events:none}
+.ptag{position:absolute;transform:translateX(-50%);text-align:center;font-family:Silkscreen,monospace;font-size:10px;letter-spacing:1px;pointer-events:auto;white-space:nowrap}
+.ptag .n{display:inline-block;background:rgba(13,20,44,.9);border:2px solid #070b1a;padding:2px 6px}.ptag.me .n{border-color:#ffd23f;color:#ffd23f}
+.ptag.turn .n{background:#ec6f97;color:#2a0b1c;border-color:#fbd4e1}
+.ptag .h{display:block;color:#ff5a6a;font-size:10px;margin-top:2px;text-shadow:0 1px 0 #000;min-height:12px}.ptag.out{opacity:.5}.ptag.out .h{color:#aab3d6;font-size:8px}
+.ptag .bar{display:block;width:56px;height:6px;margin:2px auto 0;background:#2a3456;border:1px solid #070b1a}.ptag .bar[hidden]{display:none}
+.ptag .bar i{display:block;height:100%;background:linear-gradient(90deg,#7bd389,#55b3ff,#a07bff,#ff6ad5,#ffd23f);background-size:56px 100%;transition:width .6s cubic-bezier(.3,.7,.3,1)}
+.ptag .bot{display:block;margin-top:3px}.ptag .lv{font-style:normal;font-size:8px;background:#2a3456;padding:1px 5px;text-transform:uppercase}
+.lv.easy{background:#2f8f5a}.lv.medium{background:#9a7a1f}.lv.hard{background:#a33a3a}.botx{background:none;border:0;color:#fff;cursor:pointer;font-size:13px;line-height:1}
+.ptype{position:absolute;z-index:4;transform:translate(-50%,-100%);background:#fff;color:#1a1a24;font-family:"Space Mono",monospace;font-size:13px;font-weight:700;padding:3px 8px;border:2px solid #070b1a;white-space:nowrap}
+.ptype[hidden]{display:none}.ptype.bad{background:#ffd0d0;text-decoration:line-through}
+.pfx{position:absolute;inset:0;z-index:5;pointer-events:none;overflow:hidden}
+.ppop{position:absolute;transform:translate(-50%,-100%);background:rgba(13,20,44,.95);border:2px solid var(--k);font-family:Silkscreen,monospace;font-size:11px;letter-spacing:1px;padding:4px 8px;white-space:nowrap;animation:pPop 2.2s ease forwards}
+.ppop b{color:var(--k);font-weight:400}.ppop em{font-style:normal;color:#ffd23f}.ppop.life{color:#ff8a9a}
+@keyframes pPop{0%{opacity:0;transform:translate(-50%,-80%) scale(.7)}12%{opacity:1;transform:translate(-50%,-100%) scale(1.06)}20%{transform:translate(-50%,-100%) scale(1)}80%{opacity:1;transform:translate(-50%,-150%)}100%{opacity:0;transform:translate(-50%,-170%)}}
+.pbanner{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);text-align:center;animation:pBan 1.9s ease forwards}
+.pbanner b{display:block;font-family:Silkscreen,monospace;font-size:clamp(28px,5vw,52px);font-weight:400;color:#ffd23f;letter-spacing:4px;text-shadow:3px 3px 0 #1a1033,-2px 0 0 #1a1033,2px 0 0 #1a1033,0 -2px 0 #1a1033}
+.pbanner span{font-family:Silkscreen,monospace;font-size:12px;letter-spacing:2px;background:rgba(13,20,44,.9);padding:3px 10px;color:#fff}
+@keyframes pBan{0%{opacity:0;transform:translate(-50%,-50%) scale(.6)}15%{opacity:1;transform:translate(-50%,-50%) scale(1.06)}25%{transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{opacity:0}}
+.plogo{font-size:clamp(34px,6.4vw,70px)!important}
+.pmain{z-index:6}.plobby{justify-content:flex-start;padding-top:80px}.ppanel{text-align:center;width:min(560px,100%)}
+.ppanel .mrow{justify-content:center;align-items:center}.padd{display:inline-flex;gap:4px;align-items:center;font-family:Silkscreen,monospace;font-size:10px;letter-spacing:1px;margin-left:8px;text-transform:uppercase}.padd .mpill{padding:4px 8px}
+.pbest{list-style:none;margin:0 0 12px;padding:0;text-align:left}.pbest li{padding:4px 6px;border-bottom:1px solid rgba(255,255,255,.06);font-size:13px}
+.pbest i{font-style:normal;font-family:Silkscreen,monospace;font-size:9px;background:var(--k);color:#0d142c;padding:1px 5px;margin-left:6px}
+.mparty em{font-style:normal;color:#7fe0ff;margin-left:8px;font-size:11px}
+.moo.pdanger:before{content:"";position:absolute;inset:0;z-index:5;pointer-events:none;box-shadow:inset 0 0 90px rgba(255,60,60,.55);animation:pPulse .45s ease-in-out infinite alternate}
+@keyframes pPulse{from{opacity:.35}to{opacity:1}}
+.party .pcode[hidden],.pq[hidden],.pform[hidden]{display:none}
+@media (max-width:760px){.pq{top:58px;width:94%}.pform{top:140px}.pmsg{top:192px}.pcode{left:12px;top:12px}.ptag{font-size:8px}.ptag .bar{width:40px}.plobby{padding-top:110px}.padd{margin:6px 0 0}}
 
 </style>
 </head>
@@ -141,7 +183,7 @@ async function api(path, opts = {}) {
 function handleAuthError() { return false; }
 
 /* ---------- Moo-llion: daily word game, the rarer your answer the higher your cow floats ---------- */
-function startMoo(root) {
+function startMoo(root, opts = {}) {
   const IMG = "https://d8j0ntlcm91z4.cloudfront.net/user_3KOBfqwOB9ikrbu9I0UQir2iysj/hf_20261109_";
   const SCENES = ["010015_b7dfcf78-f8cd-4ca6-afe7-28cc5c5c705a", "010014_0b70e6ac-9caf-47e8-a9a9-fc84493a60a1", "010014_06a075f2-9d53-4f46-bbf8-cccd147b1b17",
     "010014_7805181d-ae17-4f85-88b4-badffc9feb02", "010015_477b5311-ba65-4b30-9b88-cab11688d00d", "010013_e8d385b4-bd8f-45bf-a541-948406faccf6",
@@ -403,7 +445,7 @@ function startMoo(root) {
       <div class="mmenu">${help}${needName ? `<button type="button" class="mpill mhow">? How to play</button>
       <form class="mform mname" autocomplete="off"><span>&gt;</span><input maxlength="16" placeholder="what should we call you?" aria-label="Your name" spellcheck="false"></form><div class="merr" role="alert"></div>
       <button type="button" class="mgo">▲ Lift off ▲</button>` : `<div class="mpills">${st && st.streak ? `<div class="mpill">🔥 ${st.streak} day streak</div>` : `<button type="button" class="mpill mhow">? How to play</button>`}${st && st.name ? `<button type="button" class="mpill mwho" title="Change your name">✎ ${escM(st.name)}</button>` : ""}</div>
-      <button type="button" class="mgo">${done ? "▸ See my flight ◂" : a ? "▲ Keep floating ▲" : "▲ Lift off ▲"}</button>`}
+      <button type="button" class="mgo">${done ? "▸ See my flight ◂" : a ? "▲ Keep floating ▲" : "▲ Lift off ▲"}</button>${opts.onParty && st ? `<button type="button" class="mbar mparty">👽 Alien Party <em>play with friends</em></button>` : ""}`}
       <button type="button" class="mbar mlb">Today's leaderboard <em>${st ? st.board.length + " played" : ""}</em></button></div>`;
     if (needName) {
       const inp = main.querySelector(".mname input"), err = main.querySelector(".merr"), go = main.querySelector(".mgo");
@@ -418,6 +460,7 @@ function startMoo(root) {
       main.querySelector(".mname").onsubmit = e => { e.preventDefault(); pick(); };
       go.onclick = pick;
     } else main.querySelector(".mgo").onclick = () => { sfx.tap(); if (!st) return; done ? results() : play(); };
+    const pty = main.querySelector(".mparty"); if (pty) pty.onclick = () => { sfx.tap(); opts.onParty(); };
     const who = main.querySelector(".mwho"); if (who) who.onclick = async () => {
       const n = (prompt("Change your name to:", st.name) || "").trim(); if (!n || n === st.name) return;
       try { const d = await api("/api/moo", {method: "POST", body: JSON.stringify({action: "hello", name: n})}); st = d.state; set("nova-moo-name", n); title(); } catch (e) { alert(e.message); }
@@ -519,7 +562,338 @@ function startMoo(root) {
   return {stop() { stopped = true; clearTimeout(pollT); cancelAnimationFrame(countRaf); cancelAnimationFrame(flyRaf); cancelAnimationFrame(rig.raf); document.removeEventListener("keydown", onKey); if (fsEl()) (document.exitFullscreen || document.webkitExitFullscreen)?.call(document)?.catch?.(() => {}); }};
 }
 
-startMoo(document.getElementById("root"));
+/* ---------- Alien Party: pass-the-turn mode. The UFO slowly beams up whoever's turn it is; answer before you're abducted ---------- */
+function startParty(root, opts = {}) {
+  const IMG = "https://d8j0ntlcm91z4.cloudfront.net/user_3KOBfqwOB9ikrbu9I0UQir2iysj/hf_20261109_";
+  const SCENES = ["010015_b7dfcf78-f8cd-4ca6-afe7-28cc5c5c705a", "010014_0b70e6ac-9caf-47e8-a9a9-fc84493a60a1", "010014_06a075f2-9d53-4f46-bbf8-cccd147b1b17",
+    "010014_7805181d-ae17-4f85-88b4-badffc9feb02", "010015_477b5311-ba65-4b30-9b88-cab11688d00d", "010013_e8d385b4-bd8f-45bf-a541-948406faccf6",
+    "010013_87567b9b-0dc4-43e7-b16d-ee1b203ec47e"].map(id => IMG + id + "_min.webp");
+  const TIERS = ["Pasture", "Treetops", "Clouds", "Jet stream", "Stratosphere", "One in a Moo-llion"];
+  const TIERC = ["#7bd389", "#3fc29a", "#55b3ff", "#a07bff", "#ff6ad5", "#ffd23f"];
+  const COW = ["...........hh...", "..kkkkkkkkkkkkkk", ".kwwbbwwwwbwkwek", "kwbbbwwwwwwkwwwk", ".kwwbwwwbbwwkppk", "..kwwwwwbbbwwkpk", "..kkkkkkkkkkkkk.", "..k.k.....k.k...", "..n.n.....n.n..."];
+  const CP = {w: "#ffffff", k: "#1a1a24", b: "#2b2b36", h: "#f2e3b3", p: "#ffb3c1", e: "#1a1a24", n: "#3a3a46"};
+  const K = "#1a1a24", S = 3;
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
+  const get = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } };
+  const set = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let room = null, code = null, poll = 0, pollMs = 0, stopped = false, sending = false, lastJson = "", seq = -1, raf = 0, recvAt = 0, revealEnd = 0;
+  let muted = get("nova-moo-mute", false), ac = null, typeTimer = 0, lastSent = "", botStart = {turnId: -1, at: 0}, remote = {turnId: -1, shown: "", last: 0};
+  let ufoX = -1, ufoY = 0, lifts = [], anim = null, lastFrame = 0, mode = "";
+
+  /* ----- sounds ----- */
+  function tone(f, t0, dur, type = "square", vol = 0.05, f2) {
+    if (muted) return;
+    try {
+      ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+      const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime + t0;
+      o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
+      g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g).connect(ac.destination); o.start(t); o.stop(t + dur + 0.02);
+    } catch {}
+  }
+  const sfx = {
+    tap: () => tone(660, 0, 0.06),
+    bad: () => { tone(220, 0, 0.12, "sawtooth", 0.04); tone(180, 0.1, 0.16, "sawtooth", 0.04); },
+    good: tier => [0, 1, 2, 3, 4].slice(0, tier + 2).forEach((k, i) => tone(392 * Math.pow(1.26, k), i * 0.08, 0.13, "triangle", 0.06)),
+    zap: () => { tone(900, 0, 0.5, "sawtooth", 0.05, 120); tone(1400, 0.05, 0.4, "square", 0.03, 300); },
+    turn: () => { tone(520, 0, 0.08, "triangle", 0.05); tone(780, 0.08, 0.1, "triangle", 0.05); },
+  };
+
+  /* ----- pixel art: cows and the UFO ----- */
+  function drawCow(x, ox, oy, flip, alpha = 1) {
+    x.globalAlpha = alpha;
+    COW.forEach((r, y) => [...r].forEach((ch, i) => { if (CP[ch]) { x.fillStyle = CP[ch]; x.fillRect(flip ? ox + 15 - i : ox + i, oy + y, 1, 1); } }));
+    x.globalAlpha = 1;
+  }
+  function drawShip(x, ox, oy, t, hot) {
+    const px = (X, Y, c) => { x.fillStyle = c; x.fillRect(ox + X, oy + Y, 1, 1); }, cx = 13;
+    for (let y = 0; y < 6; y++) for (let X = 0; X < 26; X++) { const d = ((X - cx) / 6) ** 2 + ((y - 6) / 5.5) ** 2; if (d <= 1) px(X, y + 1, d > 0.8 ? K : "#bff4ff"); }
+    px(cx - 3, 3, "#fff"); px(cx - 2, 2, "#fff");
+    const wave = Math.floor(t * 3) % 2;
+    [[cx - 1, 4], [cx, 4], [cx + 1, 4], [cx - 1, 5], [cx, 5], [cx + 1, 5], [cx - 2, 3], [cx + 2, wave ? 2 : 3]].forEach(([a, b]) => px(a, b, "#4ee08a"));
+    px(cx - 1, 4, K); px(cx + 1, 4, K);
+    const hull = hot > 0.8 ? "#ff6a4a" : "#9b7bff", hullD = hot > 0.8 ? "#b8202e" : "#5b3fc4";
+    for (let y = 0; y < 7; y++) for (let X = 0; X < 26; X++) { const d = ((X - cx) / 12.5) ** 2 + ((y - 3) / 3.4) ** 2; if (d <= 1) px(X, y + 6, d > 0.82 ? K : y < 3 ? hull : hullD); }
+    const blink = Math.floor(t * (3 + hot * 12)) % 2;
+    for (let X = 3; X < 24; X += 3) px(X, 9, (X / 3) % 2 === blink ? (hot > 0.6 ? "#ffe14a" : "#7dffb0") : "#3a3a46");
+    for (let X = cx - 3; X <= cx + 3; X++) px(X, 13, "rgb(110,230,255)");
+  }
+  function drawBeam(x, cx, top, bottom, s, t) {
+    const shift = Math.floor(t * 16);
+    for (let y = top; y < bottom; y++) {
+      const k = (y - top) / Math.max(1, bottom - top), half = 3 + (4 + s * 8) * k;
+      for (let X = -Math.round(half); X <= Math.round(half); X++) {
+        const e = Math.abs(X) / half, band = (((y + shift) % 4) + 4) % 4 === 0 ? 0.1 : 0;
+        x.fillStyle = "rgba(110,230,255," + Math.min(0.8, (0.18 + s * 0.4) * (1 - e * e * 0.7) + band).toFixed(2) + ")"; x.fillRect(Math.round(cx + X), y, 1, 1);
+      }
+    }
+    for (let i = 0; i < 3 + s * 10; i++) { const y = top + Math.random() * (bottom - top); x.fillStyle = "#fff"; x.fillRect(Math.round(cx + (Math.random() * 2 - 1) * (3 + 6 * s)), Math.round(y), 1, 1); }
+  }
+
+  /* ----- the screen ----- */
+  root.innerHTML = `<div class="moo party"><div class="moobg">${SCENES.map((u, i) => `<i data-s="${i}" style="background-image:url('${u}')"></i>`).join("")}</div>
+    <canvas class="pcv" aria-hidden="true"></canvas><div class="ptags"></div><div class="ptype" hidden></div><div class="pfx"></div>
+    <div class="mbox pcode" hidden><small>Room</small><b></b><button type="button" class="pcopy">Copy</button></div>
+    <div class="pq" hidden><small></small><h2></h2></div>
+    <form class="mform pform" hidden autocomplete="off"><span>&gt;</span><input maxlength="50" placeholder="type your answer" aria-label="Your answer" spellcheck="false"><button type="submit" class="mgo sm">Zap ▸</button></form>
+    <div class="pmsg" role="status"></div>
+    <div class="mtopr"><button type="button" class="mbox mbtn msnd" aria-label="Sound"></button><button type="button" class="mbox mbtn mfs" aria-label="Full screen">⛶</button><button type="button" class="mbox mbtn pleave" hidden>Leave</button></div>
+    <div class="mmain pmain"></div><div class="mscan"></div></div>`;
+  const $ = s => root.querySelector(s), wrap = $(".moo"), cv = $(".pcv"), cx = cv.getContext("2d"), main = $(".pmain"), form = $(".pform"), inp = $(".pform input"), msg = $(".pmsg");
+  const syncSnd = () => { $(".msnd").textContent = muted ? "🔇" : "🔊"; };
+  syncSnd(); $(".msnd").onclick = () => { muted = !muted; set("nova-moo-mute", muted); syncSnd(); sfx.tap(); };
+  const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement;
+  $(".mfs").onclick = async () => { if (fsEl()) (document.exitFullscreen || document.webkitExitFullscreen)?.call(document)?.catch?.(() => {}); else try { await (wrap.requestFullscreen || wrap.webkitRequestFullscreen).call(wrap); } catch {} };
+  $(".pcopy").onclick = e => navigator.clipboard?.writeText(code).then(() => { e.target.textContent = "Copied"; setTimeout(() => e.target.textContent = "Copy", 1200); }, () => {});
+  $(".pleave").onclick = async () => {
+    if (room?.status === "playing" && !confirm("Leave this game?")) return;
+    try { await api("/api/abduct", {method: "POST", body: JSON.stringify({action: "leave", code})}); } catch {}
+    set("moollion-party-room", null); menu();
+  };
+  let scene = -1;
+  function setScene(i) {
+    if (i === scene) return;
+    root.querySelectorAll(".moobg i.on").forEach(el => { el.classList.remove("on"); el.classList.add("off"); setTimeout(() => el.classList.remove("off"), 1400); });
+    root.querySelector(`.moobg i[data-s="${i}"]`)?.classList.add("on"); scene = i;
+  }
+  const sizeCanvas = () => { cv.width = Math.max(100, Math.ceil(wrap.clientWidth / S)); cv.height = Math.max(80, Math.ceil(wrap.clientHeight / S)); };
+  sizeCanvas(); const onResize = () => { sizeCanvas(); seatsKey = ""; if (room) drawTags(); }; addEventListener("resize", onResize);
+
+  /* ----- menu: create or join a room ----- */
+  function menu() {
+    clearInterval(poll); pollMs = 0; room = null; code = null; lastJson = ""; seq = -1; mode = "menu";
+    ["pcode", "pq", "pform", "pleave"].forEach(c => $("." + c).hidden = true); $(".ptags").innerHTML = ""; $(".ptype").hidden = true; msg.textContent = "";
+    setScene(3); cancelAnimationFrame(raf); raf = requestAnimationFrame(frame);
+    const saved = get("moollion-party-room", null);
+    main.className = "mmain pmain mtitle";
+    main.innerHTML = `<div class="mhead"><h1 class="mlogo plogo">ALIEN PARTY</h1><div class="msub">Answer before the UFO beams you up</div></div>
+      <div class="mmenu"><div class="mhelp" hidden><b>How to play</b><p>Up to 8 cows stand in a line. On your turn the UFO slowly beams you up (the timer is hidden). Name something that fits the prompt before it gets you. Everyone answers the same prompt for a round, but no repeats! Rarer answers fill your bar more, and a full bar is an extra heart. Get abducted and you lose a heart. Last cow standing wins.</p></div>
+      <button type="button" class="mpill mhow">? How to play</button>
+      <button type="button" class="mgo pnew">▲ Create room ▲</button>
+      <form class="mform pjoin" autocomplete="off"><span>&gt;</span><input maxlength="6" placeholder="room code" aria-label="Room code" autocapitalize="characters" spellcheck="false"><button type="submit" class="mgo sm">Join</button></form>
+      ${saved ? `<button type="button" class="mbar prejoin">Rejoin room <em>${esc(saved)}</em></button>` : ""}
+      <div class="merr" role="alert"></div>
+      <button type="button" class="mbar pback">◂ Back to the daily game</button></div>`;
+    const err = main.querySelector(".merr"), ci = main.querySelector(".pjoin input");
+    const go = async (action, c) => {
+      err.textContent = "";
+      try { const d = await api("/api/abduct", {method: "POST", body: JSON.stringify({action, code: c})}); enter(d.room); }
+      catch (e) { if (e.status === 401) { err.textContent = "Pick a name in the daily game first."; return; } err.textContent = e.message; if (e.status === 404) set("moollion-party-room", null); }
+    };
+    main.querySelector(".pnew").onclick = () => { sfx.tap(); go("create"); };
+    main.querySelector(".pjoin").onsubmit = e => { e.preventDefault(); const c = ci.value.trim(); if (c.length >= 4) go("join", c); else err.textContent = "Room codes have 5 letters and numbers."; };
+    ci.addEventListener("input", () => { ci.value = ci.value.toUpperCase().replace(/[^A-Z0-9]/g, ""); });
+    const rj = main.querySelector(".prejoin"); if (rj) rj.onclick = () => go("join", saved);
+    main.querySelector(".mhow").onclick = () => { const h = main.querySelector(".mhelp"); h.hidden = !h.hidden; };
+    main.querySelector(".pback").onclick = () => opts.onBack && opts.onBack();
+  }
+
+  /* ----- in a room ----- */
+  function enter(r) {
+    code = r.code; set("moollion-party-room", code);
+    $(".pcode b").textContent = code; $(".pcode").hidden = false; $(".pleave").hidden = false;
+    apply(r, true);
+  }
+  function setPoll(ms) { if (ms === pollMs) return; pollMs = ms; clearInterval(poll); poll = setInterval(refresh, ms); }
+  async function refresh() {
+    if (stopped || !code || document.hidden || sending) return;
+    try { apply((await api("/api/abduct?code=" + code)).room); }
+    catch (e) { if (e.status === 404) { set("moollion-party-room", null); msg.textContent = "This room closed."; setTimeout(menu, 1500); clearInterval(poll); pollMs = 0; } }
+  }
+  function apply(r, first) {
+    const j = JSON.stringify(r); if (!first && j === lastJson) return; lastJson = j;
+    const old = room, ev = r.event; room = r; recvAt = Date.now(); revealEnd = recvAt + (r.revealIn || 0);
+    if (r.botType && botStart.turnId !== r.botType.turnId) botStart = {turnId: r.botType.turnId, at: recvAt + r.botType.startIn};
+    setPoll(r.status === "playing" ? 450 : 1500);
+    if (old && old.turnId !== r.turnId) { if (r.turn === r.me && r.status === "playing") sfx.turn(); }
+    render(old);
+    if (ev && ev.seq > seq && !first) handle(ev, old);
+    seq = r.seq;
+  }
+  const myTurn = () => room && room.status === "playing" && room.turn === room.me;
+  // where each cow stands (canvas pixels): a line across the bottom
+  const seatX = i => { const n = room.players.length, W = cv.width; return Math.round(W * (0.1 + 0.8 * (i + 0.5) / n)); };
+  const baseY = () => Math.round(cv.height * 0.8) - 9;
+  let seatsKey = "";
+  function drawTags() {
+    const holder = $(".ptags"), key = room.players.map(p => p.name + (p.bot || "")).join("|") + ":" + room.me + ":" + cv.width;
+    if (seatsKey !== key) {
+      seatsKey = key;
+      holder.innerHTML = room.players.map((p, i) => `<div class="ptag" data-i="${i}" style="left:${seatX(i) * S}px;top:${(baseY() + 11) * S}px"><span class="n">${esc(p.name)}</span><span class="h"></span><span class="bar"><i></i></span><span class="bot"></span></div>`).join("");
+    }
+    room.players.forEach((p, i) => {
+      const el = holder.querySelector(`[data-i="${i}"]`); if (!el) return;
+      const playing = room.status === "playing";
+      el.classList.toggle("me", p.me); el.classList.toggle("turn", playing && room.turn === i); el.classList.toggle("out", playing && (!p.alive || p.left));
+      el.querySelector(".h").textContent = !playing && room.status !== "over" ? "" : p.left ? "left" : !p.alive ? "abducted" : "♥".repeat(p.lives);
+      const bar = el.querySelector(".bar i"); if (!bar.dataset.hold) { bar.style.width = Math.min(100, p.power) + "%"; }
+      el.querySelector(".bar").hidden = !playing || !p.alive;
+      const bb = el.querySelector(".bot");
+      bb.innerHTML = room.status !== "playing" && p.bot ? `<em class="lv ${p.bot}">${p.bot}</em>${room.host ? `<button type="button" class="botx" aria-label="Remove ${esc(p.name)}">×</button>` : ""}` : "";
+      const x = bb.querySelector(".botx"); if (x) x.onclick = () => act("removebot", {index: i});
+    });
+  }
+  function render(old) {
+    const playing = room.status === "playing";
+    mode = playing ? "play" : room.status;
+    drawTags();
+    setScene(playing ? Math.min(6, room.round) : room.status === "over" ? 6 : 1);
+    const q = $(".pq"); q.hidden = !playing;
+    if (playing) {
+      const revealing = Date.now() < revealEnd;
+      q.querySelector("small").textContent = "Round " + room.round;
+      q.querySelector("h2").textContent = revealing ? "New prompt!" : room.prompt || "";
+      q.classList.toggle("reveal", revealing);
+      if (revealing) setTimeout(() => room && render(room), revealEnd - Date.now() + 20);
+    }
+    // the answer box: only on your turn (you can type ahead while waiting)
+    const me = room.players[room.me], alive = playing && me && me.alive && !me.left;
+    form.hidden = !playing || !alive;
+    const turnChanged = !old || old.turnId !== room.turnId;
+    if (turnChanged && old && old.turn === room.me) { inp.value = ""; lastSent = ""; }
+    inp.placeholder = myTurn() ? "your turn! type an answer" : "type ahead, it sends on your turn";
+    form.classList.toggle("mine", myTurn());
+    if (myTurn() && document.activeElement !== inp) inp.focus({preventScroll: true});
+    if (turnChanged && myTurn() && inp.value.trim().length >= 2 && form.dataset.armed) { delete form.dataset.armed; setTimeout(submit, Math.max(0, revealEnd - Date.now()) + 30); }
+    // menus over the stage
+    if (!playing) lobbyPanel(); else if (main.innerHTML) { main.innerHTML = ""; main.className = "mmain pmain"; }
+    if (!raf) raf = requestAnimationFrame(frame);
+  }
+  function lobbyPanel() {
+    const over = room.status === "over", w = over ? room.players[room.winner] : null;
+    main.className = "mmain pmain plobby";
+    const best = over ? room.players.filter(p => p.best).map(p => `<li><b>${esc(p.name)}</b> “${esc(p.best.answer)}” <i style="--k:${TIERC[p.best.tier]}">${TIERS[p.best.tier]}</i></li>`).join("") : "";
+    main.innerHTML = `<div class="mpanel ppanel"><small>${over ? "Game over" : "Room " + esc(room.code)}</small>
+      <h2>${over ? (room.winner === room.me ? "You win! 🏆" : w ? esc(w.name) + " wins!" : "Everyone got abducted!") : room.players.length < 2 ? "Waiting for cows…" : "Everyone's here!"}</h2>
+      ${over && best ? `<p>Best answers</p><ol class="pbest">${best}</ol>` : `<p>${room.host ? "Share the code <b>" + esc(room.code) + "</b>, add bots, or practice alone." : "Waiting for the host to start…"}</p>`}
+      ${room.host ? `<div class="mrow"><button type="button" class="mgo sm pstart">${over ? "Play again" : room.players.length < 2 ? "Practice alone" : "Start ▸"}</button>
+        <span class="padd"><span>Add bot</span>${["easy", "medium", "hard"].map(l => `<button type="button" class="mpill" data-l="${l}">${l}</button>`).join("")}</span></div>` : ""}
+      <div class="merr" role="alert"></div></div>`;
+    const s = main.querySelector(".pstart"); if (s) s.onclick = () => { sfx.tap(); s.disabled = true; s.textContent = "Beaming in…"; act("start"); };
+    main.querySelectorAll(".padd button").forEach(b => b.onclick = () => act("addbot", {level: b.dataset.l}));
+  }
+  async function act(action, extra = {}) {
+    if (sending) return; sending = true;
+    try { const d = await api("/api/abduct", {method: "POST", body: JSON.stringify({action, code, ...extra})}); sending = false; if (d.room) apply(d.room); }
+    catch (e) { sending = false; const er = main.querySelector(".merr"); if (er) er.textContent = e.message; if (e.data?.room) apply(e.data.room); const s = main.querySelector(".pstart"); if (s) { s.disabled = false; s.textContent = "Start ▸"; } }
+  }
+  inp.addEventListener("input", () => { msg.textContent = ""; form.classList.remove("bad"); delete form.dataset.armed; if (myTurn() && Date.now() >= revealEnd) sendTyping(); });
+  form.onsubmit = e => { e.preventDefault(); if (myTurn()) submit(); else if (inp.value.trim().length >= 2) { form.dataset.armed = 1; msg.textContent = "⚡ Loaded! It sends when it's your turn."; } };
+  function sendTyping() {
+    if (typeTimer) return;
+    typeTimer = setTimeout(() => {
+      typeTimer = 0; if (!myTurn() || inp.value === lastSent) return; lastSent = inp.value;
+      api("/api/abduct", {method: "POST", body: JSON.stringify({action: "type", code, text: inp.value, turnId: room.turnId})}).catch(() => {});
+    }, 120);
+  }
+  async function submit() {
+    const a = inp.value.trim(); if (!myTurn() || sending || a.length < 2) return;
+    sending = true; form.classList.add("wait"); msg.textContent = "Checking with the alien…";
+    try { const d = await api("/api/abduct", {method: "POST", body: JSON.stringify({action: "answer", code, answer: a})}); sending = false; form.classList.remove("wait"); msg.textContent = ""; inp.value = ""; apply(d.room); }
+    catch (e) {
+      sending = false; form.classList.remove("wait");
+      if (e.data?.room) apply(e.data.room);
+      if (e.data?.code === "abducted") { msg.textContent = ""; return; }
+      if (e.data?.code === "wait") { setTimeout(submit, Math.max(50, revealEnd - Date.now() + 30)); return; }
+      msg.textContent = e.message; form.classList.remove("bad"); void form.offsetWidth; form.classList.add("bad"); inp.select(); sfx.bad();
+    }
+  }
+
+  /* ----- what just happened ----- */
+  function pop(i, html, k, cls = "") {
+    const fx = $(".pfx"), d = document.createElement("div"); d.className = "ppop " + cls; d.style.setProperty("--k", k);
+    d.style.left = seatX(i) * S + "px"; d.style.top = (baseY() - 22) * S + "px"; d.innerHTML = html; fx.appendChild(d); setTimeout(() => d.remove(), 2200);
+  }
+  function banner(text, sub) { const fx = $(".pfx"), d = document.createElement("div"); d.className = "pbanner"; d.innerHTML = `<b>${esc(text)}</b>${sub ? `<span>${esc(sub)}</span>` : ""}`; fx.appendChild(d); setTimeout(() => d.remove(), 1900); }
+  function handle(ev, old) {
+    const nm = i => i === room.me ? "You" : room.players[i]?.name || "Someone";
+    if (ev.type === "start") { banner("Beam me up!", "Answer before the UFO gets you"); return; }
+    if (ev.type === "join" && room.status !== "playing") { msg.textContent = (room.players[ev.by]?.name || "Someone") + " joined"; setTimeout(() => msg.textContent = "", 1800); return; }
+    if (ev.type === "answer") {
+      pop(ev.by, `“${esc(ev.answer)}” <b>${TIERS[ev.tier]}</b> <em>+${ev.pts}</em>`, TIERC[ev.tier]);
+      sfx.good(ev.tier);
+      if (ev.full) {
+        const bar = root.querySelector(`.ptag[data-i="${ev.by}"] .bar i`);
+        if (bar) { bar.dataset.hold = 1; bar.style.width = "100%"; setTimeout(() => { delete bar.dataset.hold; drawTags(); }, 900); }
+        setTimeout(() => pop(ev.by, ev.bonus ? "+1 ♥" : "Max hearts!", "#ff5a6a", "life"), 500);
+      }
+      if (ev.round) setTimeout(() => banner("Round " + ev.round, "Higher up · a bit faster"), 600);
+      return;
+    }
+    if (ev.type === "abduct") {
+      anim = {i: ev.by, t0: performance.now(), out: ev.out};
+      sfx.zap();
+      setTimeout(() => pop(ev.by, ev.out ? `${esc(nm(ev.by))} got abducted!` : "-1 ♥", "#ff5a4a", "life"), 450);
+      if (ev.round) setTimeout(() => banner("Round " + ev.round, "Higher up · a bit faster"), 1300);
+    }
+    if (ev.type === "leave") { msg.textContent = (old?.players[ev.by]?.name || "Someone") + " left"; setTimeout(() => msg.textContent = "", 1800); }
+  }
+
+  /* ----- every frame: the UFO, its beam, the cows, and live typing ----- */
+  function frame(now) {
+    raf = 0; if (stopped) return;
+    raf = requestAnimationFrame(frame);
+    if (now - lastFrame < 33) return; lastFrame = now;
+    const W = cv.width, H = cv.height, t = now / 1000; cx.clearRect(0, 0, W, H);
+    if (!room || !room.players.length) { // menu: a lone UFO drifting over a cow
+      const x0 = Math.round(W / 2 + Math.sin(t * 0.7) * 30), y0 = Math.round(H * 0.42);
+      drawBeam(cx, x0, y0 + 13, y0 + 46, 0.15, t); drawShip(cx, x0 - 13, y0 + Math.round(Math.sin(t * 2)), t, 0); drawCow(cx, x0 - 8, y0 + 38 + Math.round(Math.sin(t * 2.6)), false);
+      return;
+    }
+    const playing = room.status === "playing", by = baseY(), n = room.players.length;
+    const heat = playing ? Math.min(1, (room.heat || 0) + Math.max(0, Date.now() - Math.max(recvAt, revealEnd)) / 1000 * (room.heatRate || 0)) : 0;
+    const ti = playing ? room.turn : -1, tx = ti >= 0 ? seatX(ti) : Math.round(W / 2);
+    if (ufoX < 0) ufoX = tx;
+    ufoX += (tx - ufoX) * 0.18; ufoY = Math.round(H * 0.34 + Math.sin(t * 2) * 1.2 + (heat > 0.85 ? (Math.random() - 0.5) * 2 : 0));
+    // cows (the active one floats up the beam as time runs out)
+    lifts.length = n;
+    for (let i = 0; i < n; i++) {
+      const p = room.players[i], target = i === ti && Date.now() >= revealEnd ? heat * (by - ufoY - 18) : 0;
+      lifts[i] = (lifts[i] || 0) + (target - (lifts[i] || 0)) * 0.25;
+    }
+    // the abduction: shoot up into the UFO, then drop back down (or stay gone)
+    let abd = null;
+    if (anim) { const k = (now - anim.t0) / 1000; if (k > 2.2) anim = null; else abd = {i: anim.i, k, out: anim.out}; }
+    if (playing && ti >= 0 && !abd) drawBeam(cx, Math.round(ufoX), ufoY + 13, by + 9, 0.15 + heat * 0.7, t);
+    if (abd) { const ax = seatX(abd.i); if (abd.k < 0.6) drawBeam(cx, ax, ufoY + 13, by + 9, 1, t); }
+    for (let i = 0; i < n; i++) {
+      const p = room.players[i], x0 = seatX(i) - 8, flip = i >= n / 2;
+      let y0 = by - Math.round(lifts[i] || 0), alpha = 1;
+      if (abd && abd.i === i) {
+        if (abd.k < 0.5) y0 = Math.round(by - (by - ufoY - 6) * (abd.k / 0.5));
+        else if (abd.k < 1.2 || abd.out) continue; // inside the UFO
+        else y0 = Math.round(-12 + (by + 12) * Math.min(1, (abd.k - 1.2) / 0.6)); // dropped back down
+      } else if (playing && (!p.alive || p.left)) continue; // abducted for good
+      drawCow(cx, x0, y0, flip, alpha);
+    }
+    if (playing || anim) drawShip(cx, Math.round((abd ? seatX(abd.i) : ufoX) - 13), ufoY, t, heat);
+    // tags follow the line, the active one bounces
+    // live typing for other players and bots
+    const tb = $(".ptype");
+    if (playing && !myTurn() && Date.now() >= revealEnd) {
+      let target = "", bt = room.botType;
+      if (bt && bt.turnId === room.turnId) { const k = Math.floor((Date.now() - botStart.at) / bt.per); target = bt.text.slice(0, Math.max(0, Math.min(bt.text.length, k))); }
+      else target = room.typing?.text || "";
+      if (remote.turnId !== room.turnId) remote = {turnId: room.turnId, shown: "", last: 0};
+      if (target.startsWith(remote.shown) && target.length > remote.shown.length) { if (now - remote.last > 40) { remote.shown = target.slice(0, remote.shown.length + 1); remote.last = now; } }
+      else if (!target.startsWith(remote.shown)) remote.shown = target;
+      tb.hidden = !remote.shown; tb.textContent = remote.shown; tb.classList.toggle("bad", !!room.typing?.bad && !bt);
+      tb.style.left = seatX(ti) * S + "px"; tb.style.top = (by - Math.round(lifts[ti] || 0) - 8) * S + "px";
+    } else tb.hidden = true;
+    wrap.classList.toggle("pdanger", playing && myTurn() && heat > 0.8);
+  }
+
+  menu();
+  return {stop() { stopped = true; clearInterval(poll); clearTimeout(typeTimer); cancelAnimationFrame(raf); removeEventListener("resize", onResize); }};
+}
+
+// two modes share the page: the daily game and Alien Party
+const ROOT = document.getElementById("root");
+let CUR = null;
+function goDaily() { if (CUR) CUR.stop(); CUR = startMoo(ROOT, {onParty: goParty}); history.replaceState(null, "", location.pathname); }
+function goParty() { if (CUR) CUR.stop(); CUR = startParty(ROOT, {onBack: goDaily}); history.replaceState(null, "", location.pathname + "#party"); }
+if (location.hash === "#party") goParty(); else goDaily();
 </script>
 </body>
 </html>
