@@ -9,9 +9,10 @@ import { norm, findInList, scoreFromRank, scoreFromObscurity } from "./moo.js";
 // so nobody is always first on a fresh prompt.
 // Rarer answers fill your power bar more; a full bar is an extra heart. Last cow standing wins.
 // Rarity uses ranked answer lists (the same kind the daily game uses), kept in a shared prompt bank.
-export const config = { maxDuration: 60 };
+export const config = { maxDuration: 120 };
 
 const TTL = 6 * 3600, LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const LENS = "ab:len";
 const START_LIVES = 3, MAX_LIVES = 5, MAX_PLAYERS = 8, REVEAL = 2200; // REVEAL = the "new prompt!" moment before the beam starts
 const PTS = [10, 16, 24, 34, 48, 70]; // power bar fill per rarity tier (100 = +1 heart)
 const LEVELS = ["easy", "medium", "hard"], BOT_NAMES = ["Byte", "Pixel", "Bolt", "Chip", "Gizmo", "Sprocket", "Widget"];
@@ -78,23 +79,49 @@ async function claude(model, user, maxTokens) {
 }
 function parseJSON(t, open) { const s = t.indexOf(open), e = t.lastIndexOf(open === "[" ? "]" : "}"); if (s < 0 || e < s) throw new Error("Bad JSON"); return JSON.parse(t.slice(s, e + 1)); }
 async function judge(prompt, answer) {
-  const t = await claude("haiku", `Prompt: "${prompt}"
+  const ask = model => claude(model, `Prompt: "${prompt}"
 Player's answer: "${answer}"
 1. Is it a real, correct answer to the prompt? Be fair: accept normal spellings and small typos, but reject jokes, made-up things, things that don't fit, and answers that are too vague.
 2. If correct, how obscure is it from 0 to 100? 0 = the first thing everyone says. 50 = most people know it but wouldn't think of it. 80 = only fans or experts would know it. 100 = almost nobody has heard of it.
-Reply with only JSON: {"valid": true or false, "name": "the answer's proper name", "obscurity": number, "why": "a short friendly reason, max 10 words"}`, 160);
-  const v = parseJSON(t, "{");
-  return { valid: !!v.valid, name: String(v.name || answer).slice(0, 50), obscurity: Math.max(0, Math.min(100, Number(v.obscurity) || 0)), why: String(v.why || "").slice(0, 80) };
+3. If it's wrong but looks like a misspelling of a correct answer, put the correct answer in "suggest", otherwise leave it "".
+Reply with only JSON: {"valid": true or false, "name": "the answer's proper name", "obscurity": number, "why": "a short friendly reason, max 10 words", "suggest": ""}`, 240);
+  let v; try { v = parseJSON(await ask("haiku"), "{"); } catch { v = parseJSON(await ask("sonnet"), "{"); }
+  return { valid: !!v.valid, name: String(v.name || answer).slice(0, 50), obscurity: Math.max(0, Math.min(100, Number(v.obscurity) || 0)), why: String(v.why || "").slice(0, 80), suggest: v.valid ? "" : String(v.suggest || "").slice(0, 50) };
 }
-async function makeList(prompt) {
-  const t = await claude("sonnet", `Prompt: "${prompt}"
-List 120 different correct answers, ordered from the answer the MOST people would say first, down to the most obscure answers that are still definitely correct.
-Use each answer's most common name. Put alternate names or spellings after a | (example: "Chickpea|Garbanzo bean").
-Reply with only a JSON array of strings.`, 4000);
+const LIST_RULES = `Use each answer's most common name. Put alternate names or spellings after a | (example: "Chickpea|Garbanzo bean").
+Reply with only a JSON array of strings.`;
+function parseList(t) {
   let arr; try { arr = parseJSON(t, "["); } catch { // cut off mid-list: keep every complete answer
     const s = t.indexOf("["), e = t.lastIndexOf('",'); if (s < 0 || e < s) throw new Error("Bad JSON " + t.length + ": " + t.slice(0, 160).replace(/\s+/g, " ")); arr = JSON.parse(t.slice(s, e + 1) + "]");
   }
-  return arr.map(x => String(x).trim().slice(0, 80)).filter(Boolean).slice(0, 200);
+  return arr.map(x => String(x).trim().slice(0, 80)).filter(Boolean);
+}
+// adds answers to a list, skipping any that are already on it (under any of their names)
+function mergeLists(list, more) {
+  const seen = new Set(list.flatMap(x => x.split("|").map(norm)));
+  for (const x of more) { const ks = x.split("|").map(norm).filter(Boolean); if (ks.length && !ks.some(k => seen.has(k))) { list.push(x); ks.forEach(k => seen.add(k)); } }
+  return list;
+}
+// a big ranked answer list: the well-known answers in order, then a second batch of deeper cuts, built at the same time
+async function makeList(prompt) {
+  const [a, b] = await Promise.allSettled([
+    claude("sonnet", `Prompt: "${prompt}"
+List 120 different correct answers, ordered from the answer the MOST people would say first, down to the most obscure answers that are still definitely correct.
+${LIST_RULES}`, 4000),
+    claude("sonnet", `Prompt: "${prompt}"
+List 150 lesser-known answers that are still definitely correct. Skip the 40 answers most people would say first. Order them from fairly well known down to very obscure (things only fans or experts know).
+${LIST_RULES}`, 4500)]);
+  const top = a.status === "fulfilled" ? parseList(a.value) : [], deep = b.status === "fulfilled" ? parseList(b.value) : [];
+  if (top.length < 30) throw new Error("List too short: " + (a.reason?.message || top.length));
+  return mergeLists(top, deep).slice(0, 320);
+}
+// grows a list that's already in the bank with a batch of deeper cuts
+async function extendList(prompt, list) {
+  const t = await claude("sonnet", `Prompt: "${prompt}"
+These answers are already known: ${list.map(x => x.split("|")[0]).join(", ")}.
+List up to 150 MORE correct answers that are not in that list. Order them from fairly well known down to very obscure (things only fans or experts know).
+${LIST_RULES}`, 4500);
+  return mergeLists([...list], parseList(t)).slice(0, 320);
 }
 
 /* ----- the prompt bank: prompts with ranked answer lists, shared by every room ----- */
@@ -109,22 +136,61 @@ async function bankPrompts() {
   }
   return have;
 }
-// adds a few missing prompt lists to the bank at once (each prompt is only ever written by one request)
+// adds a few missing prompt lists to the bank at once (each prompt is only ever written by one request);
+// once every prompt has a list, it deepens the shortest old lists instead
 async function growBank(have, n = 3) {
   const todo = SEED.filter(p => !have.includes(p)).sort(() => Math.random() - 0.5), picked = [];
-  for (const p of todo) { if (picked.length >= n) break; if (await redis("SET", "ab:g3:" + norm(p), "1", "NX", "EX", "60")) picked.push(p); }
+  for (const p of todo) { if (picked.length >= n) break; if (await redis("SET", "ab:g3:" + norm(p), "1", "NX", "EX", "120")) picked.push(p); }
+  if (!picked.length) { // nothing missing: deepen lists made before lists got big
+    const lens = (await redis("HGETALL", LENS)) || [], known = {};
+    for (let i = 0; i < lens.length; i += 2) known[lens[i]] = Number(lens[i + 1]);
+    for (const p of have.filter(p => !(known[p] >= 170)).sort(() => Math.random() - 0.5)) {
+      if (picked.length >= n) break;
+      if (await redis("SET", "ab:x:" + norm(p), "1", "NX", "EX", "120")) picked.push(p);
+    }
+    const made = await Promise.all(picked.map(async p => {
+      try {
+        const old = await listFor(p), list = old.length >= 170 ? old : await extendList(p, old);
+        await redis("HSET", BANK, p, JSON.stringify(list)); await redis("HSET", LENS, p, String(Math.max(170, list.length))); return p;
+      } catch (e) { console.error("abduct extend", e.message); await redis("SET", "ab:x:" + norm(p), "1", "EX", "21600"); return null; }
+    }));
+    return made.filter(Boolean);
+  }
   const made = await Promise.all(picked.map(async p => {
-    try { const list = await makeList(p); if (list.length >= 40) { await redis("HSET", BANK, p, JSON.stringify(list)); return p; } }
+    try { const list = await makeList(p); if (list.length >= 40) { await redis("HSET", BANK, p, JSON.stringify(list)); await redis("HSET", LENS, p, String(Math.max(170, list.length))); return p; } }
     catch (e) { console.error("abduct list", e.message); }
     await redis("SET", "ab:g3:" + norm(p), "1", "EX", "21600"); // didn't work out: leave this prompt alone for a few hours
     return null;
   }));
   return made.filter(Boolean);
 }
+// answers Claude okayed that weren't on the list, kept per prompt so they're recognized (and spell-checked) next time
+const extraKey = prompt => "ab:extra:" + norm(prompt);
+async function extrasFor(prompt) { const a = (await redis("HGETALL", extraKey(prompt))) || [], o = {}; for (let i = 0; i < a.length; i += 2) o[a[i]] = Number(a[i + 1]); return o; }
+// the closest known answer to a misspelling (only if it's close enough to be a typo, not a different answer)
+function osa(a, b) {
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) {
+    d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+  }
+  return d[a.length][b.length];
+}
+function suggestFor(names, raw) {
+  const k = norm(raw); if (k.length < 3) return "";
+  const max = Math.max(1, Math.min(4, Math.round(k.length * 0.34)));
+  let best = "", bestD = max + 1;
+  for (const entry of names) for (const alias of String(entry).split("|")) {
+    const a = norm(alias); if (!a || Math.abs(a.length - k.length) > max) continue;
+    const d = osa(a, k); if (d < bestD) { bestD = d; best = entry.split("|")[0]; }
+  }
+  return best;
+}
 async function listFor(prompt) { const v = await redis("HGET", BANK, prompt); return v ? JSON.parse(v) : []; }
 
 /* ----- game helpers ----- */
-function fuseRange(round) { const f = Math.pow(0.94, round - 1); return [Math.max(6000, Math.round(10500 * f)), Math.max(8500, Math.round(16500 * f))]; }
+function fuseRange(round) { const f = Math.pow(0.94, round - 1); return [Math.max(7000, Math.round(12500 * f)), Math.max(10000, Math.round(19500 * f))]; }
 function event(room, e) { room.seq = (room.seq || 0) + 1; room.event = { seq: room.seq, ...e, at: Date.now() }; }
 const inGame = p => p.alive && !p.left;
 function nextAlive(room, from) { const n = room.players.length; for (let s = 1; s <= n; s++) { const i = (from + s) % n; if (inGame(room.players[i])) return i; } return from; }
@@ -294,10 +360,13 @@ export default async function handler(req, res) {
       if (at < (room0.reveal || 0)) return res.status(400).json({ error: "Wait for the new prompt!", code: "wait" });
       const raw = String(req.body.answer || "").replace(/\s+/g, " ").trim().slice(0, 50);
       if (raw.length < 2) return res.status(400).json({ error: "Type an answer first." });
-      const list = await listFor(room0.prompt), k = findInList(list, raw);
-      if (k >= 0) { const s = scoreFromRank(k, list.length); checked = { key: "i:" + k, answer: list[k].split("|")[0], tier: s.tier }; }
+      const [list, extras] = await Promise.all([listFor(room0.prompt), extrasFor(room0.prompt)]), nk = norm(raw);
+      const onList = k => { const s = scoreFromRank(k, list.length), name = list[k].split("|")[0]; return { key: "i:" + k, alts: ["n:" + norm(name), "n:" + nk], answer: name, tier: s.tier }; };
+      const xs = Object.keys(extras), k = findInList(list, raw), x = k < 0 ? findInList(xs, raw) : -1;
+      if (k >= 0) checked = onList(k);
+      else if (x >= 0) { const s = scoreFromObscurity(extras[xs[x]]); checked = { key: "n:" + norm(xs[x]), alts: ["n:" + nk], answer: xs[x], tier: s.tier }; }
       else {
-        const nk = norm(raw), vk = `ab:v:${norm(room0.prompt)}:${nk}`;
+        const vk = `ab:v:${norm(room0.prompt)}:${nk}`;
         let v = await getJSON(vk);
         if (!v) {
           const ip = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim().slice(0, 64) || "x", ik = `moo:ip:${today()}:${ip}`;
@@ -306,9 +375,19 @@ export default async function handler(req, res) {
           try { v = await judge(room0.prompt, raw); } catch { return res.status(503).json({ error: "Couldn't check that answer. Try again fast!" }); }
           await redis("SET", vk, JSON.stringify(v), "EX", String(30 * 86400));
         }
-        if (!v.valid) { await setTyping(room0, raw, "bad"); return res.status(400).json({ error: v.why || "That doesn't fit the prompt.", code: "invalid" }); }
-        const s = scoreFromObscurity(v.obscurity);
-        checked = { key: "n:" + norm(v.name || raw), alt: "n:" + nk, answer: v.name || raw, tier: s.tier, note: v.why };
+        if (!v.valid) {
+          await setTyping(room0, raw, "bad");
+          let sug = suggestFor([...list, ...xs], raw) || v.suggest || "";
+          if (norm(sug) === nk) sug = "";
+          return res.status(400).json({ error: sug ? "Hmm, that's not quite it." : v.why || "That doesn't fit the prompt.", code: "invalid", suggest: sug });
+        }
+        const k2 = findInList(list, v.name); // Claude knew a nickname for something on the list
+        if (k2 >= 0) checked = onList(k2);
+        else {
+          const s = scoreFromObscurity(v.obscurity);
+          checked = { key: "n:" + norm(v.name || raw), alts: ["n:" + nk], answer: v.name || raw, tier: s.tier, note: v.why };
+          if (norm(v.name)) await redis("HSET", extraKey(room0.prompt), v.name, String(v.obscurity));
+        }
       }
       checked.at = at; checked.turnId = room0.turnId;
     }
@@ -385,8 +464,8 @@ export default async function handler(req, res) {
         // the answer counts if it arrived before the beam finished, even if checking it took a moment
         if (room.turnId !== checked.turnId || room.turn !== mi) { tick(room); await save(room); return reply(400, { error: "Too slow! 🛸", code: "abducted" }); }
         if (checked.at > room.beam.deadline) { tick(room); await save(room); return reply(400, { error: "Too slow! 🛸", code: "abducted" }); }
-        if (room.used.includes(checked.key) || (checked.alt && room.used.includes(checked.alt))) return reply(400, { error: "Someone already said that!", code: "used" });
-        if (checked.alt) room.used.push(checked.alt);
+        if ([checked.key, ...checked.alts].some(u => room.used.includes(u))) return reply(400, { error: "Someone already said that!", code: "used" });
+        room.used.push(...checked.alts);
         accept(room, mi, checked);
         await save(room);
         return reply(200);
