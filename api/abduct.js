@@ -255,7 +255,7 @@ export default async function handler(req, res) {
           return r;
         });
         if (!room) return res.status(404).json({ error: "That room doesn't exist anymore." });
-      } else if (room.status !== "playing") { // waiting in the lobby: quietly add a prompt to the shared bank
+      } else if (room.status !== "playing" && req.query?.grow) { // a side request from the lobby: add a few prompts to the shared bank
         const have = await bankPrompts();
         if (SEED.some(p => !have.includes(p))) await growBank(have, 3);
       }
