@@ -110,11 +110,11 @@ async function bankPrompts() {
 // adds a few missing prompt lists to the bank at once (each prompt is only ever written by one request)
 async function growBank(have, n = 3) {
   const todo = SEED.filter(p => !have.includes(p)).sort(() => Math.random() - 0.5), picked = [];
-  for (const p of todo) { if (picked.length >= n) break; if (await redis("SET", "ab:gen:" + norm(p), "1", "NX", "EX", "60")) picked.push(p); }
+  for (const p of todo) { if (picked.length >= n) break; if (await redis("SET", "ab:g2:" + norm(p), "1", "NX", "EX", "60")) picked.push(p); }
   const made = await Promise.all(picked.map(async p => {
     try { const list = await makeList(p); if (list.length >= 40) { await redis("HSET", BANK, p, JSON.stringify(list)); return p; } }
     catch (e) { console.error("abduct list", e.message); }
-    await redis("SET", "ab:gen:" + norm(p), "1", "EX", "21600"); // didn't work out: leave this prompt alone for a few hours
+    await redis("SET", "ab:g2:" + norm(p), "1", "EX", "21600"); // didn't work out: leave this prompt alone for a few hours
     return null;
   }));
   return made.filter(Boolean);
