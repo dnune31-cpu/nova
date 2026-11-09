@@ -6,6 +6,8 @@ import { redis, getJSON, getAuth, MODEL_IDS, isAdminEmail } from "./_lib.js";
 // ranked from what most people would say to the most obscure. That list is saved in the database.
 // Your answer is matched against the list; answers that aren't on it get one Claude check
 // (is it correct, how obscure is it), which is saved so everyone gets the same verdict.
+// Players on moollion.cc just pick a name (no password): the browser keeps a random player id
+// and sends it as the x-moo-player header. Names are claimed so two people can't share one.
 export const config = { maxDuration: 120 };
 
 const N = 7, KEEP = 40 * 86400;
@@ -29,6 +31,7 @@ const dayNum = d => Math.round((Date.parse(d + "T00:00:00Z") - EPOCH) / 86400000
 const shift = (d, n) => new Date(Date.parse(d + "T12:00:00Z") + n * 86400000).toISOString().slice(0, 10);
 const K = {
   day: d => `moo:day:${d}`, gen: d => `moo:gen:${d}`, plays: d => `moo:p:${d}`, verdict: (d, i) => `moo:v:${d}:${i}`,
+  pid: id => `moo:pid:${id}`, name: n => `moo:name:${n}`, ip: (d, ip) => `moo:ip:${d}:${ip}`,
   user: e => `moo:u:${e}`, lock: e => `moo:lk:${e}`, judged: (d, e) => `moo:j:${d}:${e}`, recent: "moo:recent",
 };
 
@@ -154,19 +157,28 @@ async function getDay(d) {
   } finally { await redis("DEL", K.gen(d)); }
 }
 
-async function view(d, day, email) {
+// who is playing: a random id kept in their browser, plus the name they picked
+async function who(req) {
+  const id = String(req.headers["x-moo-player"] || "").toLowerCase();
+  if (!/^[a-f0-9]{32}$/.test(id)) return null;
+  const p = await getJSON(K.pid(id));
+  return { id, key: "p:" + id, name: p?.name || null };
+}
+const cleanName = n => String(n || "").replace(/[^\p{L}\p{N} _.'-]/gu, "").replace(/\s+/g, " ").trim().slice(0, 16);
+
+async function view(d, day, email, name) {
   const all = (await redis("HGETALL", K.plays(d))) || [];
   const plays = {};
   for (let i = 0; i < all.length; i += 2) { try { plays[all[i]] = JSON.parse(all[i + 1]); } catch {} }
   const mine = plays[email] || { answers: [], total: 0 };
   const done = mine.answers.length >= N;
   const u = (await getJSON(K.user(email))) || {};
-  const board = Object.entries(plays).map(([e, p]) => {
+  const board = Object.entries(plays).filter(([e]) => e.startsWith("p:")).map(([e, p]) => {
     const best = p.answers.reduce((b, a) => (a.m > (b?.m ?? -1) ? a : b), null);
     return { name: p.name, total: p.total, count: p.answers.length, me: e === email, best: done && best ? { answer: best.answer, tier: best.tier } : null };
   }).sort((a, b) => b.total - a.total).slice(0, 30);
   return {
-    date: d, num: dayNum(d), count: N, tiers: TIERS,
+    date: d, num: dayNum(d), count: N, tiers: TIERS, name,
     prompts: day.prompts.slice(0, Math.min(N, mine.answers.length + 1)),
     answers: mine.answers, total: mine.total, done,
     streak: u.last === d || u.last === shift(d, -1) ? u.streak || 0 : 0,
@@ -176,24 +188,40 @@ async function view(d, day, email) {
 
 export default async function handler(req, res) {
   try {
-    const auth = await getAuth(req);
-    if (!auth) return res.status(401).json({ error: "Please log in again." });
-    const email = auth.user.email, name = String(auth.user.name || "Player").slice(0, 24);
-    const d = today();
-    const day = await getDay(d);
-    if (!day) return res.status(200).json({ preparing: true });
-
-    if (req.method === "GET") return res.status(200).json(await view(d, day, email));
-    if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
-
-    const { action } = req.body || {};
-    if (action === "reset") { // the site owner can wipe their own flight for today and play again
-      if (!auth.admin && !isAdminEmail(email)) return res.status(403).json({ error: "Only the site owner can restart a day." });
+    const d = today(), action = req.method === "POST" ? (req.body || {}).action : null;
+    if (action === "reset") { // the site owner (logged in to Nova) can wipe a player's flight for today
+      const auth = await getAuth(req);
+      if (!auth || (!auth.admin && !isAdminEmail(auth.user.email))) return res.status(403).json({ error: "Only the site owner can restart a day." });
+      const pid = String(req.body.pid || "").toLowerCase();
+      if (!/^[a-f0-9]{32}$/.test(pid)) return res.status(400).json({ error: "Which player?" });
+      const email = "p:" + pid;
       await redis("HDEL", K.plays(d), email);
       const u = (await getJSON(K.user(email))) || {};
       if (u.last === d) await redis("SET", K.user(email), JSON.stringify({ ...u, last: (u.streak || 0) > 1 ? shift(d, -1) : null, streak: Math.max(0, (u.streak || 0) - 1) }));
-      return res.status(200).json({ ok: true, state: await view(d, day, email) });
+      return res.status(200).json({ ok: true });
     }
+
+    const me = await who(req);
+    if (!me) return res.status(401).json({ error: "Pick a name to play.", code: "name" });
+    if (action === "hello") { // pick (or change) your name
+      const nm = cleanName(req.body.name), low = nm.toLowerCase();
+      if (nm.length < 2) return res.status(400).json({ error: "Names need at least 2 letters or numbers." });
+      const owner = await redis("GET", K.name(low));
+      if (owner && owner !== me.id) return res.status(409).json({ error: "That name is taken. Try another one." });
+      if (!owner && !(await redis("SET", K.name(low), me.id, "NX"))) return res.status(409).json({ error: "That name is taken. Try another one." });
+      if (me.name && me.name.toLowerCase() !== low && (await redis("GET", K.name(me.name.toLowerCase()))) === me.id) await redis("DEL", K.name(me.name.toLowerCase()));
+      await redis("SET", K.pid(me.id), JSON.stringify({ name: nm, since: Date.now() }));
+      me.name = nm;
+      const ph = await redis("HGET", K.plays(d), me.key); // keep today's leaderboard name in sync
+      if (ph) { const pl = JSON.parse(ph); pl.name = nm; await redis("HSET", K.plays(d), me.key, JSON.stringify(pl)); }
+    }
+    if (!me.name) return res.status(401).json({ error: "Pick a name to play.", code: "name" });
+    const email = me.key, name = me.name;
+    const day = await getDay(d);
+    if (!day) return res.status(200).json({ preparing: true });
+
+    if (req.method === "GET" || action === "hello") return res.status(200).json(action === "hello" ? { state: await view(d, day, email, name) } : await view(d, day, email, name));
+    if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
     if (action !== "answer" && action !== "skip") return res.status(400).json({ error: "Unknown action" });
     const got = await redis("SET", K.lock(email), "1", "NX", "PX", "20000");
     if (!got) return res.status(429).json({ error: "One answer at a time." });
@@ -202,7 +230,7 @@ export default async function handler(req, res) {
       const mine = plays ? JSON.parse(plays) : { name, answers: [], total: 0 };
       const i = mine.answers.length;
       if (i >= N) return res.status(400).json({ error: "You already finished today's flight." });
-      if (Number(req.body.i) !== i) return res.status(409).json({ error: "That prompt is already done.", state: await view(d, day, email) });
+      if (Number(req.body.i) !== i) return res.status(409).json({ error: "That prompt is already done.", state: await view(d, day, email, name) });
       const prompt = day.prompts[i], list = day.lists[i] || [];
       let result;
       if (action === "skip") result = { answer: "", tier: -1, m: 0, note: "Skipped. The cow stayed put." };
@@ -220,6 +248,10 @@ export default async function handler(req, res) {
             const n = await redis("INCR", K.judged(d, email));
             if (n === 1) await redis("EXPIRE", K.judged(d, email), "172800");
             if (n > 60) return res.status(429).json({ error: "That's a lot of guesses today. Try one of your answers again later." });
+            const ip = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim().slice(0, 64) || "x";
+            const ni = await redis("INCR", K.ip(d, ip));
+            if (ni === 1) await redis("EXPIRE", K.ip(d, ip), "172800");
+            if (ni > 400) return res.status(429).json({ error: "Too many guesses from here today. Come back tomorrow." });
             try { v = await judge(prompt, raw); } catch (e) { console.error("moo judge", e.message); return res.status(503).json({ error: "Couldn't check that answer right now. Try again." }); }
             await redis("SET", `${K.verdict(d, i)}:${key}`, JSON.stringify(v), "EX", String(KEEP));
           }
@@ -237,7 +269,7 @@ export default async function handler(req, res) {
         const streak = u.last === shift(d, -1) ? (u.streak || 0) + 1 : u.last === d ? u.streak || 1 : 1;
         await redis("SET", K.user(email), JSON.stringify({ last: d, streak, best: Math.max(u.best || 0, mine.total) }));
       }
-      return res.status(200).json({ result, state: await view(d, day, email) });
+      return res.status(200).json({ result, state: await view(d, day, email, name) });
     } finally { await redis("DEL", K.lock(email)); }
   } catch (err) {
     console.error(err);
