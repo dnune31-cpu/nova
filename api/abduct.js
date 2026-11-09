@@ -21,43 +21,82 @@ const BOT = { // think = pause before typing, per = ms per letter, fail = chance
   medium: { think: [1800, 3600], per: 110, fail: 0.1, pick: [0.15, 0.7] },
   hard: { think: [1200, 2600], per: 80, fail: 0.04, pick: [0.4, 1] },
 };
-const SEED = [
+// prompts by difficulty: broad and easy early on, narrower (but still with plenty of answers) as the rounds go up
+const EASY = [
   "Name a dog breed", "Name a fruit", "Name a sport", "Name a country", "Name a musical instrument",
-  "Name a type of cheese", "Name a bird", "Name a vegetable", "Name a board game", "Name a kind of tree",
-  "Name a famous painter", "Name a pasta shape", "Name a dinosaur", "Name a car brand", "Name a fish",
-  "Name a flower", "Name a breakfast food", "Name a chemical element", "Name a dance style", "Name a city in Europe",
-  "Name an insect", "Name a spice or herb", "Name a sea creature", "Name a superhero", "Name a type of bread",
-  "Name a card game", "Name a river", "Name a farm animal", "Name a kitchen tool", "Name a planet, moon or star",
-  "Name a Disney movie", "Name a video game", "Name a dessert", "Name a snake", "Name a gemstone",
-  "Name a cat breed", "Name a type of pasta sauce", "Name a soup", "Name a candy bar", "Name an ice cream flavor",
-  "Name a cereal brand", "Name a fast food chain", "Name a soda or soft drink", "Name a type of nut", "Name a type of bean",
-  "Name a sandwich", "Name a type of cookie", "Name a cake", "Name a condiment or sauce", "Name a capital city",
-  "Name a US state", "Name a country in Africa", "Name a country in Asia", "Name a city in South America", "Name an island",
-  "Name a mountain or mountain range", "Name a desert", "Name a lake", "Name a famous landmark", "Name a national park",
-  "Name an ocean or sea", "Name a volcano", "Name a mammal", "Name a reptile", "Name a shark species",
-  "Name a whale or dolphin", "Name a monkey or ape", "Name a big cat", "Name a bird of prey", "Name a butterfly or moth",
-  "Name a spider", "Name a frog or toad", "Name a bug that flies", "Name an animal that lives in the Arctic", "Name an animal found in Australia",
-  "Name an extinct animal", "Name an Olympic sport", "Name a soccer club", "Name an NBA team", "Name an NFL team",
-  "Name an MLB team", "Name a famous athlete", "Name a martial art", "Name a yoga pose", "Name a track and field event",
-  "Name a swimming stroke", "Name a winter sport", "Name a gymnastics move", "Name a tennis player", "Name a Formula 1 driver",
-  "Name a Pixar movie", "Name an animated TV show", "Name a Marvel character", "Name a DC character", "Name a Pokémon",
-  "Name a Nintendo character", "Name a video game console", "Name a Harry Potter character", "Name a Star Wars character", "Name a Lord of the Rings character",
-  "Name a Greek god or goddess", "Name a Norse god", "Name a mythical creature", "Name a fairy tale", "Name a bone in the human body",
-  "Name an organ in the human body", "Name a muscle", "Name a disease", "Name a unit of measurement", "Name a shape",
-  "Name a color", "Name a programming language", "Name a computer brand", "Name an app on a phone", "Name a social media platform",
-  "Name a website", "Name a US president", "Name a famous scientist", "Name an inventor", "Name a famous composer",
-  "Name a rapper", "Name a pop singer", "Name a rock band", "Name a boy band or girl group", "Name a musical (stage show)",
-  "Name an opera", "Name a famous author", "Name a novel", "Name a poet", "Name a Shakespeare play",
-  "Name a tool in a toolbox", "Name a thing in a bathroom", "Name a thing in a classroom", "Name a school subject", "Name a piece of furniture",
-  "Name a kitchen appliance", "Name a type of shoe", "Name a type of hat", "Name a piece of clothing", "Name a fabric",
-  "Name a type of boat", "Name a type of aircraft", "Name a car model", "Name a bicycle part", "Name a profession",
+  "Name a bird", "Name a vegetable", "Name a board game", "Name a fish", "Name a flower",
+  "Name a breakfast food", "Name a superhero", "Name a farm animal", "Name a kitchen tool", "Name a Disney movie",
+  "Name a video game", "Name a dessert", "Name an ice cream flavor", "Name a fast food chain", "Name a soda or soft drink",
+  "Name a sandwich", "Name a type of cookie", "Name a US state", "Name a mammal", "Name an Olympic sport",
+  "Name a famous athlete", "Name a Pixar movie", "Name an animated TV show", "Name a Marvel character", "Name a Pokémon",
+  "Name a Nintendo character", "Name a Harry Potter character", "Name a Star Wars character", "Name an organ in the human body", "Name a shape",
+  "Name a color", "Name an app on a phone", "Name a social media platform", "Name a website", "Name a pop singer",
+  "Name a rapper", "Name a piece of furniture", "Name a kitchen appliance", "Name a piece of clothing", "Name a profession",
   "Name a thing that's yellow", "Name a thing that's round", "Name a thing with wheels", "Name a thing that's cold", "Name a thing that flies",
-  "Name a thing that's sticky", "Name a word that rhymes with cat", "Name a word that starts with Q", "Name a word with double letters", "Name a palindrome word",
-  "Name an onomatopoeia (sound word)", "Name an emotion", "Name a weather event", "Name a holiday", "Name a language",
-  "Name an alphabet or writing system", "Name a currency", "Name a type of dance music", "Name a guitar brand", "Name a chess opening",
-  "Name a knot", "Name a cloud type", "Name a rock or mineral", "Name a constellation", "Name a famous ship",
-  "Name a drink you'd order at a café", "Name a tech company", "Name a festival or celebration", "Name a metal", "Name a tarot card",
+  "Name an emotion", "Name a holiday", "Name a language", "Name a school subject", "Name a thing in a bathroom",
+  "Name a thing in a classroom", "Name a type of shoe", "Name a candy bar", "Name a cereal brand", "Name a car brand",
+  "Name an insect", "Name a sea creature", "Name a big cat", "Name a tech company", "Name a type of bread",
+  "Name a cake", "Name a pizza topping", "Name an animal at the zoo", "Name a thing at the beach", "Name a toy",
+  "Name a movie", "Name a TV show", "Name a city in the US", "Name a vehicle", "Name a body part",
+  "Name a thing in a backpack", "Name a drink", "Name a restaurant chain", "Name a type of candy", "Name a party game",
+  "Name a movie villain", "Name a cartoon character", "Name a thing you see in the sky", "Name a thing that's red", "Name a thing that's green",
+  "Name a thing that's hot", "Name a job at a hospital", "Name a Halloween costume", "Name a movie actor or actress", "Name a clothing brand",
+  "Name a shoe brand", "Name a snack food", "Name a thing at a birthday party", "Name a thing in a fridge", "Name a thing in a toolbox or garage",
+  "Name a thing that's soft", "Name a thing you plug in", "Name a pet", "Name a thing at a farm", "Name a sports team",
+  "Name a famous singer", "Name a video game character", "Name a SpongeBob or Simpsons character",
 ];
+const MEDIUM = [
+  "Name a type of cheese", "Name a kind of tree", "Name a famous painter", "Name a pasta shape", "Name a dinosaur",
+  "Name a spice or herb", "Name a type of pasta sauce", "Name a soup", "Name a type of nut", "Name a type of bean",
+  "Name a condiment or sauce", "Name a capital city", "Name a country in Africa", "Name a country in Asia", "Name a country in Europe",
+  "Name a city in Europe", "Name a city in South America", "Name a city in Asia", "Name an island", "Name a mountain or mountain range",
+  "Name a desert", "Name a lake", "Name a national park", "Name a river", "Name a famous landmark", "Name an ocean or sea",
+  "Name a volcano", "Name a reptile", "Name a whale or dolphin", "Name a monkey or ape", "Name a bird of prey",
+  "Name a bug that flies", "Name an animal that lives in the Arctic", "Name an animal found in Australia", "Name an extinct animal", "Name a soccer club",
+  "Name an NBA team", "Name an NFL team", "Name an MLB team", "Name a martial art", "Name a track and field event",
+  "Name a winter sport", "Name a tennis player", "Name a DC character", "Name a video game console", "Name a Lord of the Rings character",
+  "Name a Greek god or goddess", "Name a mythical creature", "Name a fairy tale", "Name a disease", "Name a unit of measurement",
+  "Name a programming language", "Name a computer brand", "Name a US president", "Name a famous scientist", "Name an inventor",
+  "Name a famous composer", "Name a rock band", "Name a boy band or girl group", "Name a musical (stage show)", "Name a famous author",
+  "Name a novel", "Name a Shakespeare play", "Name a tool in a toolbox", "Name a type of hat", "Name a fabric",
+  "Name a type of boat", "Name a type of aircraft", "Name a car model", "Name a bicycle part", "Name a thing that's sticky",
+  "Name a word that rhymes with cat", "Name a weather event", "Name a currency", "Name a type of dance music", "Name a guitar brand",
+  "Name a dance style", "Name a card game", "Name a chemical element", "Name a planet, moon or star", "Name a gemstone",
+  "Name a cat breed", "Name a snake", "Name a famous ship", "Name a drink you'd order at a café", "Name a festival or celebration",
+  "Name a metal", "Name a cocktail", "Name a Mexican food", "Name an Italian food", "Name a Japanese food",
+  "Name a Chinese food", "Name an Indian dish", "Name a type of pastry", "Name a berry", "Name a tropical fruit",
+  "Name a root vegetable", "Name a type of tea", "Name a famous painting", "Name a famous building", "Name a Taylor Swift song",
+  "Name a Batman villain", "Name a Spider-Man villain", "Name a Super Smash Bros fighter", "Name a Minecraft item or block", "Name a Christmas song",
+  "Name a horror movie", "Name a Marvel movie", "Name a type of doctor", "Name a music genre", "Name a math term",
+  "Name a slang word", "Name a compound word", "Name a word that rhymes with day", "Name a word that ends in -tion", "Name a word that's also a name",
+  "Name a hairstyle", "Name a famous TV host", "Name a YouTuber", "Name a famous comedian", "Name an Olympic athlete",
+  "Name a soccer player", "Name a basketball player", "Name a famous American football player", "Name a famous baseball player", "Name a fast car",
+  "Name a famous racehorse or horse breed", "Name a type of dog toy or pet supply", "Name a board or card game from your childhood", "Name a famous duo", "Name an ancient wonder or ruin",
+  "Name a famous explorer", "Name a famous king or queen", "Name an empire in history", "Name a war in history",
+];
+const HARD = [
+  "Name a bone in the human body", "Name a muscle", "Name a yoga pose", "Name a gymnastics move", "Name a Norse god",
+  "Name an opera", "Name a poet", "Name a chess opening", "Name a knot", "Name a rock or mineral",
+  "Name a constellation", "Name a tarot card", "Name a palindrome word", "Name a word that starts with Q", "Name a word with double letters",
+  "Name an onomatopoeia (sound word)", "Name an alphabet or writing system", "Name a butterfly or moth", "Name a spider", "Name a frog or toad",
+  "Name a Formula 1 driver", "Name a shark species", "Name a breed of horse", "Name a breed of chicken", "Name a type of apple",
+  "Name a type of mushroom", "Name a pepper or chili", "Name a leafy green", "Name a citrus fruit", "Name a wine grape",
+  "Name a type of sushi", "Name a French dish", "Name a cheese from France", "Name a word that ends in -ology", "Name a word that starts with Z",
+  "Name a French word used in English", "Name a Latin phrase used in English", "Name a type of cell in the body", "Name a part of the brain", "Name a hormone",
+  "Name a disease caused by a virus", "Name a medical specialty", "Name a rocket or spacecraft", "Name an astronaut", "Name a space mission",
+  "Name a fighter jet", "Name a famous bridge", "Name a famous museum", "Name a Shakespeare character", "Name a Greek hero",
+  "Name an Egyptian god", "Name a Roman emperor", "Name a famous battle", "Name a famous philosopher", "Name a famous mathematician",
+  "Name an ancient civilization", "Name a city in Japan", "Name a city in Italy", "Name a US state capital", "Name a nocturnal animal",
+  "Name an animal that hibernates", "Name a word for a group of animals (like a pride of lions)", "Name a musical term (like forte)", "Name a jazz musician", "Name a famous guitarist",
+  "Name an Oscar Best Picture winner", "Name an Alfred Hitchcock movie", "Name a Minecraft mob", "Name a Linux or terminal command", "Name a geometry term",
+  "Name a law or equation in physics", "Name a subatomic particle", "Name a Beatles song", "Name a Michael Jackson song", "Name a James Bond movie",
+  "Name a Star Wars planet", "Name a Mario Kart track", "Name an 8-bit or retro video game", "Name a deep-sea creature", "Name an invertebrate",
+  "Name a seabird", "Name a dog breed from Germany", "Name a type of fern or moss", "Name a cactus or succulent", "Name a famous diamond or jewel",
+  "Name a font or typeface",
+];
+const SEED = [...EASY, ...MEDIUM, ...HARD], LEVEL = {};
+[EASY, MEDIUM, HARD].forEach((ps, lv) => ps.forEach(p => LEVEL[p] = lv));
+const levelOf = p => LEVEL[p] ?? 1; // the daily game's prompts count as medium
 const key = c => `ab:${c}`, tkey = c => `ab:${c}:t`, BANK = "ab:bank";
 const clean = c => String(c || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -190,14 +229,28 @@ function suggestFor(names, raw) {
 async function listFor(prompt) { const v = await redis("HGET", BANK, prompt); return v ? JSON.parse(v) : []; }
 
 /* ----- game helpers ----- */
-function fuseRange(round) { const f = Math.pow(0.94, round - 1); return [Math.max(7000, Math.round(12500 * f)), Math.max(10000, Math.round(19500 * f))]; }
+function fuseRange(round, level = 0) { const f = Math.pow(0.95, round - 1), bonus = [0, 1000, 2500][level] || 0; return [Math.max(8500, Math.round(14500 * f)) + bonus, Math.max(12000, Math.round(22000 * f)) + bonus]; }
 function event(room, e) { room.seq = (room.seq || 0) + 1; room.event = { seq: room.seq, ...e, at: Date.now() }; }
 const inGame = p => p.alive && !p.left;
 function nextAlive(room, from) { const n = room.players.length; for (let s = 1; s <= n; s++) { const i = (from + s) % n; if (inGame(room.players[i])) return i; } return from; }
-function newBeam(room) { const [a, b] = fuseRange(room.round || 1), t = a + crypto.randomInt(b - a + 1), start = Math.max(Date.now(), room.reveal || 0); room.beam = { start, total: t, deadline: start + t }; }
+function newBeam(room) { const [a, b] = fuseRange(room.round || 1, room.level || 0), t = a + crypto.randomInt(b - a + 1), start = Math.max(Date.now(), room.reveal || 0); room.beam = { start, total: t, deadline: start + t }; }
+// which difficulty the next prompt should be: easy at first, mixing in medium, then hard as the rounds go up
+function wantLevel(round) {
+  const r = Math.random();
+  if (round <= 2) return 0;
+  if (round <= 4) return r < 0.6 ? 1 : 0;
+  if (round <= 6) return r < 0.7 ? 1 : r < 0.9 ? 2 : 0;
+  return r < 0.65 ? 2 : 1;
+}
 function nextPrompt(room) {
-  if (!room.deck?.length) room.deck = [...room.pool].sort(() => Math.random() - 0.5).filter(p => p !== room.prompt);
-  room.prompt = room.deck.shift() || room.pool[0]; room.used = []; room.reveal = Date.now() + REVEAL;
+  room.seen = room.seen || [];
+  const lv = wantLevel(room.round || 1), fresh = room.pool.filter(p => p !== room.prompt && !room.seen.includes(p));
+  let cands = fresh.filter(p => levelOf(p) === lv);
+  for (let d = 1; !cands.length && d <= 2; d++) cands = fresh.filter(p => Math.abs(levelOf(p) - lv) === d); // nearest level that's left
+  if (!cands.length) { room.seen = []; cands = room.pool.filter(p => p !== room.prompt); }
+  room.prompt = cands.length ? cands[crypto.randomInt(cands.length)] : room.pool[0];
+  room.seen.push(room.prompt); room.level = levelOf(room.prompt);
+  room.used = []; room.reveal = Date.now() + REVEAL;
   const alive = Math.max(1, room.players.filter(inGame).length); // lasts one trip around the line, sometimes up to half a trip more
   room.promptLeft = alive + crypto.randomInt(Math.ceil(alive * 0.6) + 1);
 }
@@ -278,7 +331,7 @@ function view(room, me, typing) {
   return {
     code: room.code, status: room.status, me: mi, host: mi === 0,
     players: room.players.map((p, i) => ({ name: p.name, lives: p.lives ?? START_LIVES, power: p.power || 0, alive: p.alive !== false, left: !!p.left, last: p.last || null, best: p.best || null, answers: p.answers || 0, bot: p.bot || null, me: i === mi })),
-    turn: room.turn ?? 0, turnId: room.turnId || 0, prompt: room.prompt || null, round: room.round || 1, usedCount: (room.used || []).length,
+    turn: room.turn ?? 0, turnId: room.turnId || 0, prompt: room.prompt || null, round: room.round || 1, level: room.level || 0, usedCount: (room.used || []).length,
     heat: Math.round(heat * 1000) / 1000, heatRate: room.status === "playing" ? Math.round(1e6 / room.beam.total) / 1000 : 0,
     revealIn: room.status === "playing" ? Math.max(0, (room.reveal || 0) - Date.now()) : 0, promptLeft: room.promptLeft || 0,
     botType: botView(room), winner: room.winner ?? null, event: room.event || null, seq: room.seq || 0, game: room.game || 1,
@@ -434,7 +487,7 @@ export default async function handler(req, res) {
         let pool = await bankPrompts();
         if (pool.length < 5) { await growBank(pool, 5); pool = await bankPrompts(); }
         if (!pool.length) return reply(503, { error: "The aliens are still writing prompts. Try again in a few seconds." });
-        room.pool = pool; room.deck = [];
+        room.pool = pool; room.deck = []; room.seen = []; room.level = 0;
         room.players = room.players.filter(p => !p.left).sort((a, b) => (a.bot ? 1 : 0) - (b.bot ? 1 : 0));
         room.players.forEach(p => { p.lives = START_LIVES; p.power = 0; p.answers = 0; p.alive = true; p.last = null; p.best = null; });
         room.solo = room.players.length === 1;
