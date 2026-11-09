@@ -124,7 +124,17 @@ Player's answer: "${answer}"
 2. If correct, how obscure is it from 0 to 100? 0 = the first thing everyone says. 50 = most people know it but wouldn't think of it. 80 = only fans or experts would know it. 100 = almost nobody has heard of it.
 3. If it's wrong but looks like a misspelling of a correct answer, put the correct answer in "suggest", otherwise leave it "".
 Reply with only JSON: {"valid": true or false, "name": "the answer's proper name", "obscurity": number, "why": "a short friendly reason, max 10 words", "suggest": ""}`, 240);
-  let v; try { v = parseJSON(await ask("haiku"), "{"); } catch { v = parseJSON(await ask("sonnet"), "{"); }
+  const v = await new Promise((resolve, reject) => {
+    let done = false, pending = 0, backupStarted = false, timer = 0;
+    const run = model => {
+      pending++;
+      ask(model).then(t => parseJSON(t, "{")).then(
+        x => { pending--; if (!done) { done = true; clearTimeout(timer); resolve(x); } },
+        e => { pending--; if (!backupStarted) backup(); else if (!done && pending === 0) reject(e); });
+    };
+    const backup = () => { if (backupStarted || done) return; backupStarted = true; clearTimeout(timer); run("sonnet"); };
+    run("haiku"); timer = setTimeout(backup, 1300); // Sonnet joins in if Haiku is slow or fails; first good verdict wins
+  });
   return { valid: !!v.valid, name: String(v.name || answer).slice(0, 50), obscurity: Math.max(0, Math.min(100, Number(v.obscurity) || 0)), why: String(v.why || "").slice(0, 80), suggest: v.valid ? "" : String(v.suggest || "").slice(0, 50) };
 }
 const LIST_RULES = `Use each answer's most common name. Put alternate names or spellings after a | (example: "Chickpea|Garbanzo bean").
@@ -225,6 +235,21 @@ function suggestFor(names, raw) {
     const d = osa(a, k); if (d < bestD) { bestD = d; best = entry.split("|")[0]; }
   }
   return best;
+}
+// Claude's verdict on an answer, cached; if another request is already asking, wait for its result instead of asking twice
+async function verdict(prompt, raw, req) {
+  const vk = `ab:v:${norm(prompt)}:${norm(raw)}`, pk = "ab:vp:" + vk.slice(5);
+  let v = await getJSON(vk); if (v) return v;
+  if (!(await redis("SET", pk, "1", "NX", "EX", "8"))) {
+    for (let i = 0; i < 50 && !v; i++) { await new Promise(r => setTimeout(r, 120)); v = await getJSON(vk); }
+    if (v) return v;
+  }
+  const ip = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim().slice(0, 64) || "x", ik = `moo:ip:${today()}:${ip}`;
+  const ni = await redis("INCR", ik); if (ni === 1) await redis("EXPIRE", ik, "172800");
+  if (ni > 2500) { const e = new Error("Too many guesses from here today."); e.status = 429; throw e; }
+  try { v = await judge(prompt, raw); } finally { if (!v) await redis("DEL", pk); }
+  await redis("SET", vk, JSON.stringify(v), "EX", String(30 * 86400));
+  return v;
 }
 async function listFor(prompt) { const v = await redis("HGET", BANK, prompt); return v ? JSON.parse(v) : []; }
 
@@ -402,6 +427,17 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
+    // checks what someone is typing as soon as they pause, so the answer is already judged when they press Enter
+    if (action === "check") {
+      const [room] = await load(code);
+      if (!room || room.status !== "playing" || !room.players.some(p => p.id === id) || Date.now() < (room.reveal || 0)) return res.status(200).json({ ok: false });
+      const raw = String(req.body.text || "").replace(/\s+/g, " ").trim().slice(0, 50);
+      if (raw.length < 3) return res.status(200).json({ ok: false });
+      const list = await listFor(room.prompt);
+      if (findInList(list, raw) >= 0) return res.status(200).json({ ok: true });
+      try { const v = await verdict(room.prompt, raw, req); return res.status(200).json({ ok: true, valid: !!v.valid }); } catch { return res.status(200).json({ ok: false }); }
+    }
+
     // an answer is checked before taking the room lock (checking a new answer with Claude can take a second)
     let checked = null;
     if (action === "answer") {
@@ -419,15 +455,9 @@ export default async function handler(req, res) {
       if (k >= 0) checked = onList(k);
       else if (x >= 0) { const s = scoreFromObscurity(extras[xs[x]]); checked = { key: "n:" + norm(xs[x]), alts: ["n:" + nk], answer: xs[x], tier: s.tier }; }
       else {
-        const vk = `ab:v:${norm(room0.prompt)}:${nk}`;
-        let v = await getJSON(vk);
-        if (!v) {
-          const ip = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim().slice(0, 64) || "x", ik = `moo:ip:${today()}:${ip}`;
-          const ni = await redis("INCR", ik); if (ni === 1) await redis("EXPIRE", ik, "172800");
-          if (ni > 400) return res.status(429).json({ error: "Too many guesses from here today." });
-          try { v = await judge(room0.prompt, raw); } catch { return res.status(503).json({ error: "Couldn't check that answer. Try again fast!" }); }
-          await redis("SET", vk, JSON.stringify(v), "EX", String(30 * 86400));
-        }
+        let v;
+        try { v = await verdict(room0.prompt, raw, req); }
+        catch (e) { return res.status(e.status || 503).json({ error: e.status ? e.message : "Couldn't check that answer. Try again fast!" }); }
         if (!v.valid) {
           await setTyping(room0, raw, "bad");
           let sug = suggestFor([...list, ...xs], raw) || v.suggest || "";
