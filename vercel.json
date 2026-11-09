@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/", "has": [{ "type": "host", "value": "moollion.cc" }], "destination": "/moollion.html" },
+    { "source": "/", "has": [{ "type": "host", "value": "www.moollion.cc" }], "destination": "/moollion.html" }
+  ]
+}
