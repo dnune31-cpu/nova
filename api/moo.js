@@ -117,6 +117,7 @@ Reply with only a JSON array of 10 strings.`, 800);
     const seen = new Set(recent.map(norm));
     const arr = parseJSON(t, "[").map(x => String(x).trim().slice(0, 60)).filter(x => x && !seen.has(norm(x))); // never repeat a recent prompt
     if (arr.length >= N) return arr.slice(0, N);
+    console.error("moo prompts: only " + arr.length + " new prompts", t.slice(0, 200));
   } catch (e) { console.error("moo prompts", e.message); }
   const pool = BACKUP.filter(p => !recent.includes(p)), pick = [];
   while (pick.length < N) { const src = pool.length ? pool : BACKUP; const p = src.splice(Math.floor(Math.random() * src.length), 1)[0]; if (p && !pick.includes(p)) pick.push(p); }
@@ -142,14 +143,14 @@ Reply with only JSON: {"valid": true or false, "name": "the answer's proper name
 }
 
 /* ----- the day's puzzle ----- */
-async function getDay(d, harder = false) {
+async function getDay(d, harder = false, chosen = null) {
   const day = await getJSON(K.day(d));
   if (day) return day;
   const got = await redis("SET", K.gen(d), "1", "NX", "EX", "150");
   if (!got) return null; // someone else is making it right now
   try {
     const recent = (await redis("LRANGE", K.recent, "0", "60")) || [];
-    const prompts = await makePrompts(recent, harder);
+    const prompts = chosen || await makePrompts(recent, harder);
     const lists = await Promise.all(prompts.map(makeList));
     const made = { date: d, prompts, lists, ver: Date.now() };
     await redis("SET", K.day(d), JSON.stringify(made), "EX", String(KEEP));
@@ -195,7 +196,8 @@ export default async function handler(req, res) {
       const auth = await getAuth(req);
       if (!auth || (!auth.admin && !isAdminEmail(auth.user.email))) return res.status(403).json({ error: "Only the site owner can restart a day." });
       await redis("DEL", K.day(d), K.plays(d), K.gen(d));
-      const day = await getDay(d, !!req.body.harder);
+      const chosen = Array.isArray(req.body.prompts) && req.body.prompts.length === N ? req.body.prompts.map(x => String(x).trim().slice(0, 60)) : null;
+      const day = await getDay(d, !!req.body.harder, chosen);
       if (!day) return res.status(503).json({ error: "Someone else is making today's prompts right now. Try again in a minute." });
       return res.status(200).json({ ok: true, date: d, prompts: day.prompts });
     }
