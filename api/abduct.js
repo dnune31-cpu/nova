@@ -90,7 +90,7 @@ List 120 different correct answers, ordered from the answer the MOST people woul
 Use each answer's most common name. Put alternate names or spellings after a | (example: "Chickpea|Garbanzo bean").
 Reply with only a JSON array of strings.`, 4000);
   let arr; try { arr = parseJSON(t, "["); } catch { // cut off mid-list: keep every complete answer
-    const s = t.indexOf("["), e = t.lastIndexOf('",'); if (s < 0 || e < s) throw new Error("Bad JSON"); arr = JSON.parse(t.slice(s, e + 1) + "]");
+    const s = t.indexOf("["), e = t.lastIndexOf('",'); if (s < 0 || e < s) throw new Error("Bad JSON " + t.length + ": " + t.slice(0, 160).replace(/\s+/g, " ")); arr = JSON.parse(t.slice(s, e + 1) + "]");
   }
   return arr.map(x => String(x).trim().slice(0, 80)).filter(Boolean).slice(0, 200);
 }
