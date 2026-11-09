@@ -149,7 +149,7 @@ async function getDay(d) {
     const recent = (await redis("LRANGE", K.recent, "0", "60")) || [];
     const prompts = await makePrompts(recent);
     const lists = await Promise.all(prompts.map(makeList));
-    const made = { date: d, prompts, lists };
+    const made = { date: d, prompts, lists, ver: Date.now() };
     await redis("SET", K.day(d), JSON.stringify(made), "EX", String(KEEP));
     for (const p of prompts) await redis("LPUSH", K.recent, p);
     await redis("LTRIM", K.recent, "0", "80");
@@ -189,6 +189,14 @@ async function view(d, day, email, name) {
 export default async function handler(req, res) {
   try {
     const d = today(), action = req.method === "POST" ? (req.body || {}).action : null;
+    if (action === "newday") { // the site owner can throw out today's prompts and make a fresh set (everyone's flight for today restarts)
+      const auth = await getAuth(req);
+      if (!auth || (!auth.admin && !isAdminEmail(auth.user.email))) return res.status(403).json({ error: "Only the site owner can restart a day." });
+      await redis("DEL", K.day(d), K.plays(d), K.gen(d));
+      const day = await getDay(d);
+      if (!day) return res.status(503).json({ error: "Someone else is making today's prompts right now. Try again in a minute." });
+      return res.status(200).json({ ok: true, date: d, prompts: day.prompts });
+    }
     if (action === "reset") { // the site owner (logged in to Nova) can wipe a player's flight for today
       const auth = await getAuth(req);
       if (!auth || (!auth.admin && !isAdminEmail(auth.user.email))) return res.status(403).json({ error: "Only the site owner can restart a day." });
@@ -243,7 +251,7 @@ export default async function handler(req, res) {
           result = { answer: list[at].split("|")[0], ...s, note: at === 0 ? "The number one answer. Everyone says that." : LINES[s.tier] };
         } else {
           const key = norm(raw);
-          let v = await getJSON(`${K.verdict(d, i)}:${key}`);
+          let v = await getJSON(`${K.verdict(d + (day.ver ? "." + day.ver : ""), i)}:${key}`);
           if (!v) {
             const n = await redis("INCR", K.judged(d, email));
             if (n === 1) await redis("EXPIRE", K.judged(d, email), "172800");
@@ -253,7 +261,7 @@ export default async function handler(req, res) {
             if (ni === 1) await redis("EXPIRE", K.ip(d, ip), "172800");
             if (ni > 400) return res.status(429).json({ error: "Too many guesses from here today. Come back tomorrow." });
             try { v = await judge(prompt, raw); } catch (e) { console.error("moo judge", e.message); return res.status(503).json({ error: "Couldn't check that answer right now. Try again." }); }
-            await redis("SET", `${K.verdict(d, i)}:${key}`, JSON.stringify(v), "EX", String(KEEP));
+            await redis("SET", `${K.verdict(d + (day.ver ? "." + day.ver : ""), i)}:${key}`, JSON.stringify(v), "EX", String(KEEP));
           }
           if (!v.valid) return res.status(422).json({ error: v.why || "That doesn't fit the prompt. Try another answer.", code: "invalid" });
           const s = scoreFromObscurity(v.obscurity);
