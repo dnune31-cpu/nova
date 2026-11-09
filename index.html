@@ -1029,6 +1029,95 @@ form#f{width:calc(100% - 20px)}
 .chlv button.on{border-color:transparent;color:#0b0b14}
 .chlv button.on.easy{background:#4ee08a}.chlv button.on.medium{background:#f4d03f}.chlv button.on.hard{background:#ff6a5a}.chlv button.on.side{background:#ffcf8a}
 .chbotlv{display:flex;align-items:center;gap:8px}
+/* Moo-llion (pixel sky, daily rare-answer game) */
+.gtile.c6{background:#4a7fd0 url("https://d8j0ntlcm91z4.cloudfront.net/user_3KOBfqwOB9ikrbu9I0UQir2iysj/hf_20261109_010015_b7dfcf78-f8cd-4ca6-afe7-28cc5c5c705a_min.webp") center 60%/cover}
+.gtile.c6:before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,14,34,.05) 20%,rgba(10,14,34,.82))}
+.gtile.c6>*{position:relative;z-index:1}.gtile.c6 small{color:#d6dcf0}
+.moo{position:relative;height:clamp(560px,calc(100vh - 150px),820px);border-radius:14px;overflow:hidden;background:#0d1530;color:#fff;font-family:"Space Mono",ui-monospace,monospace;isolation:isolate;user-select:none}
+.moo:fullscreen{height:100vh;border-radius:0}.moo.mfull{position:fixed;inset:0;height:auto;z-index:9999;border-radius:0}
+.moo button{font:inherit;color:inherit}
+.moobg i{position:absolute;inset:-5%;background-size:cover;background-position:center 60%;opacity:0;transform:translateY(-5%) scale(1.04);transition:opacity 1.2s ease,transform 1.5s cubic-bezier(.2,.7,.3,1);image-rendering:pixelated}
+.moobg i.on{opacity:1;transform:none}.moobg i.off{opacity:0;transform:translateY(9%) scale(1.06)}
+.mscan{position:absolute;inset:0;z-index:5;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,.12) 0 1px,transparent 1px 3px),radial-gradient(ellipse at center,transparent 55%,rgba(0,0,20,.38))}
+.mbox{background:rgba(13,20,44,.9);border:2px solid #070b1a;box-shadow:inset 0 0 0 1px rgba(255,255,255,.07),0 3px 0 rgba(0,0,0,.25);border-radius:4px;color:#fff;font-family:Silkscreen,monospace}
+.moohud{position:absolute;left:16px;top:14px;z-index:4;display:flex;flex-direction:column;gap:8px;max-width:min(520px,52%)}
+.moohud[hidden],.mprog[hidden],.mruler[hidden],.mbtn[hidden]{display:none}
+.malt{align-self:flex-start;padding:7px 14px 6px;text-align:center;min-width:96px}.malt small{display:block;font-size:9px;letter-spacing:2px;color:#aab3d6;text-transform:uppercase}.malt b{font-size:20px;color:#cfe8ff;font-weight:400}
+.mzone{padding:8px 12px;border-left:3px solid #5ad1ff}.mzone b{display:block;color:#7fe0ff;letter-spacing:2px;font-size:14px;font-weight:400;text-transform:uppercase}.mzone span{font-family:"Space Mono",monospace;font-size:11px;color:#d6dcf0;line-height:1.4;display:block;margin-top:2px}
+.mprog{position:absolute;left:50%;top:14px;transform:translateX(-50%);padding:8px 14px 6px;z-index:4;text-align:center}
+.mdots{display:flex;gap:4px;justify-content:center}.mdots i{width:12px;height:12px;background:#2a3456;border:1px solid #070b1a}.mdots i.on{background:var(--k,#f4c542)}
+.mprog small{display:block;font-size:9px;letter-spacing:2px;margin-top:5px;color:#d6dcf0;text-transform:uppercase}
+.mtopr{position:absolute;right:16px;top:14px;display:flex;gap:6px;z-index:6}
+.mbtn{height:34px;min-width:34px;padding:0 10px;cursor:pointer;font-size:12px!important;letter-spacing:1px;text-transform:uppercase}.mbtn:hover{border-color:#5ad1ff}
+.mruler{position:absolute;right:28px;top:76px;bottom:96px;width:70px;z-index:2;pointer-events:none}
+.mline{position:absolute;right:0;top:0;bottom:0;width:2px;background:rgba(10,15,34,.55)}
+.mticks span{position:absolute;right:8px;transform:translateY(-50%);font-family:Silkscreen,monospace;font-size:9px;background:rgba(13,20,44,.85);padding:2px 5px;border:1px solid #070b1a;color:#cfd6ee;white-space:nowrap}
+.mmark{position:absolute;right:-1px;width:0;height:0}.mmark:before{content:"";position:absolute;right:-6px;top:-5px;width:10px;height:10px;background:#ff5d8f;box-shadow:0 0 0 2px #1a0b14}
+.mmark span{position:absolute;right:12px;top:-10px;background:#ff5d8f;color:#1a0b14;font-family:Silkscreen,monospace;font-size:10px;padding:2px 6px;white-space:nowrap;box-shadow:0 0 0 2px #1a0b14}
+.moocowwrap{position:absolute;z-index:2;line-height:0;transition:left 1.2s cubic-bezier(.3,.7,.3,1),top 1.2s cubic-bezier(.3,.7,.3,1)}
+.moocowwrap canvas{image-rendering:pixelated;filter:drop-shadow(0 3px 0 rgba(0,0,0,.18))}
+.moocowwrap.ground{left:calc(50% - 24px);top:57%}
+.moocowwrap.air{left:19%;top:43%;animation:mooBob 3.2s ease-in-out infinite}
+.moocowwrap.air.lift{animation:mooLift 1.4s cubic-bezier(.3,.7,.3,1),mooBob 3.2s 1.4s ease-in-out infinite}
+@keyframes mooBob{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-8px) rotate(2deg)}}
+@keyframes mooLift{0%{transform:translateY(0)}35%{transform:translateY(-70px) rotate(-4deg)}100%{transform:translateY(0)}}
+.moofx{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden}
+.moofx i{position:absolute;top:-40px;width:24px;height:8px;background:#fff;opacity:.85;box-shadow:10px -7px 0 #fff,20px 0 0 #fff,6px 6px 0 #e3e9f6,18px 6px 0 #e3e9f6;transform:scale(var(--s,1));animation:mooFall 1.2s linear forwards}
+@keyframes mooFall{to{top:115%}}
+.mmain{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:96px 120px 28px;pointer-events:none}
+.mmain>*{pointer-events:auto}
+.mask:before,.mres:before{content:"";position:absolute;left:50%;top:52%;width:min(760px,92%);height:340px;transform:translate(-50%,-50%);background:radial-gradient(ellipse,rgba(8,12,30,.55),transparent 70%);z-index:-1;pointer-events:none}
+.mtitle{justify-content:space-between;padding:38px 20px 28px}
+.mlogo{font-family:Silkscreen,monospace;font-weight:700;font-size:clamp(40px,7.6vw,84px);letter-spacing:4px;margin:0;color:#ffeccf;line-height:1;text-shadow:4px 0 #ff5d8f,-4px 0 #3fd9ff,0 7px 0 rgba(0,0,0,.35)}
+.msub{font-family:Silkscreen,monospace;letter-spacing:6px;font-size:13px;color:#fff;text-shadow:0 2px 0 #000,0 0 8px rgba(0,0,0,.6);margin-top:12px;text-transform:uppercase}
+.mmenu{display:flex;flex-direction:column;align-items:center;gap:10px;width:min(480px,100%)}
+.mpill{font-family:Silkscreen,monospace;font-size:10px;letter-spacing:2px;background:rgba(13,20,44,.9);border:2px solid #070b1a;color:#fff;padding:5px 12px;border-radius:4px;text-transform:uppercase;cursor:pointer}
+.mgo{width:100%;font-family:Silkscreen,monospace!important;font-size:20px;letter-spacing:6px;text-transform:uppercase;color:#2a0b1c!important;background:#ec6f97;border:2px solid #fbd4e1;box-shadow:0 4px 0 #a33a5f,0 0 0 2px #1a0b14;padding:14px;cursor:pointer;border-radius:2px}
+.mgo:hover{filter:brightness(1.07)}.mgo:active{transform:translateY(2px);box-shadow:0 2px 0 #a33a5f,0 0 0 2px #1a0b14}.mgo:disabled{filter:saturate(.4);cursor:default;letter-spacing:2px;font-size:15px}
+.mgo.sm{width:auto;font-size:13px;letter-spacing:3px;padding:9px 16px}
+.mbar{width:100%;font-family:Silkscreen,monospace!important;font-size:13px;letter-spacing:3px;text-transform:uppercase;background:rgba(13,20,44,.92);border:2px solid #070b1a;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);padding:11px;cursor:pointer;border-radius:2px}
+.mbar em{font-style:normal;color:#7fe0ff;margin-left:8px;font-size:11px}.mbar.sm{width:auto;padding:9px 14px;font-size:12px}.mbar:hover{border-color:#5ad1ff}
+.mhelp{background:rgba(13,20,44,.94);border:2px solid #070b1a;padding:10px 14px;font-size:12px;line-height:1.55;text-align:left}
+.mhelp b{font-family:Silkscreen,monospace;color:#7fe0ff;font-weight:400;letter-spacing:2px;text-transform:uppercase}.mhelp p{margin:4px 0 0}.mhelp[hidden]{display:none}
+.mq small{font-family:Silkscreen,monospace;letter-spacing:3px;font-size:11px;color:#7fe0ff;background:rgba(13,20,44,.88);padding:3px 10px;border:1px solid #070b1a;text-transform:uppercase}
+.mq h2{font-family:Silkscreen,monospace;font-weight:400;font-size:clamp(24px,3.6vw,40px);letter-spacing:2px;margin:14px 0 20px;color:#fff6e4;text-transform:uppercase;max-width:780px;line-height:1.15;
+  text-shadow:3px 3px 0 #1a1033,-2px -2px 0 #1a1033,2px -2px 0 #1a1033,-2px 2px 0 #1a1033}
+.mform{display:flex;align-items:center;gap:8px;width:min(560px,100%);background:rgba(13,20,44,.95);border:2px solid #ffeccf;box-shadow:0 0 0 2px #070b1a,0 6px 0 rgba(0,0,0,.25);padding:6px 6px 6px 14px}
+.mform span{font-family:Silkscreen,monospace;color:#ff8fb3}
+.mform input{flex:1;min-width:0;background:none;border:0;outline:0;color:#fff;font-family:"Space Mono",monospace;font-size:18px;padding:8px 0}
+.mform input::placeholder{color:#7d86ad}.mform.wait{opacity:.75;pointer-events:none}.mform.bad{animation:mShake .35s;border-color:#ff6a6a}
+@keyframes mShake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.merr{min-height:24px;margin-top:10px;font-size:13px;color:#ffe2e8}.merr:not(:empty){background:rgba(13,20,44,.9);padding:4px 10px;border:1px solid #070b1a}
+.mskip{margin-top:8px;background:none;border:0;font-family:Silkscreen,monospace!important;font-size:10px;letter-spacing:2px;text-transform:uppercase;opacity:.8;cursor:pointer;text-shadow:0 1px 0 #000}.mskip:hover{opacity:1}
+.mico{position:relative;width:16px;height:19px;background:var(--k);border-radius:50% 50% 46% 46%;box-shadow:0 0 0 2px #1a1033;margin-bottom:12px;animation:mooBob 2.4s ease-in-out infinite}
+.mico:after{content:"";position:absolute;left:7px;top:21px;width:2px;height:9px;background:#fff;box-shadow:0 0 0 1px #1a1033}
+.mtier{font-family:Silkscreen,monospace;font-size:clamp(26px,4.2vw,46px);letter-spacing:6px;color:var(--k);text-transform:uppercase;margin:8px 0 8px;line-height:1.05;
+  text-shadow:3px 3px 0 #1a1033,-2px 0 0 #1a1033,2px 0 0 #1a1033,0 -2px 0 #1a1033;animation:mPop .5s cubic-bezier(.34,1.56,.64,1)}
+@keyframes mPop{from{transform:scale(.6);opacity:0}to{transform:none;opacity:1}}
+.mrare{display:flex;align-items:center;gap:3px;font-family:Silkscreen,monospace;font-size:9px;letter-spacing:2px;text-shadow:0 1px 0 #000;margin-bottom:12px;text-transform:uppercase}
+.mrare small{margin:0 6px}.mrare i{width:22px;height:6px;background:var(--k);opacity:.45}.mrare i.on{opacity:1;height:10px;box-shadow:0 0 0 2px #1a1033}
+.mans{font-family:"Space Mono",monospace;font-weight:700;font-size:26px;text-shadow:2px 2px 0 #1a1033}
+.mpts{font-family:Silkscreen,monospace;font-size:13px;letter-spacing:2px;margin-top:6px;text-shadow:0 2px 0 #1a1033}.mpts b{color:#ffd23f;font-weight:400}
+.mnote{font-size:12.5px;color:#bff0ff;margin:8px 0 18px;text-shadow:0 1px 0 #000,0 0 6px rgba(0,0,0,.7);max-width:520px}
+.mnext{width:auto;padding:12px 32px;font-size:16px}
+.mend{padding:92px 110px 24px}
+.mpanel{background:rgba(13,20,44,.94);border:2px solid #070b1a;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08),0 10px 30px rgba(0,0,0,.4);padding:16px 18px;width:min(620px,100%);max-height:100%;overflow:auto;text-align:left;user-select:text}
+.mpanel>small{font-family:Silkscreen,monospace;letter-spacing:2px;font-size:10px;color:#7fe0ff;text-transform:uppercase}
+.mpanel h2{font-family:Silkscreen,monospace;font-weight:400;font-size:34px;margin:2px 0 4px;color:#ffeccf}
+.mpanel p{margin:0 0 10px;font-size:13px;color:#d6dcf0}.mpanel p b{color:#7fe0ff}
+.mlist{list-style:none;margin:0 0 12px;padding:0;display:flex;flex-direction:column;gap:4px}
+.mlist li{display:grid;grid-template-columns:1fr auto auto;grid-template-areas:"p p p" "b i e";gap:2px 10px;padding:6px 8px;background:rgba(255,255,255,.04);border-left:3px solid #2a3456;font-size:13px}
+.mlist .mp{grid-area:p;color:#8f99c2;font-size:11px}.mlist b{grid-area:b}
+.mlist i{grid-area:i;font-style:normal;font-family:Silkscreen,monospace;font-size:10px;color:#0d142c;background:var(--k);padding:1px 6px;align-self:center}
+.mlist em{grid-area:e;font-style:normal;color:#ffd23f;font-family:Silkscreen,monospace;font-size:11px;align-self:center}
+.mrow{display:flex;gap:8px;flex-wrap:wrap}.mtiny{font-size:11px!important;color:#8f99c2!important;margin:10px 0 0!important}
+.mboard{list-style:none;margin:8px 0 10px;padding:0}
+.mboard li{display:grid;grid-template-columns:26px 1fr auto;grid-template-areas:"r b i" "r e e";gap:0 10px;padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.06);font-size:13px;align-items:center}
+.mboard li.me{background:rgba(255,93,143,.12)}.mrk{grid-area:r;font-family:Silkscreen,monospace;color:#ffd23f}.mboard b{grid-area:b}
+.mboard em{grid-area:e;font-style:normal;color:#8f99c2;font-size:11.5px}.mboard em.mflying{color:#7fe0ff}.mboard i{grid-area:i;font-style:normal;font-family:Silkscreen,monospace;color:#7fe0ff}
+@media (max-width:760px){.moo{height:clamp(540px,calc(100vh - 120px),760px)}.mzone,.mruler{display:none!important}.mprog{top:58px;left:auto;right:12px;transform:none}
+  .moohud{left:12px;top:12px}.mtopr{right:12px;top:12px}.mmain,.mend{padding:104px 14px 18px}.moocowwrap.air{left:7%;top:24%}.mq h2{font-size:24px}.mgo{font-size:16px;letter-spacing:4px}}
+@media (prefers-reduced-motion:reduce){.moo *{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
@@ -3166,6 +3255,7 @@ const novaGraphs = {store: new Map(), n: 0};
     {id: "2048", name: "2048", icon: "🔢", cls: "c3", sub: () => { const b = store.get("nova-2048-best", 0); return b ? `Best ${b.toLocaleString()}` : "Slide and merge"; }, start: start2048},
     {id: "cards", name: "Nova Cards", icon: "🪐", cls: "c4", sub: () => "UNO-style · 2 to 4 friends", start: root => startNovaCards(root)},
     {id: "wordbomb", name: "Word Bomb", icon: "💣", cls: "c5", sub: () => "Type fast · 1 to 8 friends", start: root => startWordBomb(root)},
+    {id: "moo", name: "Moo-llion", icon: "🐄", cls: "c6", sub: () => "Daily · the rarer the answer, the higher you float", start: root => startMoo(root)},
   ];
   function showHub() {
     stopGame();
@@ -3867,6 +3957,251 @@ function startNovaCards(root) {
 
   lobby();
   return {stop() { stopped = true; clearInterval(poll); }};
+}
+
+/* ---------- Moo-llion: daily word game, the rarer your answer the higher your cow floats ---------- */
+function startMoo(root) {
+  const IMG = "https://d8j0ntlcm91z4.cloudfront.net/user_3KOBfqwOB9ikrbu9I0UQir2iysj/hf_20261109_";
+  const SCENES = ["010015_b7dfcf78-f8cd-4ca6-afe7-28cc5c5c705a", "010014_0b70e6ac-9caf-47e8-a9a9-fc84493a60a1", "010014_06a075f2-9d53-4f46-bbf8-cccd147b1b17",
+    "010014_7805181d-ae17-4f85-88b4-badffc9feb02", "010015_477b5311-ba65-4b30-9b88-cab11688d00d", "010013_e8d385b4-bd8f-45bf-a541-948406faccf6",
+    "010013_87567b9b-0dc4-43e7-b16d-ee1b203ec47e"].map(id => IMG + id + "_min.webp");
+  // where you are in the sky (by total height), with the picture for each
+  const ZONES = [
+    {at: 0, scene: 1, name: "The Pasture", text: "Hay bales, a red barn, a winding path. Your hooves just left the grass."},
+    {at: 200, scene: 2, name: "The Treetops", text: "The roof of the forest, right under your hooves."},
+    {at: 900, scene: 3, name: "The Clouds", text: "Soft white puffs on every side. The farm is a quilt far below."},
+    {at: 3000, scene: 4, name: "The Jet Stream", text: "Fast winds and a golden sunset. A plane waves its wings at you."},
+    {at: 8000, scene: 5, name: "The Stratosphere", text: "The Earth curves away below and the sky turns dark blue."},
+    {at: 15000, scene: 6, name: "Deep Space", text: "Stars all around and the Moon up close. One in a moo-llion."},
+  ];
+  const TIERC = ["#7bd389", "#3fc29a", "#55b3ff", "#a07bff", "#ff6ad5", "#ffd23f"];
+  const get = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } };
+  const set = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+  const escM = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
+  const fmt = n => Math.round(n).toLocaleString() + "m";
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const zoneOf = m => { let z = 0; ZONES.forEach((x, i) => { if (m >= x.at) z = i; }); return z; };
+  let st = null, stopped = false, pollT = 0, shown = 0, busy = false, scene = -1, countRaf = 0, muted = get("nova-moo-mute", false), ac = null;
+
+  if (!document.getElementById("mooFonts")) {
+    const l = document.createElement("link"); l.id = "mooFonts"; l.rel = "stylesheet";
+    l.href = "https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Space+Mono:wght@400;700&display=swap";
+    document.head.appendChild(l);
+  }
+  SCENES.forEach(u => { const i = new Image(); i.src = u; }); // warm the cache so the sky changes instantly
+
+  /* ----- the little pixel cow and its balloon ----- */
+  const SPRITE = [
+    "....rrrrrrr.....", "...rrwrrrrrr....", "..rrwwrrrrrrr...", "..rrwrrrrrrrr...", "..rrrrrrrrrrr...", "..rrrrrrrrrrd...", "...rrrrrrrrd....", "....rrrrrrd.....",
+    "......ddd.......", ".......s........", ".......s........", "........s.......", "........s....hh.", "..kkkkkkkkkkkkkk", ".kwwbbwwwwbwkwek", "kwbbbwwwwwwkwwwk",
+    ".kwwbwwwbbwwkppk", "..kwwwwwbbbwwkpk", "..kkkkkkkkkkkkk.", "..k.k.....k.k...", "..n.n.....n.n...",
+  ];
+  const PAL = {r: "#ff4d5e", w: "#ffffff", d: "#b8202e", s: "#e9e6dc", k: "#1a1a24", b: "#2b2b36", h: "#f2e3b3", p: "#ffb3c1", e: "#1a1a24", n: "#3a3a46"};
+  function cowCanvas(scale = 3) {
+    const c = document.createElement("canvas"); c.width = 16; c.height = SPRITE.length; c.className = "moocow";
+    c.style.width = 16 * scale + "px"; c.style.height = SPRITE.length * scale + "px";
+    const x = c.getContext("2d");
+    SPRITE.forEach((row, y) => [...row].forEach((ch, i) => { if (PAL[ch]) { x.fillStyle = PAL[ch]; x.fillRect(i, y, 1, 1); } }));
+    return c;
+  }
+
+  /* ----- little sounds (can be muted) ----- */
+  function tone(f, t0, dur, type = "square", vol = 0.05) {
+    if (muted) return;
+    try {
+      ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+      const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime + t0;
+      o.type = type; o.frequency.setValueAtTime(f, t); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g).connect(ac.destination); o.start(t); o.stop(t + dur + 0.02);
+    } catch {}
+  }
+  const sfx = {
+    tap: () => tone(660, 0, 0.06),
+    bad: () => { tone(220, 0, 0.12, "sawtooth", 0.04); tone(180, 0.1, 0.16, "sawtooth", 0.04); },
+    rise: tier => { [0, 1, 2, 3, 4].slice(0, tier + 2).forEach((k, i) => tone(392 * Math.pow(1.26, k), i * 0.09, 0.14, "triangle", 0.06)); },
+  };
+
+  /* ----- the shell: sky, HUD, and the middle area that changes ----- */
+  root.innerHTML = `<div class="moo"><div class="moobg">${SCENES.map((u, i) => `<i data-s="${i}" style="background-image:url('${u}')"></i>`).join("")}</div>
+    <div class="moofx"></div><div class="moocowwrap"></div>
+    <div class="moohud" hidden><div class="mbox malt"><small>Altitude</small><b>0m</b></div><div class="mbox mzone"><b></b><span></span></div></div>
+    <div class="mbox mprog" hidden><div class="mdots"></div><small></small></div>
+    <div class="mtopr"><button type="button" class="mbox mbtn msnd" aria-label="Sound"></button><button type="button" class="mbox mbtn mfs" aria-label="Full screen">⛶</button><button type="button" class="mbox mbtn mquit" hidden>Quit</button></div>
+    <div class="mruler" hidden><div class="mline"></div><div class="mticks"></div><div class="mmark"><span></span></div></div>
+    <div class="mmain"></div><div class="mscan"></div></div>`;
+  const $m = s => root.querySelector(s), main = $m(".mmain"), wrap = $m(".moo");
+  const sndBtn = $m(".msnd"), syncSnd = () => { sndBtn.textContent = muted ? "🔇" : "🔊"; sndBtn.setAttribute("aria-pressed", String(!muted)); };
+  syncSnd(); sndBtn.onclick = () => { muted = !muted; set("nova-moo-mute", muted); syncSnd(); sfx.tap(); };
+  $m(".mquit").onclick = () => title();
+  const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement;
+  $m(".mfs").onclick = async () => {
+    if (fsEl() || wrap.classList.contains("mfull")) { wrap.classList.remove("mfull"); if (fsEl()) (document.exitFullscreen || document.webkitExitFullscreen)?.call(document)?.catch?.(() => {}); return; }
+    try { await (wrap.requestFullscreen || wrap.webkitRequestFullscreen).call(wrap); } catch { wrap.classList.add("mfull"); }
+  };
+  const onKey = e => { if (e.key === "Escape" && wrap.classList.contains("mfull")) wrap.classList.remove("mfull"); };
+  document.addEventListener("keydown", onKey);
+
+  function setScene(i) {
+    if (i === scene) return;
+    const old = root.querySelector(".moobg i.on");
+    if (old) { old.classList.remove("on"); old.classList.add("off"); setTimeout(() => old.classList.remove("off"), 1400); }
+    root.querySelector(`.moobg i[data-s="${i}"]`)?.classList.add("on");
+    scene = i;
+  }
+  function placeCow(mode) { // "ground" on the title screen, "air" while playing
+    const w = $m(".moocowwrap");
+    if (!w.firstChild) w.appendChild(cowCanvas(3));
+    w.className = "moocowwrap " + mode;
+  }
+
+  /* ----- HUD ----- */
+  function hud(alt) {
+    const z = ZONES[zoneOf(alt)];
+    $m(".malt b").textContent = fmt(alt);
+    $m(".mzone b").textContent = z.name; $m(".mzone span").textContent = z.text;
+    // ruler: 0 at the bottom, a round number above you at the top
+    const steps = [500, 1000, 2500, 5000, 10000, 20000, 40000, 80000];
+    const top = steps.find(s => s >= alt * 1.25 + 100) || steps[steps.length - 1];
+    const ticks = $m(".mticks");
+    if (ticks.dataset.top !== String(top)) {
+      ticks.dataset.top = top;
+      ticks.innerHTML = Array.from({length: 6}, (_, k) => { const v = top * (5 - k) / 5; return `<span style="top:${k * 20}%">${v >= 1000 ? (v / 1000).toLocaleString() + "km" : v + "m"}</span>`; }).join("");
+    }
+    const mk = $m(".mmark"); mk.style.top = (100 - Math.min(100, alt / top * 100)) + "%"; mk.querySelector("span").textContent = fmt(alt);
+  }
+  function dots() {
+    const n = st.count, a = st.answers.length;
+    $m(".mdots").innerHTML = Array.from({length: n}, (_, k) => `<i class="${k < a ? "on" : ""}" style="${k < a && st.answers[k].tier >= 0 ? `--k:${TIERC[st.answers[k].tier]}` : ""}"></i>`).join("");
+    $m(".mprog small").textContent = st.done ? "Flight complete" : `Prompt ${Math.min(n, a + 1)} of ${n}`;
+  }
+  function countTo(from, to) {
+    cancelAnimationFrame(countRaf);
+    if (reduce) { shown = to; hud(to); return; }
+    const t0 = performance.now(), dur = 1300;
+    const step = now => {
+      const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+      shown = from + (to - from) * e; hud(shown);
+      if (zoneOf(shown) !== zoneOf(from) || k === 1) setScene(ZONES[zoneOf(shown)].scene);
+      if (k < 1) countRaf = requestAnimationFrame(step);
+    };
+    countRaf = requestAnimationFrame(step);
+  }
+  function whoosh(strength) { // clouds rush past while the cow rises
+    if (reduce) return;
+    const fx = $m(".moofx");
+    for (let k = 0; k < 3 + strength * 2; k++) {
+      const c = document.createElement("i");
+      c.style.left = (Math.random() * 90) + "%"; c.style.setProperty("--s", (0.6 + Math.random() * 1.2).toFixed(2));
+      c.style.animationDelay = (Math.random() * 0.5).toFixed(2) + "s"; c.style.animationDuration = (0.9 + Math.random() * 0.6).toFixed(2) + "s";
+      fx.appendChild(c); setTimeout(() => c.remove(), 2400);
+    }
+    const w = $m(".moocowwrap"); w.classList.remove("lift"); void w.offsetWidth; w.classList.add("lift");
+  }
+
+  /* ----- screens ----- */
+  function playing(on) {
+    $m(".moohud").hidden = $m(".mprog").hidden = $m(".mruler").hidden = $m(".mquit").hidden = !on;
+    wrap.classList.toggle("onair", on); $m(".mquit").textContent = "Quit";
+  }
+  function title() {
+    playing(false); setScene(0); placeCow("ground");
+    const a = st ? st.answers.length : 0, done = st && st.done;
+    main.className = "mmain mtitle";
+    main.innerHTML = `<div class="mhead"><h1 class="mlogo">MOO-LLION</h1><div class="msub">The daily float${st ? " #" + st.num : ""}</div></div>
+      <div class="mmenu"><div class="mhelp" hidden><b>How to play</b><p>Every day there are 7 prompts, the same for everyone, like "Name a dog breed". Give one answer to each. The rarer your answer is (while still being right), the higher your cow floats: Pasture, Treetops, Clouds, Jet stream, Stratosphere, and the top: One in a Moo-llion. Your total height is your score. New prompts every day at midnight.</p></div>${st && st.streak ? `<div class="mpill">🔥 ${st.streak} day streak</div>` : `<button type="button" class="mpill mhow">? How to play</button>`}
+      <button type="button" class="mgo">${done ? "▸ See my flight ◂" : a ? "▲ Keep floating ▲" : "▲ Lift off ▲"}</button>
+      <button type="button" class="mbar mlb">Today's leaderboard <em>${st ? st.board.length : 0} played</em></button></div>`;
+    main.querySelector(".mgo").onclick = () => { sfx.tap(); if (!st) return; done ? results() : play(); };
+    main.querySelector(".mlb").onclick = () => { sfx.tap(); board(); };
+    const how = main.querySelector(".mhow"); if (how) how.onclick = () => { const h = main.querySelector(".mhelp"); h.hidden = !h.hidden; };
+    if (!st) { main.querySelector(".mgo").disabled = true; main.querySelector(".mgo").textContent = "Loading…"; }
+  }
+  function play() {
+    if (st.done) return results();
+    playing(true); placeCow("air");
+    shown = st.total; hud(shown); setScene(ZONES[zoneOf(shown)].scene); dots();
+    const i = st.answers.length, prompt = st.prompts[i];
+    main.className = "mmain mask";
+    main.innerHTML = `<div class="mq"><small>Prompt ${i + 1} of ${st.count}</small><h2>${escM(prompt)}</h2></div>
+      <form class="mform" autocomplete="off"><span>&gt;</span><input maxlength="50" placeholder="type your answer" aria-label="Your answer" spellcheck="false"><button type="submit" class="mgo sm">Float ▸</button></form>
+      <div class="merr" role="alert"></div><button type="button" class="mskip">skip this one</button>`;
+    const form = main.querySelector(".mform"), inp = form.querySelector("input"), err = main.querySelector(".merr");
+    inp.focus({preventScroll: true});
+    inp.addEventListener("input", () => { err.textContent = ""; form.classList.remove("bad"); });
+    form.onsubmit = e => { e.preventDefault(); const v = inp.value.trim(); if (v.length >= 2) send("answer", v); };
+    main.querySelector(".mskip").onclick = () => { if (confirm("Skip this prompt? You won't float for it.")) send("skip", ""); };
+  }
+  async function send(action, answer) {
+    if (busy) return; busy = true;
+    const form = main.querySelector(".mform"), err = main.querySelector(".merr");
+    form?.classList.add("wait"); if (err) err.textContent = action === "answer" ? "Checking the sky charts…" : "";
+    try {
+      const d = await api("/api/moo", {method: "POST", body: JSON.stringify({action, i: st.answers.length, answer})});
+      busy = false; const before = st.total; st = d.state; reveal(d.result, before);
+    } catch (e) {
+      busy = false; if (handleAuthError(e)) return;
+      if (e.data?.state) { st = e.data.state; return play(); }
+      form?.classList.remove("wait");
+      if (err) err.textContent = e.message;
+      if (form) { form.classList.remove("bad"); void form.offsetWidth; form.classList.add("bad"); form.querySelector("input").select(); }
+      sfx.bad();
+    }
+  }
+  function reveal(r, before) {
+    dots();
+    const t = r.tier, last = st.done;
+    main.className = "mmain mres";
+    main.innerHTML = t < 0 ? `<div class="mtier" style="--k:#aab3e6">Skipped</div><p class="mnote">${escM(r.note)}</p>` :
+      `<div class="mico" style="--k:${TIERC[t]}"></div><div class="mtier" style="--k:${TIERC[t]}">${escM(st.tiers[t])}</div>
+      <div class="mrare"><small>Common</small>${TIERC.map((c, k) => `<i style="--k:${c}" class="${k === t ? "on" : ""}"></i>`).join("")}<small>Rare</small></div>
+      <div class="mans">“${escM(r.answer)}”</div><div class="mpts"><b>+${r.m.toLocaleString()}m</b> · up to ${fmt(st.total)}</div><p class="mnote">${escM(r.note)}</p>`;
+    main.insertAdjacentHTML("beforeend", `<button type="button" class="mgo mnext">${last ? "See my flight ▸" : "Next ▸"}</button>`);
+    const next = main.querySelector(".mnext"); next.onclick = () => { sfx.tap(); last ? results() : play(); };
+    setTimeout(() => next.focus({preventScroll: true}), 50);
+    if (t >= 0) { sfx.rise(t); whoosh(t); }
+    countTo(before, st.total);
+  }
+  function results() {
+    playing(true); placeCow("air"); shown = st.total; hud(st.total); setScene(ZONES[zoneOf(st.total)].scene); dots();
+    $m(".mquit").textContent = "Menu";
+    const z = ZONES[zoneOf(st.total)];
+    const rows = st.answers.map((a, k) => `<li><span class="mp">${escM(st.prompts[k] || "")}</span><b>${a.tier < 0 ? "skipped" : escM(a.answer)}</b><i style="--k:${a.tier < 0 ? "#555" : TIERC[a.tier]}">${a.tier < 0 ? "–" : escM(st.tiers[a.tier])}</i><em>+${a.m.toLocaleString()}m</em></li>`).join("");
+    main.className = "mmain mend";
+    main.innerHTML = `<div class="mpanel"><small>Flight complete · #${st.num}</small><h2>${fmt(st.total)}</h2><p>You reached <b>${escM(z.name)}</b>${st.streak ? ` · 🔥 ${st.streak} day streak` : ""}</p>
+      <ol class="mlist">${rows}</ol><div class="mrow"><button type="button" class="mgo sm mshare">Copy my flight</button><button type="button" class="mbar sm mlb">Leaderboard</button></div><p class="mtiny">New prompts at midnight.</p></div>`;
+    main.querySelector(".mlb").onclick = () => board();
+    main.querySelector(".mshare").onclick = e => {
+      const sq = ["🟩", "🟢", "🟦", "🟪", "🩷", "⭐"];
+      const txt = `Moo-llion #${st.num} 🐄🎈 ${fmt(st.total)}\n${st.answers.map(a => a.tier < 0 ? "⬛" : sq[a.tier]).join("")}\nnova.futbol`;
+      navigator.clipboard?.writeText(txt).then(() => { e.target.textContent = "Copied!"; setTimeout(() => e.target.textContent = "Copy my flight", 1400); }, () => {});
+    };
+  }
+  function board() {
+    const done = st && st.done;
+    playing(false); setScene(done ? ZONES[zoneOf(st.total)].scene : 0); placeCow(done ? "air" : "ground");
+    main.className = "mmain mend";
+    const rows = (st?.board || []).map((p, k) => `<li class="${p.me ? "me" : ""}"><span class="mrk">${k + 1}</span><b>${escM(p.name)}</b>${p.count < st.count ? `<em class="mflying">flying… ${p.count}/${st.count}</em>` : p.best ? `<em>best: “${escM(p.best.answer)}”</em>` : "<em></em>"}<i>${fmt(p.total)}</i></li>`).join("");
+    main.innerHTML = `<div class="mpanel"><small>Today · #${st ? st.num : ""}</small><h2>Leaderboard</h2>${rows ? `<ol class="mboard">${rows}</ol>` : `<p>No one has floated yet today. Be the first!</p>`}
+      ${done ? "" : `<p class="mtiny">Finish your flight to see everyone's best answers.</p>`}<div class="mrow"><button type="button" class="mgo sm mback">◂ Back</button></div></div>`;
+    main.querySelector(".mback").onclick = () => title();
+  }
+
+  async function load() {
+    const slow = setTimeout(() => { const g = main.querySelector(".mgo"); if (g && !st) g.textContent = "Inflating today's balloon…"; }, 2500);
+    try {
+      const d = await api("/api/moo");
+      clearTimeout(slow);
+      if (stopped) return;
+      if (d.preparing) { const g = main.querySelector(".mgo"); if (g) g.textContent = "Inflating today's balloon…"; pollT = setTimeout(load, 3000); return; }
+      st = d; title();
+    } catch (e) {
+      clearTimeout(slow);
+      if (stopped || handleAuthError(e)) return;
+      const g = main.querySelector(".mgo"); if (g) { g.disabled = false; g.textContent = "Couldn't reach the sky. Try again"; g.onclick = () => { g.disabled = true; g.textContent = "Inflating today's balloon…"; load(); }; }
+    }
+  }
+  title(); load();
+  return {stop() { stopped = true; clearTimeout(pollT); cancelAnimationFrame(countRaf); document.removeEventListener("keydown", onKey); if (fsEl()) (document.exitFullscreen || document.webkitExitFullscreen)?.call(document)?.catch?.(() => {}); }};
 }
 
 /* ---------- Word Bomb: type a word with the letters before the bomb blows (1 to 8 friends) ---------- */
