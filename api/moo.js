@@ -255,11 +255,11 @@ export default async function handler(req, res) {
           if (!v) {
             const n = await redis("INCR", K.judged(d, email));
             if (n === 1) await redis("EXPIRE", K.judged(d, email), "172800");
-            if (n > 60) return res.status(429).json({ error: "That's a lot of guesses today. Try one of your answers again later." });
+            if (n > 250) return res.status(429).json({ error: "That's a lot of guesses today. Try one of your answers again later." });
             const ip = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim().slice(0, 64) || "x";
             const ni = await redis("INCR", K.ip(d, ip));
             if (ni === 1) await redis("EXPIRE", K.ip(d, ip), "172800");
-            if (ni > 400) return res.status(429).json({ error: "Too many guesses from here today. Come back tomorrow." });
+            if (ni > 3000) return res.status(429).json({ error: "Too many guesses from here today. Come back tomorrow." });
             try { v = await judge(prompt, raw); } catch (e) { console.error("moo judge", e.message); return res.status(503).json({ error: "Couldn't check that answer right now. Try again." }); }
             await redis("SET", `${K.verdict(d + (day.ver ? "." + day.ver : ""), i)}:${key}`, JSON.stringify(v), "EX", String(KEEP));
           }

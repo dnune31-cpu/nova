@@ -287,7 +287,7 @@ async function verdict(prompt, raw, req) {
     for (let i = 0; i < 50 && !v; i++) { await new Promise(r => setTimeout(r, 120)); v = await getJSON(vk); }
     if (v) return v;
   }
-  const ip = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim().slice(0, 64) || "x", ik = `moo:ip:${today()}:${ip}`;
+  const ip = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim().slice(0, 64) || "x", ik = `ab:ip:${today()}:${ip}`;
   const ni = await redis("INCR", ik); if (ni === 1) await redis("EXPIRE", ik, "172800");
   if (ni > 2500) { const e = new Error("Too many guesses from here today."); e.status = 429; throw e; }
   try { v = await judge(prompt, raw); } finally { if (!v) await redis("DEL", pk); }
