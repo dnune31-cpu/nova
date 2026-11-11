@@ -32,7 +32,7 @@ const shift = (d, n) => new Date(Date.parse(d + "T12:00:00Z") + n * 86400000).to
 const K = {
   day: d => `moo:day:${d}`, gen: d => `moo:gen:${d}`, plays: d => `moo:p:${d}`, verdict: (d, i) => `moo:v:${d}:${i}`,
   pid: id => `moo:pid:${id}`, name: n => `moo:name:${n}`, ip: (d, ip) => `moo:ip:${d}:${ip}`,
-  user: e => `moo:u:${e}`, lock: e => `moo:lk:${e}`, judged: (d, e) => `moo:j:${d}:${e}`, recent: "moo:recent",
+  user: e => `moo:u:${e}`, lock: e => `moo:lk:${e}`, judged: (d, e) => `moo:j:${d}:${e}`, recent: "moo:recent", rate: d => `moo:rate:${d}`,
 };
 
 /* ----- matching answers (forgiving about case, accents, "the", plurals and small typos) ----- */
@@ -78,11 +78,24 @@ export function scoreFromRank(idx, len) {
   let t = 0; while (t < 4 && p >= cuts[t + 1]) t++;
   return place(t, (p - cuts[t]) / (cuts[t + 1] - cuts[t]));
 }
-export function scoreFromObscurity(o) {
-  const v = Math.max(0, Math.min(100, Number(o) || 0)), cuts = [0, 15, 35, 55, 75, 90, 100.01];
-  let t = 0; while (t < 5 && v >= cuts[t + 1]) t++;
+// one rarity scale for everything: every answer on a day's list is rated on it, and so are new answers Claude checks.
+// An answer's tier comes from its own rating (how rarely people would say it), not from its spot on the list.
+export const RARITY_SCALE = `Picture asking 1,000 random people this prompt, each giving a few answers.
+0-19 = lots of people would say it (the famous, obvious answers).
+20-39 = a fair number of people would say it.
+40-59 = most people know it but few would think to say it.
+60-77 = rarely said; takes real knowledge of the topic.
+78-91 = very rare; only fans or experts would come up with it.
+92-100 = almost nobody would ever say it: truly one in a million.
+Be strict: the most famous handful should be under 10, and only genuinely obscure answers go above 90.
+Rate how rarely it would be SAID, not how hard it is to spell or how long it is. A famous thing is common even if it sits late in a list.`;
+export const RARE_CUTS = [20, 40, 60, 78, 92];
+export const rareTier = r => { const v = Math.max(0, Math.min(100, Number(r) || 0)); let t = 0; while (t < 5 && v >= RARE_CUTS[t]) t++; return t; };
+export function scoreFromRating(r) {
+  const v = Math.max(0, Math.min(100, Number(r) || 0)), cuts = [0, ...RARE_CUTS, 100.01], t = rareTier(v);
   return place(t, (v - cuts[t]) / (cuts[t + 1] - cuts[t]));
 }
+export const scoreFromObscurity = scoreFromRating;
 function place(t, f) { const [lo, hi] = METERS[t]; return { tier: t, m: Math.round((lo + (hi - lo) * Math.max(0, Math.min(1, f))) / 10) * 10 }; }
 
 /* ----- Claude ----- */
@@ -94,7 +107,9 @@ async function claude(model, system, user, maxTokens) {
   });
   const d = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(d?.error?.message || "Claude request failed");
-  return (d.content || []).map(c => c.text || "").join("");
+  const text = (d.content || []).map(c => c.text || "").join("");
+  if (!text) throw new Error("Empty reply (" + d.stop_reason + ")");
+  return text;
 }
 function parseJSON(text, open) {
   const s = text.indexOf(open), e = text.lastIndexOf(open === "[" ? "]" : "}");
@@ -132,11 +147,40 @@ Reply with only a JSON array of strings.`, 4000);
     return parseJSON(t, "[").map(x => String(x).trim().slice(0, 80)).filter(Boolean).slice(0, 220);
   } catch (e) { console.error("moo list", e.message); return []; }
 }
-async function judge(prompt, answer) {
+// rates every answer on a list with the scale above
+export async function rateList(prompt, list) {
+  const names = list.map(x => x.split("|")[0]);
+  const t = await claude("sonnet", SYS, `Prompt: "${prompt}"
+Rate how RARE each answer below is as an answer to this prompt, from 0 to 100.
+${RARITY_SCALE}
+Answers:
+${names.map((x, i) => (i + 1) + ". " + x).join("\n")}
+Reply with only a JSON object mapping each answer's number to its rating, like {"1": 3, "2": 41}.`, 5000);
+  const o = parseJSON(t, "{"), out = names.map((_, i) => { const v = Number(o[i + 1]); return Number.isFinite(v) ? Math.max(0, Math.min(100, Math.round(v))) : null; });
+  const have = out.filter(v => v !== null).length;
+  if (have < names.length * 0.8) throw new Error("Rated only " + have + " of " + names.length);
+  for (let i = 0; i < out.length; i++) if (out[i] === null) { // fill gaps from the neighbors
+    let a = i - 1; while (a >= 0 && out[a] === null) a--; let b = i + 1; while (b < out.length && out[b] === null) b++;
+    out[i] = a >= 0 && b < out.length ? Math.round((out[a] + out[b]) / 2) : a >= 0 ? out[a] : b < out.length ? out[b] : 50;
+  }
+  return out;
+}
+// a few already-rated answers from the list, spread from common to rare, so a new answer is rated on the same footing
+function anchors(list, rare) {
+  if (!rare || !list.length) return "";
+  const picks = [];
+  for (const want of [5, 30, 50, 70, 88]) {
+    let best = -1;
+    for (let k = 0; k < list.length; k++) if (Number.isFinite(rare[k]) && !picks.includes(k) && (best < 0 || Math.abs(rare[k] - want) < Math.abs(rare[best] - want))) best = k;
+    if (best >= 0) picks.push(best);
+  }
+  return picks.length ? `\nFor reference, these answers to the same prompt were rated: ${picks.map(k => `${list[k].split("|")[0]} = ${rare[k]}`).join(", ")}.` : "";
+}
+async function judge(prompt, answer, list = [], rare = null) {
   const t = await claude("haiku", SYS, `Prompt: "${prompt}"
 Player's answer: "${answer}"
 1. Is it a real, correct answer to the prompt? Be fair: accept normal spellings and small typos, but reject jokes, made-up things, things that don't fit, and answers that are too vague (like "dog" for "Name a dog breed").
-2. If correct, how obscure is it from 0 to 100? 0 = the first thing everyone says. 50 = most people know it but wouldn't think of it. 80 = only fans or experts would know it. 100 = almost nobody has heard of it.
+2. If correct, how RARE is it as an answer, 0 to 100? ${RARITY_SCALE}${anchors(list, rare)}
 Reply with only JSON: {"valid": true or false, "name": "the answer's proper name", "obscurity": number, "why": "a short friendly reason, max 12 words"}`, 200);
   const v = parseJSON(t, "{");
   return { valid: !!v.valid, name: String(v.name || answer).slice(0, 60), obscurity: Math.max(0, Math.min(100, Number(v.obscurity) || 0)), why: String(v.why || "").slice(0, 90) };
@@ -153,11 +197,29 @@ async function getDay(d, harder = false, chosen = null) {
     const prompts = chosen || await makePrompts(recent, harder);
     const lists = await Promise.all(prompts.map(makeList));
     const made = { date: d, prompts, lists, ver: Date.now() };
-    await redis("SET", K.day(d), JSON.stringify(made), "EX", String(KEEP));
+    await redis("SET", K.day(d), JSON.stringify(made), "EX", String(KEEP)); // saved now, so the day exists even if rating runs out of time
     for (const p of prompts) await redis("LPUSH", K.recent, p);
     await redis("LTRIM", K.recent, "0", "80");
-    return made;
+    return (await rateDay(d, made)) || made;
   } finally { await redis("DEL", K.gen(d)); }
+}
+// gives every answer on today's lists its own rarity rating (lists that are already rated are left alone)
+const unrated = day => day.lists.some((l, i) => l.length && !(day.rare && Array.isArray(day.rare[i]) && day.rare[i].length === l.length));
+async function rateDay(d, day) {
+  if (!unrated(day)) return day;
+  if (!(await redis("SET", K.rate(d), "1", "NX", "EX", "110"))) return null; // someone else is rating right now
+  try {
+    const rare = await Promise.all(day.lists.map(async (l, i) => {
+      const have = day.rare && day.rare[i];
+      if (!l.length || (Array.isArray(have) && have.length === l.length)) return have || null;
+      try { return await rateList(day.prompts[i], l); } catch (e) { console.error("moo rate", e.message); return null; }
+    }));
+    const now = await getJSON(K.day(d));
+    if (!now || now.ver !== day.ver) return null; // the day was restarted meanwhile
+    now.rare = rare;
+    await redis("SET", K.day(d), JSON.stringify(now), "EX", String(KEEP));
+    return now;
+  } finally { await redis("DEL", K.rate(d)); }
 }
 
 // who is playing: a random id kept in their browser, plus the name they picked
@@ -183,7 +245,7 @@ async function view(d, day, email, name) {
   return {
     date: d, num: dayNum(d), count: N, tiers: TIERS, name,
     prompts: day.prompts.slice(0, Math.min(N, mine.answers.length + 1)),
-    answers: mine.answers, total: mine.total, done,
+    answers: mine.answers, total: mine.total, done, unrated: unrated(day),
     streak: u.last === d || u.last === shift(d, -1) ? u.streak || 0 : 0,
     board,
   };
@@ -232,6 +294,7 @@ export default async function handler(req, res) {
     const day = await getDay(d);
     if (!day) return res.status(200).json({ preparing: true });
 
+    if (req.method === "GET" && req.query?.rate) { await rateDay(d, day); return res.status(200).json({ ok: true }); } // a side request from the page: rate today's lists if they aren't yet
     if (req.method === "GET" || action === "hello") return res.status(200).json(action === "hello" ? { state: await view(d, day, email, name) } : await view(d, day, email, name));
     if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
     if (action !== "answer" && action !== "skip") return res.status(400).json({ error: "Unknown action" });
@@ -243,7 +306,9 @@ export default async function handler(req, res) {
       const i = mine.answers.length;
       if (i >= N) return res.status(400).json({ error: "You already finished today's flight." });
       if (Number(req.body.i) !== i) return res.status(409).json({ error: "That prompt is already done.", state: await view(d, day, email, name) });
-      const prompt = day.prompts[i], list = day.lists[i] || [];
+      const prompt = day.prompts[i], list = day.lists[i] || [], rare = day.rare && Array.isArray(day.rare[i]) && day.rare[i].length === list.length ? day.rare[i] : null;
+      // an answer on the list scores by its own rarity rating (so it can reach any tier); until a list is rated, by its spot on the list
+      const listScore = k => rare && Number.isFinite(rare[k]) ? scoreFromRating(rare[k]) : scoreFromRank(k, list.length);
       let result;
       if (action === "skip") result = { answer: "", tier: -1, m: 0, note: "Skipped. The cow stayed put." };
       else {
@@ -251,8 +316,8 @@ export default async function handler(req, res) {
         if (raw.length < 2) return res.status(400).json({ error: "Type an answer first." });
         const at = findInList(list, raw);
         if (at >= 0) {
-          const s = scoreFromRank(at, list.length);
-          result = { answer: list[at].split("|")[0], ...s, note: at === 0 ? "The number one answer. Everyone says that." : LINES[s.tier] };
+          const s = listScore(at);
+          result = { answer: list[at].split("|")[0], ...s, note: at === 0 && s.tier === 0 ? "The number one answer. Everyone says that." : LINES[s.tier] };
         } else {
           const key = norm(raw);
           let v = await getJSON(`${K.verdict(d + (day.ver ? "." + day.ver : ""), i)}:${key}`);
@@ -264,12 +329,13 @@ export default async function handler(req, res) {
             const ni = await redis("INCR", K.ip(d, ip));
             if (ni === 1) await redis("EXPIRE", K.ip(d, ip), "172800");
             if (ni > 3000) return res.status(429).json({ error: "Too many guesses from here today. Come back tomorrow." });
-            try { v = await judge(prompt, raw); } catch (e) { console.error("moo judge", e.message); return res.status(503).json({ error: "Couldn't check that answer right now. Try again." }); }
+            try { v = await judge(prompt, raw, list, rare); } catch (e) { console.error("moo judge", e.message); return res.status(503).json({ error: "Couldn't check that answer right now. Try again." }); }
             await redis("SET", `${K.verdict(d + (day.ver ? "." + day.ver : ""), i)}:${key}`, JSON.stringify(v), "EX", String(KEEP));
           }
           if (!v.valid) return res.status(422).json({ error: v.why || "That doesn't fit the prompt. Try another answer.", code: "invalid" });
-          const s = scoreFromObscurity(v.obscurity);
-          result = { answer: v.name || raw, ...s, note: v.why ? `${v.why}` : LINES[s.tier] };
+          const k2 = findInList(list, v.name); // Claude knew another name for something that's on the list
+          const s = k2 >= 0 ? listScore(k2) : scoreFromRating(v.obscurity);
+          result = { answer: k2 >= 0 ? list[k2].split("|")[0] : v.name || raw, ...s, note: k2 < 0 && v.why ? `${v.why}` : LINES[s.tier] };
         }
       }
       result.i = i;

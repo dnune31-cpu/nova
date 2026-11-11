@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
-import { redis, getJSON, MODEL_IDS } from "./_lib.js";
-import { norm, findInList, scoreFromRank, scoreFromObscurity } from "./moo.js";
+import { redis, pipeline, getJSON, MODEL_IDS } from "./_lib.js";
+import { norm, findInList, scoreFromRank, RARITY_SCALE, rareTier, rateList } from "./moo.js";
 
 // Alien Party (moollion.cc): a pass-the-turn party mode for 1 to 8 friends with a room code.
 // Cows stand in a line. The alien's UFO hovers over whoever's turn it is and slowly beams them up
@@ -14,6 +14,9 @@ export const config = { maxDuration: 120 };
 const TTL = 6 * 3600, LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const LENS = "ab:len", RARE = "ab:rare";
 const START_LIVES = 3, MAX_LIVES = 5, MAX_PLAYERS = 8, REVEAL = 2200; // REVEAL = the "new prompt!" moment before the beam starts
+// An answer counts if it reached the server before the beam finished (GRACE covers the trip over the network). While it is
+// being checked the turn is held, so nobody gets abducted with an answer in the air; time spent on a wrong answer is given back.
+const GRACE = 600, HOLD_MS = 12000, FREEZE_MAX = 6000;
 const PTS = [10, 16, 24, 34, 48, 70]; // power bar fill per rarity tier (100 = +1 heart)
 const LEVELS = ["easy", "medium", "hard"], BOT_NAMES = ["Byte", "Pixel", "Bolt", "Chip", "Gizmo", "Sprocket", "Widget"];
 const BOT = { // think = pause before typing, per = ms per letter, fail = chance it freezes, pick = part of the ranked list it answers from
@@ -97,7 +100,7 @@ const HARD = [
 const SEED = [...EASY, ...MEDIUM, ...HARD], LEVEL = {};
 [EASY, MEDIUM, HARD].forEach((ps, lv) => ps.forEach(p => LEVEL[p] = lv));
 const levelOf = p => LEVEL[p] ?? 1; // the daily game's prompts count as medium
-const key = c => `ab:${c}`, tkey = c => `ab:${c}:t`, BANK = "ab:bank";
+const key = c => `ab:${c}`, tkey = c => `ab:${c}:t`, pkey = c => `ab:${c}:p`, BANK = "ab:bank";
 const clean = c => String(c || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const between = ([a, b]) => a + crypto.randomInt(b - a + 1);
@@ -124,47 +127,9 @@ Player's answer: "${answer}"
 2. If correct, how RARE is it as an answer, 0 to 100? ${RARITY_SCALE}
 3. If it's wrong but looks like a misspelling of a correct answer, put the correct answer in "suggest", otherwise leave it "".
 Reply with only JSON: {"valid": true or false, "name": "the answer's proper name", "obscurity": number, "why": "a short friendly reason, max 10 words", "suggest": ""}`, 240);
-  const v = await new Promise((resolve, reject) => {
-    let done = false, pending = 0, backupStarted = false, timer = 0;
-    const run = model => {
-      pending++;
-      ask(model).then(t => parseJSON(t, "{")).then(
-        x => { pending--; if (!done) { done = true; clearTimeout(timer); resolve(x); } },
-        e => { pending--; if (!backupStarted) backup(); else if (!done && pending === 0) reject(e); });
-    };
-    const backup = () => { if (backupStarted || done) return; backupStarted = true; clearTimeout(timer); run("sonnet"); };
-    run("haiku"); timer = setTimeout(backup, 1300); // Sonnet joins in if Haiku is slow or fails; first good verdict wins
-  });
+  // Haiku and Sonnet are asked at the same moment; the first good verdict wins
+  const v = await Promise.any(["haiku", "sonnet"].map(m => ask(m).then(t => parseJSON(t, "{"))));
   return { valid: !!v.valid, name: String(v.name || answer).slice(0, 50), obscurity: Math.max(0, Math.min(100, Number(v.obscurity) || 0)), why: String(v.why || "").slice(0, 80), suggest: v.valid ? "" : String(v.suggest || "").slice(0, 50) };
-}
-// one rarity scale for everything: list answers (rated in bulk) and new answers (judged one at a time)
-const RARITY_SCALE = `Picture asking 1,000 random people this prompt, each giving a few answers.
-0-19 = lots of people would say it (the famous, obvious answers).
-20-39 = a fair number of people would say it.
-40-59 = most people know it but few would think to say it.
-60-77 = rarely said; takes real knowledge of the topic.
-78-91 = very rare; only fans or experts would come up with it.
-92-100 = almost nobody would ever say it: truly one in a million.
-Be strict: the most famous handful should be under 10, and only genuinely obscure answers go above 90.`;
-const RARE_CUTS = [20, 40, 60, 78, 92];
-const rareTier = r => { const v = Math.max(0, Math.min(100, Number(r) || 0)); let t = 0; while (t < 5 && v >= RARE_CUTS[t]) t++; return t; };
-// rates every answer on a list with the scale above, so rarity comes from how rare the answer really is, not just its spot on the list
-async function rateList(prompt, list) {
-  const names = list.map(x => x.split("|")[0]);
-  const t = await claude("sonnet", `Prompt: "${prompt}"
-Rate how RARE each answer below is as an answer to this prompt, from 0 to 100.
-${RARITY_SCALE}
-Answers:
-${names.map((x, i) => (i + 1) + ". " + x).join("\n")}
-Reply with only a JSON object mapping each answer's number to its rating, like {"1": 3, "2": 41}.`, 5000);
-  const o = parseJSON(t, "{"), out = names.map((_, i) => { const v = Number(o[i + 1]); return Number.isFinite(v) ? Math.max(0, Math.min(100, Math.round(v))) : null; });
-  const have = out.filter(v => v !== null).length;
-  if (have < names.length * 0.8) throw new Error("Rated only " + have + " of " + names.length);
-  for (let i = 0; i < out.length; i++) if (out[i] === null) { // fill gaps from the neighbors
-    let a = i - 1; while (a >= 0 && out[a] === null) a--; let b = i + 1; while (b < out.length && out[b] === null) b++;
-    out[i] = a >= 0 && b < out.length ? Math.round((out[a] + out[b]) / 2) : a >= 0 ? out[a] : b < out.length ? out[b] : 50;
-  }
-  return out;
 }
 const LIST_RULES = `Use each answer's most common name. Put alternate names or spellings after a | (example: "Chickpea|Garbanzo bean").
 Reply with only a JSON array of strings.`;
@@ -280,9 +245,10 @@ function suggestFor(names, raw) {
   return best;
 }
 // Claude's verdict on an answer, cached; if another request is already asking, wait for its result instead of asking twice
-async function verdict(prompt, raw, req) {
-  const vk = `ab:v:${norm(prompt)}:${norm(raw)}`, pk = "ab:vp:" + vk.slice(5);
-  let v = await getJSON(vk); if (v) return v;
+const vkey = (prompt, raw) => `ab:v:${norm(prompt)}:${norm(raw)}`;
+async function verdict(prompt, raw, req, cached) {
+  const vk = vkey(prompt, raw), pk = "ab:vp:" + vk.slice(5);
+  let v = cached === undefined ? await getJSON(vk) : cached; if (v) return v;
   if (!(await redis("SET", pk, "1", "NX", "EX", "8"))) {
     for (let i = 0; i < 50 && !v; i++) { await new Promise(r => setTimeout(r, 120)); v = await getJSON(vk); }
     if (v) return v;
@@ -340,8 +306,9 @@ function checkOver(room) {
   return false;
 }
 // too slow: the UFO beams the cow up and it loses a heart (checked whenever anyone looks at the room)
-function tick(room) {
-  if (room.status !== "playing" || Date.now() < room.beam.deadline) return false;
+const held = (room, pend) => !!pend && room.status === "playing" && pend.turnId === room.turnId && pend.at <= room.beam.deadline + GRACE && Date.now() < pend.at + HOLD_MS;
+function tick(room, pend) {
+  if (room.status !== "playing" || Date.now() < room.beam.deadline || held(room, pend)) return false;
   const i = room.turn, p = room.players[i];
   p.lives = Math.max(0, p.lives - 1); if (p.lives === 0) p.alive = false;
   const e = { type: "abduct", by: i, prompt: room.prompt, out: !p.alive };
@@ -397,14 +364,14 @@ function botView(room) {
   return { turnId: plan.turnId, text: plan.text, startIn: plan.typeAt - Date.now(), per: plan.per };
 }
 
-function view(room, me, typing) {
-  const mi = room.players.findIndex(p => p.id === me);
-  const heat = room.status === "playing" ? Math.max(0, Math.min(1, (Date.now() - room.beam.start) / room.beam.total)) : 0;
+function view(room, me, typing, pend) {
+  const mi = room.players.findIndex(p => p.id === me), playing = room.status === "playing";
   return {
     code: room.code, status: room.status, me: mi, host: mi === 0,
     players: room.players.map((p, i) => ({ name: p.name, lives: p.lives ?? START_LIVES, power: p.power || 0, alive: p.alive !== false, left: !!p.left, last: p.last || null, best: p.best || null, answers: p.answers || 0, bot: p.bot || null, me: i === mi })),
     turn: room.turn ?? 0, turnId: room.turnId || 0, prompt: room.prompt || null, round: room.round || 1, level: room.level || 0, usedCount: (room.used || []).length,
-    heat: Math.round(heat * 1000) / 1000, heatRate: room.status === "playing" ? Math.round(1e6 / room.beam.total) / 1000 : 0,
+    // the beam: when it started (ms from now, negative once running), how long it lasts, how much checking time was given back, and whether an answer is being checked
+    beamIn: playing ? room.beam.start - Date.now() : 0, beamMs: playing ? room.beam.total : 0, fz: playing ? room.beam.frozen || 0 : 0, hold: held(room, pend),
     revealIn: room.status === "playing" ? Math.max(0, (room.reveal || 0) - Date.now()) : 0, promptLeft: room.promptLeft || 0,
     botType: botView(room), winner: room.winner ?? null, event: room.event || null, seq: room.seq || 0, game: room.game || 1,
     typing: typing && typing.turnId === room.turnId && room.status === "playing" ? { text: typing.text || "", bad: typing.bad || null } : null,
@@ -412,37 +379,46 @@ function view(room, me, typing) {
   };
 }
 async function save(room) { await redis("SET", key(room.code), JSON.stringify(room), "EX", String(TTL)); }
-async function load(code) { const [r, t] = await Promise.all([redis("GET", key(code)), redis("GET", tkey(code))]); return [r ? JSON.parse(r) : null, t ? JSON.parse(t) : null]; }
 async function setTyping(room, text, bad) { await redis("SET", tkey(room.code), JSON.stringify({ turnId: room.turnId, text: String(text).slice(0, 40), bad: bad || null }), "EX", String(TTL)); }
+const UNLOCK = "if redis.call('get',KEYS[1])==ARGV[1] then return redis.call('del',KEYS[1]) end return 0";
 async function withLock(code, fn) {
   const lk = `ab:${code}:lock`, tok = crypto.randomBytes(6).toString("hex");
   let got = false;
-  for (let i = 0; i < 30 && !got; i++) { got = !!(await redis("SET", lk, tok, "NX", "PX", "5000")); if (!got) await sleep(70); }
+  for (let i = 0; i < 40 && !got; i++) { got = !!(await redis("SET", lk, tok, "NX", "PX", "5000")); if (!got) await sleep(50); }
   if (!got) throw Object.assign(new Error("The room is busy. Try again."), { status: 503 });
-  try { return await fn(); } finally { if ((await redis("GET", lk)) === tok) await redis("DEL", lk); }
+  try { return await fn(); } finally { await redis("EVAL", UNLOCK, "1", lk, tok).catch(() => {}); }
 }
-async function who(req) {
-  const id = String(req.headers["x-moo-player"] || "").toLowerCase();
-  if (!/^[a-f0-9]{32}$/.test(id)) return null;
-  const p = await getJSON(`moo:pid:${id}`);
-  return p?.name ? { id, name: p.name } : null;
+const parse = v => { try { return v ? JSON.parse(v) : null; } catch { return null; } };
+// gives back the time an answer spent being checked (when it turned out wrong), so checking never eats the clock
+async function giveBack(code, turnId, at, dur) {
+  try {
+    if (dur > 120) await withLock(code, async () => {
+      const r = await getJSON(key(code));
+      if (!r || r.status !== "playing" || r.turnId !== turnId || at > r.beam.deadline + GRACE) return;
+      const add = Math.min(dur, FREEZE_MAX - (r.beam.frozen || 0));
+      if (add > 0) { r.beam.start += add; r.beam.deadline += add; r.beam.frozen = (r.beam.frozen || 0) + add; await save(r); }
+    });
+  } finally { await redis("DEL", pkey(code)).catch(() => {}); }
 }
+const pidOf = req => { const id = String(req.headers["x-moo-player"] || "").toLowerCase(); return /^[a-f0-9]{32}$/.test(id) ? id : null; };
 
 export default async function handler(req, res) {
   try {
-    const me = await who(req);
-    if (!me) return res.status(401).json({ error: "Pick a name to play.", code: "name" });
-    const id = me.id;
+    const id = pidOf(req), noName = () => res.status(401).json({ error: "Pick a name to play.", code: "name" });
+    if (!id) return noName();
 
-    if (req.method === "GET") {
+    if (req.method === "GET") { // the room poll: one trip to the database
       const code = clean(req.query?.code);
-      let [room, typing] = await load(code);
+      const got = await pipeline([["GET", `moo:pid:${id}`], ["GET", key(code)], ["GET", tkey(code)], ["GET", pkey(code)]]);
+      if (!parse(got[0])?.name) return noName();
+      let room = parse(got[1]), typing = parse(got[2]), pend = parse(got[3]);
       if (!room) return res.status(404).json({ error: "That room doesn't exist anymore." });
-      if (room.status === "playing" && (Date.now() >= room.beam.deadline || botNeeds(room))) {
+      if (room.status === "playing" && ((Date.now() >= room.beam.deadline && !held(room, pend)) || botNeeds(room))) {
         const list = await listFor(room.prompt);
         room = await withLock(code, async () => {
-          const r = await getJSON(key(code)); if (!r) return r;
-          let changed = tick(r);
+          const [rr, pp] = await pipeline([["GET", key(code)], ["GET", pkey(code)]]), r = parse(rr); if (!r) return r;
+          pend = parse(pp);
+          let changed = tick(r, pend);
           changed = botStep(r, r.prompt === room.prompt ? list : await listFor(r.prompt)) || changed;
           if (changed) await save(r);
           return r;
@@ -452,10 +428,13 @@ export default async function handler(req, res) {
         const have = await bankPrompts();
         await growBank(have, 3); // makes missing lists, then deepens short ones, then rates them
       }
-      return res.status(200).json({ room: view(room, id, typing) });
+      return res.status(200).json({ room: view(room, id, typing, pend) });
     }
     if (req.method !== "POST") return res.status(405).json({ error: "Not allowed" });
-    const { action } = req.body || {};
+    const { action } = req.body || {}, code = clean(req.body?.code);
+    const first = await pipeline([["GET", `moo:pid:${id}`], ["GET", key(code || "-")]]);
+    const me = { id, name: parse(first[0])?.name }, room0 = parse(first[1]);
+    if (!me.name) return noName();
 
     if (action === "create") {
       let code = "";
@@ -464,10 +443,9 @@ export default async function handler(req, res) {
       await save(room);
       return res.status(200).json({ room: view(room, id) });
     }
-    const code = clean(req.body?.code);
 
     if (action === "type") {
-      const [room] = await load(code);
+      const room = room0;
       if (!room) return res.status(404).json({ error: "No room with that code." });
       const mi = room.players.findIndex(p => p.id === id);
       if (room.status === "playing" && mi === room.turn && req.body.turnId === room.turnId) await setTyping(room, String(req.body.text || "").slice(0, 40));
@@ -476,7 +454,7 @@ export default async function handler(req, res) {
 
     // checks what someone is typing as soon as they pause, so the answer is already judged when they press Enter
     if (action === "check") {
-      const [room] = await load(code);
+      const room = room0;
       if (!room || room.status !== "playing" || !room.players.some(p => p.id === id) || Date.now() < (room.reveal || 0)) return res.status(200).json({ ok: false });
       const raw = String(req.body.text || "").replace(/\s+/g, " ").trim().slice(0, 50);
       if (raw.length < 3) return res.status(200).json({ ok: false });
@@ -489,43 +467,57 @@ export default async function handler(req, res) {
     let checked = null;
     if (action === "answer") {
       const at = Date.now();
-      const [room0] = await load(code);
       if (!room0) return res.status(404).json({ error: "No room with that code." });
-      const mi = room0.players.findIndex(p => p.id === id);
+      const mi = room0.players.findIndex(p => p.id === id), turnId = room0.turnId;
       if (room0.status !== "playing" || mi !== room0.turn) return res.status(400).json({ error: "It's not your turn." });
       if (at < (room0.reveal || 0)) return res.status(400).json({ error: "Wait for the new prompt!", code: "wait" });
       const raw = String(req.body.answer || "").replace(/\s+/g, " ").trim().slice(0, 50);
       if (raw.length < 2) return res.status(400).json({ error: "Type an answer first." });
-      const [list, extras] = await Promise.all([listFor(room0.prompt), extrasFor(room0.prompt)]), nk = norm(raw);
-      const onList = k => { const name = list[k].split("|")[0]; return { key: "i:" + k, alts: ["n:" + norm(name), "n:" + nk], answer: name, tier: tierAt(list, k) }; };
-      const xs = Object.keys(extras), k = findInList(list, raw), x = k < 0 ? findInList(xs, raw) : -1;
-      if (k >= 0) checked = onList(k);
-      else if (x >= 0) checked = { key: "n:" + norm(xs[x]), alts: ["n:" + nk], answer: xs[x], tier: rareTier(extras[xs[x]]) };
+      if (at > room0.beam.deadline + GRACE) checked = { late: true };
       else {
-        let v;
-        try { v = await verdict(room0.prompt, raw, req); }
-        catch (e) { return res.status(e.status || 503).json({ error: e.status ? e.message : "Couldn't check that answer. Try again fast!" }); }
-        if (!v.valid) {
-          await setTyping(room0, raw, "bad");
-          let sug = suggestFor([...list, ...xs], raw) || v.suggest || "";
-          if (norm(sug) === nk) sug = "";
-          return res.status(400).json({ error: sug ? "Hmm, that's not quite it." : v.why || "That doesn't fit the prompt.", code: "invalid", suggest: sug });
-        }
-        const k2 = findInList(list, v.name); // Claude knew a nickname for something on the list
-        if (k2 >= 0) checked = onList(k2);
+        // one trip: the answer list, its ratings, extra accepted answers, any saved verdict, and the "answer in the air" marker that holds the turn
+        const got = await pipeline([["HGET", BANK, room0.prompt], ["HGET", RARE, room0.prompt], ["HGETALL", extraKey(room0.prompt)], ["GET", vkey(room0.prompt, raw)],
+          ["SET", pkey(code), JSON.stringify({ turnId, at }), "EX", "20"]]);
+        const list = parse(got[0]) || [], extras = {}, nk = norm(raw); list.rare = parse(got[1]);
+        for (let i = 0; i < (got[2] || []).length; i += 2) extras[got[2][i]] = Number(got[2][i + 1]);
+        const wrong = async (status, body) => { // not accepted: hand back the checking time, then show the room as it is now
+          await giveBack(code, turnId, at, Date.now() - at);
+          const [rr, tt] = await pipeline([["GET", key(code)], ["GET", tkey(code)]]), r = parse(rr);
+          return res.status(status).json(r ? { ...body, room: view(r, id, parse(tt)) } : body);
+        };
+        const onList = k => { const name = list[k].split("|")[0]; return { key: "i:" + k, alts: ["n:" + norm(name), "n:" + nk], answer: name, tier: tierAt(list, k) }; };
+        const xs = Object.keys(extras), k = findInList(list, raw), x = k < 0 ? findInList(xs, raw) : -1;
+        if (k >= 0) checked = onList(k);
+        else if (x >= 0) checked = { key: "n:" + norm(xs[x]), alts: ["n:" + nk], answer: xs[x], tier: rareTier(extras[xs[x]]) };
         else {
-          checked = { key: "n:" + norm(v.name || raw), alts: ["n:" + nk], answer: v.name || raw, tier: rareTier(v.obscurity), note: v.why };
-          if (norm(v.name)) await redis("HSET", extraKey(room0.prompt), v.name, String(v.obscurity));
+          let v;
+          try { v = await verdict(room0.prompt, raw, req, parse(got[3])); }
+          catch (e) { return wrong(e.status || 503, { error: e.status ? e.message : "Couldn't check that answer. Try again!" }); }
+          if (!v.valid) {
+            await setTyping(room0, raw, "bad");
+            let sug = suggestFor([...list, ...xs], raw) || v.suggest || "";
+            if (norm(sug) === nk) sug = "";
+            return wrong(400, { error: sug ? "Hmm, that's not quite it." : v.why || "That doesn't fit the prompt.", code: "invalid", suggest: sug });
+          }
+          const k2 = findInList(list, v.name); // Claude knew a nickname for something on the list
+          if (k2 >= 0) checked = onList(k2);
+          else {
+            checked = { key: "n:" + norm(v.name || raw), alts: ["n:" + nk], answer: v.name || raw, tier: rareTier(v.obscurity), note: v.why };
+            if (norm(v.name)) await redis("HSET", extraKey(room0.prompt), v.name, String(v.obscurity));
+          }
         }
       }
-      checked.at = at; checked.turnId = room0.turnId;
+      checked.at = at; checked.turnId = turnId;
     }
 
     const out = await withLock(code, async () => {
       const room = await getJSON(key(code));
       if (!room) return [404, { error: "No room with that code. Check it and try again." }];
       const mi = room.players.findIndex(p => p.id === id);
-      const reply = async (status, extra = {}) => { const [, t] = await load(code); return [status, { ...extra, room: view(room, id, t) }]; };
+      const reply = async (status, extra = {}) => { // (an answer's "in the air" marker is cleared here too: by now it has been dealt with)
+        const [t] = await pipeline(action === "answer" ? [["GET", tkey(code)], ["DEL", pkey(code)]] : [["GET", tkey(code)]]);
+        return [status, { ...extra, room: view(room, id, parse(t)) }];
+      };
 
       if (action === "join") {
         if (mi < 0) {
@@ -590,9 +582,8 @@ export default async function handler(req, res) {
       if (room.status !== "playing") return reply(400, { error: "The game isn't going right now." });
 
       if (action === "answer") {
-        // the answer counts if it arrived before the beam finished, even if checking it took a moment
-        if (room.turnId !== checked.turnId || room.turn !== mi) { tick(room); await save(room); return reply(400, { error: "Too slow! 🛸", code: "abducted" }); }
-        if (checked.at > room.beam.deadline) { tick(room); await save(room); return reply(400, { error: "Too slow! 🛸", code: "abducted" }); }
+        // the answer counts if it arrived before the beam finished, however long checking it took
+        if (room.turnId !== checked.turnId || room.turn !== mi || checked.late) { tick(room); await save(room); return reply(400, { error: "Too slow! 🛸", code: "abducted" }); }
         if ([checked.key, ...checked.alts].some(u => room.used.includes(u))) return reply(400, { error: "Someone already said that!", code: "used" });
         room.used.push(...checked.alts);
         accept(room, mi, checked);
