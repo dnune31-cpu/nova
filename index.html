@@ -2357,10 +2357,10 @@ html[dir='rtl'].offline .icon-offline {
   if (safari) gate.srcdoc = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1"><style>' +
     'html,body{height:100%;margin:0}body{background:rgb(246,246,246);font-family:-apple-system,BlinkMacSystemFont,system-ui,"Helvetica Neue",sans-serif;-webkit-font-smoothing:antialiased;cursor:default;-webkit-user-select:none;user-select:none}' +
     '.c{position:absolute;left:0;right:0;top:54%;transform:translateY(-50%);text-align:center;padding:0 24px}' +
-    'h1{font-size:29px;line-height:34px;font-weight:700;margin:0 0 14px;color:rgb(128,128,128);outline:0}' +
+    'h1{font-size:29px;line-height:34px;font-weight:700;margin:0 0 14px;color:rgb(128,128,128)}#sfh{outline:0;display:inline-block;min-width:2px}' +
     'p{font-size:15px;line-height:20px;margin:0 auto;max-width:700px;color:rgb(138,138,138);overflow-wrap:anywhere}' +
     '@media (prefers-color-scheme:dark){body{background:rgb(41,41,41)}h1{color:rgb(158,158,158)}p{color:rgb(150,150,150)}}' +
-    '</style></head><body><div class="c"><h1 id="sfh">Safari Can\u2019t Find the Server</h1><p>Safari can\u2019t open the page \u201c' + esc(location.href) + '\u201d because Safari can\u2019t find the server \u201c' + host + '\u201d.</p></div></body></html>';
+    '</style></head><body><div class="c"><h1><span id="sfh">Safari</span> Can\u2019t Find the Server</h1><p>Safari can\u2019t open the page \u201c' + esc(location.href) + '\u201d because Safari can\u2019t find the server \u201c' + host + '\u201d.</p></div></body></html>';
   else gate.srcdoc = src.textContent.replace("__HOST__", host).replace("__FONT__", win ? "'Segoe UI', Tahoma, sans-serif" : "system-ui, sans-serif")
     .replace("__WIN__", win ? '<div id="suggestions-list"><p></p><ul class="single-suggestion"><li>If spelling is correct, <a href="#" id="diag">try running Windows Network Diagnostics</a>.</li></ul></div>' : "");
   gate.addEventListener("load", function () {
@@ -2370,15 +2370,15 @@ html[dir='rtl'].offline .icon-offline {
     var r = d.getElementById("reload-button"); if (r) r.onclick = function () { location.reload(); };
     // The way in where the blue text exists (Windows): click it and it becomes editable, with no box or outline. Delete the wording, type "nova".
     // Click away without doing that and it goes back to the normal wording.
-    // On Safari the way in is the heading: click it, and replace the word "Safari" with "nova".
+    // On Safari the way in is the first word of the heading: click "Safari" and replace it with "nova". Only that one word can be edited.
     var sf = d.getElementById("sfh"), title0 = sf && sf.textContent;
     if (sf) {
       sf.onclick = function () {
         if (sf.isContentEditable) return;
         sf.contentEditable = "true"; sf.spellcheck = false; sf.style.cursor = "text"; sf.style.webkitUserSelect = sf.style.userSelect = "text"; sf.focus();
-        var r = d.createRange(), sel = d.defaultView.getSelection(); r.setStart(sf.firstChild, 6); r.collapse(true); sel.removeAllRanges(); sel.addRange(r); // typing cursor right after "Safari"
+        var r = d.createRange(), sel = d.defaultView.getSelection(); r.selectNodeContents(sf); r.collapse(false); sel.removeAllRanges(); sel.addRange(r); // typing cursor right after "Safari"
       };
-      sf.addEventListener("input", function () { var t = sf.textContent.toLowerCase().replace(/\s+/g, " ").trim(); if (t.indexOf("nova") === 0 && t.indexOf("safari") < 0) open(); });
+      sf.addEventListener("input", function () { if (sf.textContent.replace(/\s+/g, "").toLowerCase() === "nova") open(); });
       sf.addEventListener("blur", function () { sf.contentEditable = "false"; sf.style.cursor = ""; sf.style.webkitUserSelect = sf.style.userSelect = ""; sf.textContent = title0; });
       sf.addEventListener("paste", function (e) { e.preventDefault(); });
     }
