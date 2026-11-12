@@ -3096,7 +3096,7 @@ async function loadAdmin() {
   catch (err) { if (!handleAuthError(err)) box.innerHTML = `<p class="adminerr">${esc(err.message)}</p>`; }
 }
 
-function renderAdmin({users, log: events, announce, cheats}) {
+function renderAdmin({users, log: events, announce, cheats, orphans, trash}) {
   const total = users.reduce((s, u) => s + (u.messages || 0), 0);
   const activeWeek = users.filter(u => u.lastActive && Date.now() - u.lastActive < 7 * 86400000).length;
   const box = $("adminBody");
@@ -3116,6 +3116,8 @@ function renderAdmin({users, log: events, announce, cheats}) {
       <thead><tr><th>Person</th><th>Joined</th><th>Last login</th><th>Messages</th><th title="Estimated from Oct 28, 2026 on">Spent</th><th>Daily limit</th><th>Models allowed</th><th>Access</th></tr></thead>
       <tbody id="uRows"></tbody>
     </table></div>
+    <div id="trashBox"></div>
+    <div id="orphanBox"></div>
     <h3 class="sect">Recent logins</h3>
     <div class="loglist" id="logRows"></div>
     <h3 class="sect">Start over</h3>
@@ -3228,16 +3230,49 @@ acc.appendChild(tb);
       // delete the account for good (their chats and saved data go with it)
       const db = document.createElement("button"); db.type = "button"; db.className = "pill no"; db.textContent = "Delete"; db.title = "Delete this account and everything saved for it";
       db.onclick = async () => {
-        if (!confirm(`Delete ${u.name} (${u.email}) for good?\n\nTheir account, chats and saved progress are erased and can't be brought back. They could sign up again later; use Block to keep someone out.`)) return;
+        if (!confirm(`Delete ${u.name} (${u.email})?\n\nTheir account, chats and saved progress are removed and they're logged out. You can restore the account from "Deleted accounts" for 30 days; after that it's gone for good.`)) return;
         db.disabled = true; db.textContent = "Deleting…";
-        try { await api("/api/admin", {method: "POST", body: JSON.stringify({email: u.email, remove: true})}); tr.remove(); }
+        try { await api("/api/admin", {method: "POST", body: JSON.stringify({email: u.email, remove: true})}); renderAdmin(await api("/api/admin")); }
         catch (err) { db.disabled = false; db.textContent = "Delete"; alert(err.message); }
       };
       acc.appendChild(db);
+      // restore: undoes block, device ban and troll mode in one go (only shown when there's something to undo)
+      const rb = document.createElement("button"); rb.type = "button"; rb.className = "pill ok"; rb.textContent = "Restore"; rb.title = "Unblock, lift the device ban and turn troll mode off";
+      const showR = () => { rb.hidden = !(u.blocked || u.devban || u.troll); };
+      rb.onclick = async () => {
+        rb.disabled = true;
+        try { await api("/api/admin", {method: "POST", body: JSON.stringify({email: u.email, restore: true})}); u.blocked = u.devban = u.troll = false; paint(); paintT(); paintV(); }
+        catch (err) { alert(err.message); }
+        rb.disabled = false; showR();
+      };
+      [b, tb, vb].forEach(x => x.addEventListener("click", () => setTimeout(showR, 900)));
+      showR(); acc.appendChild(rb);
     }
     rows.appendChild(tr);
   }
 
+  // deleted accounts that can still be brought back
+  const tbx = $("trashBox");
+  if (trash && trash.length) {
+    tbx.innerHTML = `<h3 class="sect">Deleted accounts</h3><div class="loglist"></div>`;
+    for (const t of trash) {
+      const d = document.createElement("div"); d.className = "logrow"; d.textContent = `${t.name} · ${t.email} · ${t.daysLeft} day${t.daysLeft === 1 ? "" : "s"} left to restore `;
+      const x = document.createElement("button"); x.type = "button"; x.className = "pill ok"; x.textContent = "Restore"; x.title = "Bring this account back with its chats and saved progress";
+      x.onclick = async () => { x.disabled = true; try { await api("/api/admin", {method: "POST", body: JSON.stringify({email: t.email, undelete: true})}); renderAdmin(await api("/api/admin")); } catch (err) { x.disabled = false; alert(err.message); } };
+      d.appendChild(x); tbx.querySelector(".loglist").appendChild(d);
+    }
+  }
+  // device bans left by deleted accounts
+  const ob = $("orphanBox");
+  if (orphans && orphans.length) {
+    ob.innerHTML = `<h3 class="sect">Banned devices from deleted accounts</h3><div class="loglist"></div>`;
+    for (const o of orphans) {
+      const d = document.createElement("div"); d.className = "logrow"; d.textContent = `${o.email} · ${o.devices} device${o.devices === 1 ? "" : "s"} still banned `;
+      const x = document.createElement("button"); x.type = "button"; x.className = "pill ok"; x.textContent = "Restore"; x.title = "Lift the ban so these devices can open Nova and sign up again";
+      x.onclick = async () => { x.disabled = true; try { await api("/api/admin", {method: "POST", body: JSON.stringify({email: o.email, restoreDevices: true})}); d.remove(); if (!ob.querySelector(".logrow")) ob.innerHTML = ""; } catch (err) { x.disabled = false; alert(err.message); } };
+      d.appendChild(x); ob.querySelector(".loglist").appendChild(d);
+    }
+  }
   const lr = $("logRows");
   if (!events.length) lr.innerHTML = `<div class="logrow">No logins yet.</div>`;
   const byEmail = Object.fromEntries(users.map(u => [u.email, u.name]));
