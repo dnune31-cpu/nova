@@ -1,12 +1,13 @@
 import {
   redis, getJSON, setJSON, normEmail, validEmail, isAdminEmail, hashPassword, checkPassword,
-  safeEqual, createSession, clearSession, getAuth, publicUser, logEvent, tooManyAttempts, ALL_MODELS, elevateSession, pipeline,
+  safeEqual, createSession, renewSession, clearSession, getAuth, publicUser, logEvent, tooManyAttempts, ALL_MODELS, elevateSession, pipeline,
 } from "./_lib.js";
 
 export default async function handler(req, res) {
   try {
     if (req.method === "GET") {
       const auth = await getAuth(req);
+      if (auth) await renewSession(req, res).catch(() => {}); // still logged in on this device: remember it for another year
       return res.status(200).json({ user: auth ? publicUser(auth.user, auth.admin) : null });
     }
     if (req.method !== "POST") return res.status(405).json({ error: "Use POST" });

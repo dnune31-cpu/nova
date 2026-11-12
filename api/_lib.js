@@ -62,10 +62,19 @@ function getCookie(req, name) {
   return m ? decodeURIComponent(m[1]) : null;
 }
 
+// A login is remembered on the device for a year, and every visit starts that year again, so a device that keeps coming back stays logged in.
+const REMEMBER = 60 * 60 * 24 * 365;
+const sessionCookie = token => `nova_session=${token}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${REMEMBER}`;
 export async function createSession(res, email, admin = false) {
   const token = crypto.randomBytes(32).toString("hex");
-  await setJSON(`session:${token}`, { email, admin }, "EX", 60 * 60 * 24 * 30);
-  res.setHeader("Set-Cookie", `nova_session=${token}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${60 * 60 * 24 * 30}`);
+  await setJSON(`session:${token}`, { email, admin }, "EX", REMEMBER);
+  res.setHeader("Set-Cookie", sessionCookie(token));
+}
+// called when the page opens and finds you still logged in: pushes the expiry of this device's login back out to a full year
+export async function renewSession(req, res) {
+  const token = getCookie(req, "nova_session");
+  if (!token || !/^[a-f0-9]{64}$/.test(token)) return;
+  if (await redis("EXPIRE", `session:${token}`, REMEMBER)) res.setHeader("Set-Cookie", sessionCookie(token));
 }
 
 export async function clearSession(req, res) {
@@ -108,5 +117,5 @@ export async function elevateSession(req) {
   const s = await getJSON(`session:${token}`);
   if (!s) return;
   s.admin = true;
-  await setJSON(`session:${token}`, s, "EX", 60 * 60 * 24 * 30);
+  await setJSON(`session:${token}`, s, "EX", REMEMBER);
 }
