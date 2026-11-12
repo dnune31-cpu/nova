@@ -634,9 +634,20 @@ function startParty(root, opts = {}) {
   };
 
   /* ----- pixel art: cows and the UFO ----- */
-  function drawCow(x, ox, oy, flip, alpha = 1) {
+  // Cows are drawn bigger than the rest of the art (cowPx art pixels per cow pixel, a whole number of screen pixels so they stay crisp),
+  // growing from the middle of their feet, so they still stand on the same spot. kick = a number that changes over time while the cow
+  // is in the air: its four legs then flail back and forth, each a little out of step with the others.
+  let cowPx = 1;
+  const LEG = {2: 0, 4: 1, 10: 2, 12: 3};
+  function drawCow(x, ox, oy, flip, alpha = 1, kick = null) {
+    const c = cowPx, bx = ox + 8 - 8 * c, byy = oy + 9 - 9 * c;
     x.globalAlpha = alpha;
-    COW.forEach((r, y) => [...r].forEach((ch, i) => { if (CP[ch]) { x.fillStyle = CP[ch]; x.fillRect(flip ? ox + 15 - i : ox + i, oy + y, 1, 1); } }));
+    COW.forEach((r, y) => [...r].forEach((ch, i) => {
+      if (!CP[ch]) return;
+      let col = i;
+      if (kick !== null && y >= 7) col += Math.round(Math.sin(kick + LEG[i] * 1.9) * (y === 8 ? 1.6 : 0.7)); // hooves swing further than knees
+      x.fillStyle = CP[ch]; x.fillRect(bx + (flip ? 15 - col : col) * c, byy + y * c, c, c);
+    }));
     x.globalAlpha = 1;
   }
   function drawShip(x, ox, oy, t, hot) {
@@ -708,7 +719,10 @@ function startParty(root, opts = {}) {
     AW = Math.max(100, Math.ceil(wrap.clientWidth / S)); AH = Math.max(80, Math.ceil(wrap.clientHeight / S));
     cv.width = AW * SC; cv.height = AH * SC; cv.style.width = AW * S + "px"; cv.style.height = AH * S + "px";
     cx.setTransform(SC, 0, 0, SC, 0, 0); cx.imageSmoothingEnabled = false;
+    sizeCows();
   };
+  // about 1.7x on a roomy stage, smaller when 8 cows share a narrow screen so they don't pile up
+  function sizeCows() { const gap = AW * 0.8 / Math.max(1, room ? room.players.length : 1); cowPx = Math.max(SC, Math.min(Math.round(SC * 1.7), Math.floor(SC * gap / 19))) / SC; }
   sizeCanvas(); const onResize = () => { sizeCanvas(); seatsKey = ""; if (room) drawTags(); }; addEventListener("resize", onResize);
 
   /* ----- menu: create or join a room ----- */
@@ -904,7 +918,7 @@ function startParty(root, opts = {}) {
   /* ----- what just happened ----- */
   function pop(i, html, k, cls = "") {
     const fx = $(".pfx"), d = document.createElement("div"); d.className = "ppop " + cls; d.style.setProperty("--k", k);
-    d.style.left = seatX(i) * S + "px"; d.style.top = (baseY() - 22) * S + "px"; d.innerHTML = html; fx.appendChild(d); setTimeout(() => d.remove(), 2200);
+    d.style.left = seatX(i) * S + "px"; d.style.top = (baseY() - 22 - 9 * (cowPx - 1)) * S + "px"; d.innerHTML = html; fx.appendChild(d); setTimeout(() => d.remove(), 2200);
   }
   function banner(text, sub) { const fx = $(".pfx"), d = document.createElement("div"); d.className = "pbanner"; d.innerHTML = `<b>${esc(text)}</b>${sub ? `<span>${esc(sub)}</span>` : ""}`; fx.appendChild(d); setTimeout(() => d.remove(), 1900); }
   function handle(ev, old) {
@@ -946,6 +960,7 @@ function startParty(root, opts = {}) {
       return;
     }
     const playing = room.status === "playing", by = baseY(), n = room.players.length;
+    sizeCows();
     // how far along the beam is. It stands still while an answer is being checked (yours or anyone's), so checking never costs time.
     const paused = playing && ((sending && myTurn()) || room.hold);
     if (!playing) heatNow = 0; else if (!paused) heatNow = Math.max(0, Math.min(1, (Date.now() - beamRef.start) / (room.beamMs || 1)));
@@ -978,16 +993,16 @@ function startParty(root, opts = {}) {
         const start = by - (anim.from || 0), top = ufoY + 4;
         if (abd.k < RISE) {
           const e = Math.pow(abd.k / RISE, 2.4), wob = snap(Math.sin(abd.k * 34) * 1.5 * e);
-          for (let g = 3; g >= 1; g--) { const eg = Math.pow(Math.max(0, abd.k - g * 0.035) / RISE, 2.4); drawCow(cx, x0 + wob, snap(start - (start - top) * eg), flip, 0.12 * (4 - g)); }
-          drawCow(cx, x0 + wob, snap(start - (start - top) * e), flip);
+          for (let g = 3; g >= 1; g--) { const eg = Math.pow(Math.max(0, abd.k - g * 0.035) / RISE, 2.4); drawCow(cx, x0 + wob, snap(start - (start - top) * eg), flip, 0.12 * (4 - g), t * 26); }
+          drawCow(cx, x0 + wob, snap(start - (start - top) * e), flip, 1, t * 26); // legs going wild on the way into the UFO
         } else if (abd.k >= HOLD && !abd.out) { // dropped back down, landing with a little bounce
           const e = Math.min(1, (abd.k - HOLD) / (DROP - HOLD)), b = Math.min(1, e / 0.8) ** 2, bounce = e > 0.8 ? Math.sin((e - 0.8) / 0.2 * Math.PI) * 2.5 : 0;
-          drawCow(cx, x0, snap(top + (by - top) * b - bounce), flip);
+          drawCow(cx, x0, snap(top + (by - top) * b - bounce), flip, 1, e < 0.8 ? t * 16 : null);
         }
         continue;
       }
       if (playing && (!p.alive || p.left)) continue; // abducted for good
-      drawCow(cx, x0 + snap(sway), y0, flip);
+      drawCow(cx, x0 + snap(sway), y0, flip, 1, lift > 1.5 ? t * (9 + heat * 13) + i : null); // off the ground: legs wave, faster as time runs out
     }
     for (let k = parts.length - 1; k >= 0; k--) { const q = parts[k]; q.x += q.vx * dt; q.y += q.vy * dt; q.vy += 0.05 * dt; q.life -= dt; if (q.life <= 0) { parts.splice(k, 1); continue; } cx.fillStyle = q.c; cx.fillRect(snap(q.x), snap(q.y), 1, 1); }
     if (playing || anim) drawShip(cx, ux - 13, ufoY, t, abd && abd.k < RISE + 0.3 ? 1 : heat);
@@ -1001,7 +1016,7 @@ function startParty(root, opts = {}) {
       if (target.startsWith(remote.shown) && target.length > remote.shown.length) { if (now - remote.last > 40) { remote.shown = target.slice(0, remote.shown.length + 1); remote.last = now; } }
       else if (!target.startsWith(remote.shown)) remote.shown = target;
       tb.hidden = !remote.shown; tb.textContent = remote.shown; tb.classList.toggle("bad", !!room.typing?.bad && !bt);
-      tb.style.left = seatX(ti) * S + "px"; tb.style.top = (by - (lifts[ti] || 0) - 8) * S + "px";
+      tb.style.left = seatX(ti) * S + "px"; tb.style.top = (by - (lifts[ti] || 0) - 8 - 9 * (cowPx - 1)) * S + "px";
     } else tb.hidden = true;
     wrap.classList.toggle("pdanger", playing && myTurn() && heat > 0.8 && !paused);
   }
