@@ -690,6 +690,8 @@ form#f{width:calc(100% - 20px)}
 .chsq.lt{background:#ecdcb8}.chsq.dk{background:#b58863}
 .chsq.last{box-shadow:inset 0 0 0 100px rgba(255,207,138,.38)}
 .chsq.sel{box-shadow:inset 0 0 0 100px rgba(143,179,255,.5)}
+.chsq.hint{outline:3px solid #6fdc8c;outline-offset:-3px}
+.lucard.peek:after{content:"👀";position:absolute;right:4px;top:2px;font-size:12px;line-height:1}
 .chsq.check{background:radial-gradient(circle,#ff6b6b 0,#e04848 45%,transparent 75%)}
 .chsq.dot:after{content:"";position:absolute;width:28%;height:28%;border-radius:50%;background:rgba(20,30,60,.35)}
 .chsq.cap:after{content:"";position:absolute;inset:4%;border-radius:50%;border:5px solid rgba(20,30,60,.35)}
@@ -3083,7 +3085,7 @@ async function loadAdmin() {
   catch (err) { if (!handleAuthError(err)) box.innerHTML = `<p class="adminerr">${esc(err.message)}</p>`; }
 }
 
-function renderAdmin({users, log: events, announce}) {
+function renderAdmin({users, log: events, announce, cheats}) {
   const total = users.reduce((s, u) => s + (u.messages || 0), 0);
   const activeWeek = users.filter(u => u.lastActive && Date.now() - u.lastActive < 7 * 86400000).length;
   const box = $("adminBody");
@@ -3096,6 +3098,8 @@ function renderAdmin({users, log: events, announce}) {
     </div>
     <h3 class="sect">Announcement</h3>
 <div class="annbox"><input id="annIn" maxlength="280" placeholder="Write a message everyone sees when they open Nova" aria-label="Announcement"><button type="button" class="sprim" id="annPost">Post</button><button type="button" class="ghost" id="annClear">Clear</button><span class="saved" id="annMsg"></span></div>
+<h3 class="sect">Cheats</h3>
+<div class="annbox"><button type="button" class="ghost" id="cheatBtn"></button><span class="saved" id="cheatMsg">Only you see these. Word Bomb shows you a word to type (Tab fills it in), chess marks the best move, and The Lineup marks the other player's person with 👀.</span></div>
 <h3 class="sect">People</h3>
     <div class="twrap"><table>
       <thead><tr><th>Person</th><th>Joined</th><th>Last login</th><th>Messages</th><th title="Estimated from Oct 28, 2026 on">Spent</th><th>Daily limit</th><th>Models allowed</th><th>Access</th></tr></thead>
@@ -3113,6 +3117,14 @@ function renderAdmin({users, log: events, announce}) {
     catch (err) { $("wipeGo").disabled = false; wm.textContent = err.message; }
   };
 
+  const cb = $("cheatBtn"), paintCheat = () => { cb.textContent = me.cheats ? "Cheats are ON · turn off" : "Enable cheats"; cb.className = me.cheats ? "sprim" : "ghost"; };
+  me.cheats = !!cheats; paintCheat();
+  cb.onclick = async () => {
+    cb.disabled = true;
+    try { const d = await api("/api/admin", {method: "POST", body: JSON.stringify({cheats: !me.cheats})}); me.cheats = !!d.cheats; paintCheat(); }
+    catch (err) { $("cheatMsg").textContent = err.message; }
+    cb.disabled = false;
+  };
   const rows = $("uRows");
 const ai = $("annIn"), am = $("annMsg");
 if (announce) { ai.value = announce.text; am.textContent = "Live now"; }
@@ -4677,7 +4689,7 @@ const novaGraphs = {store: new Map(), n: 0};
     function sync(r) {
       if (room && r.game !== room.game) { sel = -1; guessing = false; }
       room = r;
-      const key = JSON.stringify([r.status, r.turn, r.log.length, r.picked, r.mine, r.theirs, r.players, r.rematch, r.game, sel, guessing]);
+      const key = JSON.stringify([r.status, r.turn, r.log.length, r.picked, r.mine, r.theirs, r.players, r.rematch, r.game, sel, guessing, r.peek]);
       if (key === lastKey) return; lastKey = key;
       paint();
     }
@@ -4693,7 +4705,7 @@ const novaGraphs = {store: new Map(), n: 0};
       const ok = possible(), grid = root.querySelector(".lugrid"); grid.innerHTML = "";
       r.board.forEach((p, k) => {
         const picking = r.status === "picking" && r.mine === null, can = picking || (guessing && myTurn);
-        const c = h("button", "lucard" + (can ? " can" : "") + (r.status === "playing" && !ok[k] ? " out" : "") + (sel === k ? " sel" : "") + (r.mine === k && r.status !== "picking" ? " mine" : "") + (r.theirs === k ? " theirs" : ""), face(p) + escH(p.name));
+        const c = h("button", "lucard" + (can ? " can" : "") + (r.status === "playing" && !ok[k] ? " out" : "") + (sel === k ? " sel" : "") + (r.mine === k && r.status !== "picking" ? " mine" : "") + (r.theirs === k ? " theirs" : "") + (r.peek === k ? " peek" : ""), face(p) + escH(p.name));
         c.type = "button"; c.disabled = !can; c.setAttribute("aria-label", p.name);
         if (r.mine === k && r.status !== "picking") c.insertAdjacentHTML("afterbegin", "<i>Yours</i>"); else if (r.theirs === k) c.insertAdjacentHTML("afterbegin", "<i>Theirs</i>");
         if (can) c.onclick = () => { sel = sel === k ? -1 : k; lastKey = ""; sync(room); };
@@ -4985,8 +4997,17 @@ const novaGraphs = {store: new Map(), n: 0};
       paint();
     }
     const setStatus = t => { const s = root.querySelector(".chstatus"); if (s) s.textContent = t; };
+    // (admin cheats) works out the best move for the position on the board when it's my turn, a moment after the board is drawn
+    let hint = null, hintFen = "";
+    function wantHint() {
+      if (!me || !me.cheats || !room || room.status !== "playing" || game.turn() !== color) return;
+      const fen = game.fen(); if (fen === hintFen) return;
+      hintFen = fen; hint = null;
+      setTimeout(() => { if (stopped || game.fen() !== fen) return; try { const m = chessBotMove(new Chess(fen), "hard"); if (m) { hint = {from: m.from, to: m.to}; paint(); } } catch {} }, 60);
+    }
     function paint() {
       const boardEl = root.querySelector(".chboard"); if (!boardEl) return;
+      wantHint();
       const pl = root.querySelector(".chplayers");
       pl.innerHTML = `<div class="${color === "w" ? "me" : ""}"><i class="pw"></i>${escH(room.white || "Waiting…")}</div><div class="${color === "b" ? "me" : ""}"><i class="pb"></i>${escH(room.black || "Waiting for a friend…")}</div>`;
       const turn = game.turn(), myTurn = room.status === "playing" && turn === color;
@@ -5016,6 +5037,7 @@ const novaGraphs = {store: new Map(), n: 0};
         if (last && (last.from === sq || last.to === sq)) d.classList.add("last");
         if (sel === sq) d.classList.add("sel");
         if (targets.includes(sq)) d.classList.add(p ? "cap" : "dot");
+        if (hint && hintFen === game.fen() && (hint.from === sq || hint.to === sq)) d.classList.add("hint"); // (admin cheats) the best move
         if (p && p.type === "k" && p.color === turn && game.in_check()) d.classList.add("check");
         if (p) { const s = h("span", "pc " + (p.color === "w" ? "w" : "b")); s.textContent = GLYPH[p.type] + VS; d.appendChild(s); }
         if (ff === 0) d.appendChild(h("i", "rk", String(r + 1)));
@@ -5491,6 +5513,7 @@ function startWordBomb(root) {
       set("nova-wb-room", null); lobby();
     };
     const inp = root.querySelector(".wbinp");
+    inp.addEventListener("keydown", e => { if (e.key === "Tab" && inp.dataset.hint) { e.preventDefault(); inp.value = inp.dataset.hint; inp.dispatchEvent(new Event("input", {bubbles: true})); } });
     inp.addEventListener("input", () => {
       inp.value = inp.value.toUpperCase().replace(/[^A-Z]/g, "");
       inp.classList.remove("bad"); root.querySelector(".wbmsg").textContent = "";
@@ -5674,7 +5697,8 @@ function startWordBomb(root) {
       else sendTyping();
     }
     inp.disabled = !alive;
-    inp.placeholder = !playing ? "" : mine ? `Your turn! Type a word with ${(room.prompt || "").toUpperCase()}…` : alive ? "Type ahead, press Enter to load it…" : "You're out. Watch the others!";
+    inp.dataset.hint = playing && room.hint ? room.hint.toUpperCase() : ""; // (admin cheats) a word that fits; Tab types it in
+    inp.placeholder = !playing ? "" : room.hint ? room.hint.toUpperCase() : mine ? `Your turn! Type a word with ${(room.prompt || "").toUpperCase()}…` : alive ? "Type ahead, press Enter to load it…" : "You're out. Watch the others!";
     body.querySelector(".wbbar").classList.toggle("mine", mine);
     body.querySelector(".wbbar").hidden = !playing;
     if (mine && document.activeElement !== inp) inp.focus({preventScroll: true});

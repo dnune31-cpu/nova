@@ -15,7 +15,7 @@ export default async function handler(req, res) {
         models: u.models || ["haiku"], blocked: !!u.blocked, troll: !!u.troll, cost: u.cost || 0, dailyLimit: u.dailyLimit || 0, todayMsgs: u.day === today() ? u.dayMsgs || 0 : 0, todayCost: u.day === today() ? u.dayCost || 0 : 0, messages: u.messages || 0, usage: u.usage || {}, admin: !!u.admin,
       })).sort((a, b) => (b.lastLogin || 0) - (a.lastLogin || 0));
       const log = ((await redis("LRANGE", "loginlog", 0, 99)) || []).map(x => JSON.parse(x));
-      return res.status(200).json({ users, log, announce: await getJSON("announce") });
+      return res.status(200).json({ users, log, announce: await getJSON("announce"), cheats: !!auth.user.cheats });
     }
 
     if (req.method === "POST") {
@@ -31,6 +31,15 @@ export default async function handler(req, res) {
         for (let i = 0; i < doomed.length; i += 100) await redis("DEL", ...doomed.slice(i, i + 100));
         console.log("nova wipe: erased " + doomed.length + " keys");
         return res.status(200).json({ ok: true, erased: doomed.length });
+      }
+      // "Enable cheats": a switch on the admin's own account. While it is on, the games quietly help this admin
+      // (a word to type in Word Bomb, the best move in chess, the other player's pick in The Lineup). Nobody else sees any of it.
+      if (typeof req.body?.cheats === "boolean") {
+        const self = await getJSON(`user:${auth.user.email}`);
+        if (!self) return res.status(401).json({ error: "Please log in again." });
+        self.cheats = req.body.cheats;
+        await setJSON(`user:${auth.user.email}`, self);
+        return res.status(200).json({ ok: true, cheats: self.cheats });
       }
       if (typeof req.body?.announce === "string") {
       const text = req.body.announce.replace(/\s+/g, " ").trim().slice(0, 280);

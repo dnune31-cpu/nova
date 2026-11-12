@@ -63,6 +63,20 @@ function newPrompt(round) { // harder letters show up more often as the rounds g
   return tier[crypto.randomInt(tier.length)];
 }
 
+// for an admin with cheats on: a word that fits the current letters (it stays the same until the turn changes)
+function hintWord(room) {
+  if (!WORDS || !room.prompt) return null;
+  const start = ((room.turnId || 0) * 7919 + room.prompt.length * 104729) % WORDS.length;
+  let fallback = null;
+  for (let k = 0; k < WORDS.length; k++) {
+    const w = WORDS[(start + k) % WORDS.length];
+    if (!w.includes(room.prompt) || room.used.includes(w)) continue;
+    if (w.length >= 5 && w.length <= 9) return w;
+    if (!fallback) fallback = w;
+  }
+  return fallback;
+}
+
 /* ----- bots ----- */
 const between = ([a, b]) => a + crypto.randomInt(b - a + 1);
 function botWord(prompt, used, lv) {
@@ -232,7 +246,9 @@ export default async function handler(req, res) {
         });
         if (!room) return res.status(404).json({ error: "That room doesn't exist anymore." });
       }
-      return res.status(200).json({ room: view(room, email, typing) });
+      const out = view(room, email, typing);
+      if (auth.user.admin && auth.user.cheats && room.status === "playing") { await loadWords().catch(() => {}); const hw = hintWord(room); if (hw) out.hint = hw; }
+      return res.status(200).json({ room: out });
     }
     if (req.method !== "POST") return res.status(405).json({ error: "Not allowed" });
     const { action } = req.body || {};

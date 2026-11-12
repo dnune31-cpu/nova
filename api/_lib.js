@@ -94,7 +94,7 @@ export async function getAuth(req) {
 }
 
 export function publicUser(user, admin) {
-  return { name: user.name, email: user.email, models: admin ? ALL_MODELS : (user.models || ["haiku"]), admin };
+  return { name: user.name, email: user.email, models: admin ? ALL_MODELS : (user.models || ["haiku"]), admin, cheats: !!(user.admin && user.cheats) };
 }
 
 export async function logEvent(type, email) {

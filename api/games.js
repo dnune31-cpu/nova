@@ -39,13 +39,14 @@ function makeLineup() {
   return out;
 }
 const aSeat = (room, email) => room.p.findIndex(x => x && x.email === email);
-function aView(room, email) {
+function aView(room, email, cheat) {
   const me = aSeat(room, email), over = room.status === "over";
   return {
     kind: "lineup", code: room.code, status: room.status, me, game: room.game || 1, updated: room.updated,
     players: room.p.map(x => (x ? x.name : null)), board: room.board,
     picked: room.secret.map(x => x !== null), mine: me >= 0 ? room.secret[me] : null,
     theirs: over && me >= 0 ? room.secret[1 - me] : null, // the other player's person is only shown once the game is over
+    ...(cheat && me >= 0 && !over && room.secret[1 - me] !== null ? { peek: room.secret[1 - me] } : {}), // ...unless the admin has cheats switched on
     turn: room.turn, log: room.log, winner: room.winner ?? null, result: room.result || null, rematch: room.rematch || [],
   };
 }
@@ -60,12 +61,12 @@ async function lineup(req, res, me) {
     for (let tries = 0; tries < 8; tries++) { code = Array.from(crypto.randomBytes(5), b => LETTERS[b % LETTERS.length]).join(""); if (!(await getJSON(key(code)))) break; }
     const room = { kind: "lineup", code, p: [me, null], board: makeLineup(), secret: [null, null], status: "waiting", turn: 0, log: [], skip: [false, false], game: 1, rematch: [] };
     await save(room);
-    return res.status(200).json({ room: aView(room, me.email) });
+    return res.status(200).json({ room: aView(room, me.email, me.cheat) });
   }
   const room = await getJSON(key(clean(req.body?.code)));
   if (!room || room.kind !== "lineup") return res.status(404).json({ error: "No room with that code. Check it and try again." });
   let i = aSeat(room, me.email);
-  const reply = (status, extra = {}) => res.status(status).json({ ...extra, room: aView(room, me.email) });
+  const reply = (status, extra = {}) => res.status(status).json({ ...extra, room: aView(room, me.email, me.cheat) });
   if (action === "join") {
     if (i < 0) {
       if (room.p[0] && room.p[1]) return res.status(409).json({ error: "That room is already full." });
@@ -124,11 +125,12 @@ export default async function handler(req, res) {
     const auth = await getAuth(req);
     if (!auth) return res.status(401).json({ error: "Please log in again." });
     const me = { email: auth.user.email, name: String(auth.user.name || "Player").slice(0, 30) };
+    Object.defineProperty(me, "cheat", { value: !!(auth.user.admin && auth.user.cheats), enumerable: false }); // not saved into rooms
 
     if (req.method === "GET") {
       const room = await getJSON(key(clean(req.query?.code)));
       if (!room) return res.status(404).json({ error: "That room doesn't exist anymore." });
-      if (room.kind === "lineup") return res.status(200).json({ room: aView(room, me.email) });
+      if (room.kind === "lineup") return res.status(200).json({ room: aView(room, me.email, me.cheat) });
       return res.status(200).json({ room: view(room, me.email) });
     }
     if (req.method !== "POST") return res.status(405).json({ error: "Not allowed" });
