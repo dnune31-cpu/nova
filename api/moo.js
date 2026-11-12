@@ -1,4 +1,4 @@
-import { redis, getJSON, getAuth, MODEL_IDS, isAdminEmail } from "./_lib.js";
+import { redis, pipeline, getJSON, getAuth, MODEL_IDS, isAdminEmail } from "./_lib.js";
 
 // Moo-llion: a daily word game. Everyone gets the same 7 prompts each day ("Name a dog breed").
 // The rarer your (still correct) answer, the higher your cow's balloon floats.
@@ -233,6 +233,73 @@ async function rateDay(d, day) {
   } finally { await redis("DEL", K.rate(d)); }
 }
 
+/* ----- endless climb: one prompt after another, forever. Height adds up and is saved (moo:end:<id>); moo:endlb ranks everyone.
+   Prompts and their rated answer lists come from Alien Party's prompt bank, so nothing new has to be written per prompt. ----- */
+const E = { st: id => `moo:end:${id}`, lb: "moo:endlb" };
+async function endNext(s) { // picks a prompt this player hasn't had lately
+  const all = (await redis("HKEYS", "ab:bank")) || [];
+  if (!all.length) return null;
+  const fresh = all.filter(p => !s.seen.includes(p)), from = fresh.length ? fresh : all.filter(p => p !== s.prompt);
+  s.prompt = (from.length ? from : all)[Math.floor(Math.random() * (from.length || all.length))];
+  s.seen.push(s.prompt); if (s.seen.length > 250) s.seen = s.seen.slice(-250);
+  return s.prompt;
+}
+async function endView(me, s) {
+  const top = (await redis("ZREVRANGE", E.lb, "0", "19", "WITHSCORES")) || [], rows = [];
+  for (let i = 0; i < top.length; i += 2) rows.push([top[i], Number(top[i + 1])]);
+  const recs = rows.length ? await pipeline(rows.map(([id]) => ["GET", K.pid(id)])) : [];
+  const board = rows.map(([id, alt], k) => { let nm = "Cow"; try { nm = JSON.parse(recs[k]).name || nm; } catch {} return { name: nm, alt, me: id === me.id }; });
+  return { alt: s.alt, n: s.n, prompt: s.prompt, tiers: TIERS, best: s.best || null, board, name: me.name };
+}
+async function endless(req, res, me, action, d) {
+  const sk = E.st(me.id);
+  let s = (await getJSON(sk)) || { alt: 0, n: 0, seen: [], prompt: null };
+  if (!s.prompt) { if (!(await endNext(s))) return res.status(503).json({ error: "The aliens are still writing prompts. Try again in a minute." }); await redis("SET", sk, JSON.stringify(s)); }
+  if (req.method === "GET") return res.status(200).json(await endView(me, s));
+  if (!(await redis("SET", K.lock(me.key), "1", "NX", "PX", "20000"))) return res.status(429).json({ error: "One answer at a time." });
+  try {
+    s = (await getJSON(sk)) || s;
+    if (req.body.prompt !== s.prompt) return res.status(409).json({ error: "That prompt is already done.", state: await endView(me, s) });
+    const prompt = s.prompt;
+    let result;
+    if (action === "endless-skip") result = { answer: "", tier: -1, m: 0, note: "Skipped. On to the next one." };
+    else {
+      const raw = String(req.body.answer || "").replace(/\s+/g, " ").trim().slice(0, 50);
+      if (raw.length < 2) return res.status(400).json({ error: "Type an answer first." });
+      const [lv, rv] = await pipeline([["HGET", "ab:bank", prompt], ["HGET", "ab:rare", prompt]]);
+      const list = lv ? JSON.parse(lv) : [], rr = rv ? JSON.parse(rv) : null, rare = Array.isArray(rr) && rr.length === list.length ? rr : null;
+      const listScore = k => rare && Number.isFinite(rare[k]) ? scoreFromRating(rare[k]) : scoreFromRank(k, list.length);
+      const at = findInList(list, raw);
+      if (at >= 0) { const sc = listScore(at); result = { answer: list[at].split("|")[0], ...sc, note: LINES[sc.tier] }; }
+      else {
+        const vk = `ab:v:${norm(prompt)}:${norm(raw)}`; // the same saved verdicts Alien Party uses
+        let v = await getJSON(vk);
+        if (!v) {
+          const n = await redis("INCR", K.judged(d, me.key));
+          if (n === 1) await redis("EXPIRE", K.judged(d, me.key), "172800");
+          if (n > 250) return res.status(429).json({ error: "That's a lot of new answers today. Try ones the sky already knows, or come back tomorrow." });
+          const ip = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim().slice(0, 64) || "x";
+          const ni = await redis("INCR", K.ip(d, ip));
+          if (ni === 1) await redis("EXPIRE", K.ip(d, ip), "172800");
+          if (ni > 3000) return res.status(429).json({ error: "Too many guesses from here today. Come back tomorrow." });
+          try { v = await judge(prompt, raw, list, rare); } catch (e) { console.error("moo endless judge", e.message); return res.status(503).json({ error: "Couldn't check that answer right now. Try again." }); }
+          await redis("SET", vk, JSON.stringify(v), "EX", String(30 * 86400));
+        }
+        if (!v.valid) return res.status(422).json({ error: v.why || "That doesn't fit the prompt. Try another answer.", code: "invalid" });
+        const k2 = findInList(list, v.name), sc = k2 >= 0 ? listScore(k2) : scoreFromRating(v.obscurity);
+        result = { answer: k2 >= 0 ? list[k2].split("|")[0] : v.name || raw, ...sc, note: k2 < 0 && v.why ? `${v.why}` : LINES[sc.tier] };
+      }
+    }
+    result.prompt = prompt;
+    s.alt += result.m; s.n += 1;
+    if (result.tier >= 0 && (!s.best || result.m > s.best.m)) s.best = { answer: result.answer, tier: result.tier, m: result.m, prompt };
+    await endNext(s);
+    await redis("SET", sk, JSON.stringify(s));
+    if (s.alt > 0) await redis("ZADD", E.lb, String(s.alt), me.id);
+    return res.status(200).json({ result, state: await endView(me, s) });
+  } finally { await redis("DEL", K.lock(me.key)); }
+}
+
 // who is playing: a random id kept in their browser, plus the name they picked
 async function who(req) {
   const id = String(req.headers["x-moo-player"] || "").toLowerCase();
@@ -321,6 +388,7 @@ export default async function handler(req, res) {
       me.rec = { ...me.rec, skin: sk }; me.picked = sk; me.skin = skinOf(me.rec);
       await redis("SET", K.pid(me.id), JSON.stringify(me.rec));
     }
+    if (req.query?.endless || action === "endless" || action === "endless-skip") return await endless(req, res, me, action, d);
     const email = me.key, name = me.name;
     const day = await getDay(d);
     if (!day) return res.status(200).json({ preparing: true });

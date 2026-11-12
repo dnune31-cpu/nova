@@ -130,6 +130,7 @@ body{overflow:hidden;-webkit-tap-highlight-color:transparent}
 .mboard li.me b:after{content:"you";font-family:Silkscreen,monospace;font-size:9px;letter-spacing:1px;color:#2a0b1c;background:#ec6f97;padding:1px 5px;margin-left:8px;vertical-align:middle;font-weight:400}
 .ptag .h s{text-decoration:none;color:#39426b}
 .plink{margin-top:10px}
+.mnext2{margin:6px 0 2px;font-size:12px;color:#d6dcf0;text-shadow:0 1px 0 #000,0 0 6px rgba(0,0,0,.7)}.mnext2 b{color:#7fe0ff}.mask .mrow{justify-content:center;gap:18px}
 .mpill.new{background:#ffd23f;color:#2a1b00;border-color:#fff3a8;animation:pBlink 1s steps(2) infinite}
 .mbarn{width:min(760px,100%)}.mskins{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:8px 0 12px}
 .mskin{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 6px 9px;background:rgba(255,255,255,.04);border:2px solid #070b1a;cursor:pointer;text-align:center;border-radius:2px}
@@ -291,7 +292,11 @@ function startMoo(root, opts = {}) {
   const IMG = "https://d8j0ntlcm91z4.cloudfront.net/user_3KOBfqwOB9ikrbu9I0UQir2iysj/hf_20261109_";
   const SCENES = ["010015_b7dfcf78-f8cd-4ca6-afe7-28cc5c5c705a", "010014_0b70e6ac-9caf-47e8-a9a9-fc84493a60a1", "010014_06a075f2-9d53-4f46-bbf8-cccd147b1b17",
     "010014_7805181d-ae17-4f85-88b4-badffc9feb02", "010015_477b5311-ba65-4b30-9b88-cab11688d00d", "010013_e8d385b4-bd8f-45bf-a541-948406faccf6",
-    "010013_87567b9b-0dc4-43e7-b16d-ee1b203ec47e"].map(id => IMG + id + "_min.webp");
+    "010013_87567b9b-0dc4-43e7-b16d-ee1b203ec47e"].map(id => IMG + id + "_min.webp")
+    // beyond the Moon (the endless climb): Mars, Jupiter, Saturn, Uranus, Neptune, Pluto, the whole solar system
+    .concat(["020250_0ffd719d-ac9a-4dba-97ea-1667eba3db35", "020251_fb9c9b4a-02c4-42de-9537-4fe8ff4ceb65", "020252_d30d2db0-be30-49e6-b78c-e2e12dec02ef", "020250_068d7f54-070f-4a33-9c32-ecded2eb786a",
+      "020250_09a23f2f-cf3d-4534-8ce8-b2c256c08e93", "020250_6226a759-f86a-481c-b53d-cc017a2b5c6e", "020251_facc297f-dc1a-461c-be72-c8cb99b744b6"].map(id => IMG.replace("20261109", "20261112") + id + "_min.webp"));
+  const NEAR = 7; // the first 7 pictures load up front; the far ones load when you get close to them
   // where you are in the sky (by total height), with the picture for each
   const ZONES = [
     {at: 0, scene: 1, name: "The Pasture", text: "Hay bales, a red barn, a winding path. Your hooves just left the grass."},
@@ -300,8 +305,15 @@ function startMoo(root, opts = {}) {
     {at: 3000, scene: 4, name: "The Jet Stream", text: "Fast winds and a golden sunset. A plane waves its wings at you."},
     {at: 8000, scene: 5, name: "The Stratosphere", text: "The Earth curves away below and the sky turns dark blue."},
     {at: 15000, scene: 6, name: "Deep Space", text: "Stars all around and the Moon up close. One in a moo-llion."},
+    {at: 25000, scene: 7, name: "Mars", text: "Red dust, deep canyons and a white ice cap. Earth is a blue dot behind you."},
+    {at: 45000, scene: 8, name: "Jupiter", text: "Bands of storm cloud and the Great Red Spot, bigger than the whole Earth."},
+    {at: 70000, scene: 9, name: "Saturn", text: "Rings of ice and rock, wide enough to drift along for days."},
+    {at: 100000, scene: 10, name: "Uranus", text: "A pale blue-green giant, rolling around the Sun on its side."},
+    {at: 135000, scene: 11, name: "Neptune", text: "Deep blue, the fastest winds anywhere, and the Sun is just a bright star."},
+    {at: 175000, scene: 12, name: "Pluto", text: "A little world with a heart on it, out among the comets."},
+    {at: 220000, scene: 13, name: "The Solar System", text: "Every planet at once, circling one small yellow star. That's home."},
   ];
-  const SKY = ["#9fd3ff", "#8cc6f5", "#7fb8f0", "#f2a477", "#24408f", "#0d0b2e"]; // the sky you rush through on the way up
+  const SKY = ["#9fd3ff", "#8cc6f5", "#7fb8f0", "#f2a477", "#24408f", "#0d0b2e", "#3a1420", "#2a1a14", "#1a1640", "#0c2a30", "#0a1440", "#101018", "#05050f"]; // the sky you rush through on the way up
   const TIERC = ["#7bd389", "#3fc29a", "#55b3ff", "#a07bff", "#ff6ad5", "#ffd23f"];
   const get = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } };
   const set = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
@@ -318,7 +330,7 @@ function startMoo(root, opts = {}) {
     l.href = "https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Space+Mono:wght@400;700&display=swap";
     document.head.appendChild(l);
   }
-  SCENES.forEach(u => { const i = new Image(); i.src = u; }); // warm the cache so the sky changes instantly
+  SCENES.slice(0, NEAR).forEach(u => { const i = new Image(); i.src = u; }); // warm the cache so the sky changes instantly
 
   /* ----- the little pixel cow, carried by an alien's UFO and its tractor beam ----- */
   const SHIP = {hull: "#9b7bff", hullD: "#5b3fc4", dome: "#bff4ff", lights: "#7dffb0", alien: "#4ee08a", beam: "110,230,255"};
@@ -407,7 +419,7 @@ function startMoo(root, opts = {}) {
   };
 
   /* ----- the shell: sky, HUD, and the middle area that changes ----- */
-  root.innerHTML = `<div class="moo"><div class="moobg">${SCENES.map((u, i) => `<i data-s="${i}" style="background-image:url('${u}')"></i>`).join("")}</div>
+  root.innerHTML = `<div class="moo"><div class="moobg">${SCENES.map((u, i) => `<i data-s="${i}" style="${i < NEAR ? `background-image:url('${u}')` : ""}"></i>`).join("")}</div>
     <div class="mootransit"></div><canvas class="moowind" aria-hidden="true"></canvas><div class="moofx"></div><div class="moocowwrap"></div>
     <div class="moohud" hidden><div class="mbox malt"><small>Altitude</small><b>0m</b></div><div class="mbox mzone"><b></b><span></span></div></div>
     <div class="mbox mprog" hidden><div class="mdots"></div><small></small></div>
@@ -426,7 +438,9 @@ function startMoo(root, opts = {}) {
   const onKey = e => { if (e.key === "Escape" && wrap.classList.contains("mfull")) wrap.classList.remove("mfull"); };
   document.addEventListener("keydown", onKey);
 
+  function needScene(i) { const el = root.querySelector(`.moobg i[data-s="${i}"]`); if (el && !el.style.backgroundImage) el.style.backgroundImage = `url('${SCENES[i]}')`; } // loads a far picture
   function setScene(i, replay) {
+    needScene(i);
     if (i === scene) {
       if (!replay) return;
       const el = root.querySelector(".moobg i.on"); if (el) { el.classList.remove("drop"); void el.offsetWidth; el.classList.add("drop"); }
@@ -452,7 +466,8 @@ function startMoo(root, opts = {}) {
     $m(".mzone b").textContent = z.name; $m(".mzone span").textContent = z.text;
     // ruler: 0 at the bottom, a round number above you at the top
     const steps = [500, 1000, 2500, 5000, 10000, 20000, 40000, 80000];
-    const top = steps.find(s => s >= alt * 1.25 + 100) || steps[steps.length - 1];
+    while (steps[steps.length - 1] < alt * 1.25 + 100) steps.push(steps[steps.length - 1] * 2); // the ruler keeps growing with you
+    const top = steps.find(s => s >= alt * 1.25 + 100);
     const ticks = $m(".mticks");
     if (ticks.dataset.top !== String(top)) {
       ticks.dataset.top = top;
@@ -554,7 +569,7 @@ function startMoo(root, opts = {}) {
       <div class="mmenu">${help}${needName ? `<button type="button" class="mpill mhow">? How to play</button>
       <form class="mform mname" autocomplete="off"><span>&gt;</span><input maxlength="16" placeholder="what should we call you?" aria-label="Your name" spellcheck="false"></form><div class="merr" role="alert"></div>
       <button type="button" class="mgo">▲ Lift off ▲</button>` : `<div class="mpills">${st && st.streak ? `<div class="mpill">🔥 ${st.streak} day streak</div>` : `<button type="button" class="mpill mhow">? How to play</button>`}${st && st.name ? `<button type="button" class="mpill mwho" title="Change your name">✎ ${escM(st.name)}</button>` : ""}${st && st.skins ? `<button type="button" class="mpill mcows${newSkins().length ? " new" : ""}">${newSkins().length ? "★ New cow!" : "Cows " + st.skins.have.length + "/" + SKIN_ORDER.length}</button>` : ""}</div>
-      <button type="button" class="mgo">${done ? "▸ See my flight ◂" : a ? "▲ Keep floating ▲" : "▲ Lift off ▲"}</button>${opts.onParty && st ? `<button type="button" class="mbar mparty">👽 Alien Party <em>play with friends</em></button>` : ""}`}
+      <button type="button" class="mgo">${done ? "▸ See my flight ◂" : a ? "▲ Keep floating ▲" : "▲ Lift off ▲"}</button>${st ? `<button type="button" class="mbar mendless">∞ Endless climb <em>keep rising</em></button>` : ""}${opts.onParty && st ? `<button type="button" class="mbar mparty">👽 Alien Party <em>play with friends</em></button>` : ""}`}
       <button type="button" class="mbar mlb">Today's leaderboard <em>${st ? st.board.length + " played" : ""}</em></button></div>`;
     if (needName) {
       const inp = main.querySelector(".mname input"), err = main.querySelector(".merr"), go = main.querySelector(".mgo");
@@ -569,6 +584,7 @@ function startMoo(root, opts = {}) {
       main.querySelector(".mname").onsubmit = e => { e.preventDefault(); pick(); };
       go.onclick = pick;
     } else main.querySelector(".mgo").onclick = () => { sfx.tap(); if (!st) return; done ? results() : play(); };
+    const eb = main.querySelector(".mendless"); if (eb) eb.onclick = () => { sfx.tap(); endless(); };
     const cw = main.querySelector(".mcows"); if (cw) cw.onclick = () => { sfx.tap(); cows(); };
     const pty = main.querySelector(".mparty"); if (pty) pty.onclick = () => { sfx.tap(); opts.onParty(); };
     const who = main.querySelector(".mwho"); if (who) who.onclick = async () => {
@@ -650,6 +666,73 @@ function startMoo(root, opts = {}) {
     main.innerHTML = `<div class="mpanel"><small>Today · #${st ? st.num : ""}</small><h2>Leaderboard</h2>${rows ? `<ol class="mboard">${rows}</ol>` : `<p>No one has floated yet today. Be the first!</p>`}
       ${done ? "" : `<p class="mtiny">Finish your flight to see everyone's best answers.</p>`}<div class="mrow"><button type="button" class="mgo sm mback">◂ Back</button></div></div>`;
     main.querySelector(".mback").onclick = () => title();
+  }
+
+  /* ----- endless climb: prompt after prompt with no last one. Your height is saved, so you carry on where you left off. ----- */
+  let en = null;
+  const nextSky = alt => ZONES.find(z => z.at > alt);
+  async function endless() {
+    playing(true); placeCow("air"); $m(".mquit").textContent = "Menu"; $m(".mdots").innerHTML = ""; $m(".mprog small").textContent = "Endless climb";
+    main.className = "mmain mask"; main.innerHTML = `<div class="mq"><small>Endless climb</small><h2>Finding your cow…</h2></div><div class="merr" role="alert"></div>`;
+    try { en = await api("/api/moo?endless=1"); if (!stopped) ePlay(); }
+    catch (e) { if (e.status === 401) { needName = true; return title(); } const er = main.querySelector(".merr"); if (er) er.textContent = e.message; }
+  }
+  function ePlay() {
+    playing(true); placeCow("air"); $m(".mquit").textContent = "Menu";
+    shown = en.alt; hud(shown); setScene(ZONES[zoneOf(shown)].scene);
+    $m(".mdots").innerHTML = ""; $m(".mprog small").textContent = "Endless · " + en.n + " answered";
+    const nx = nextSky(en.alt); if (nx) needScene(nx.scene);
+    main.className = "mmain mask";
+    main.innerHTML = `<div class="mq"><small>Endless climb · #${en.n + 1}</small><h2>${escM(en.prompt)}</h2></div>
+      <form class="mform" autocomplete="off"><span>&gt;</span><input maxlength="50" placeholder="type your answer" aria-label="Your answer" spellcheck="false"><button type="submit" class="mgo sm">Float ▸</button></form>
+      <div class="merr" role="alert"></div><p class="mnext2">${nx ? `Next sky: <b>${escM(nx.name)}</b> in ${fmt(nx.at - en.alt)}` : "You've seen the whole solar system. Keep climbing!"}</p>
+      <div class="mrow"><button type="button" class="mskip eskip">skip this one</button><button type="button" class="mskip etop">top climbers</button></div>`;
+    const form = main.querySelector(".mform"), inp = form.querySelector("input"), err = main.querySelector(".merr");
+    inp.focus({preventScroll: true});
+    inp.addEventListener("input", () => { err.textContent = ""; form.classList.remove("bad"); });
+    form.onsubmit = e => { e.preventDefault(); const v = inp.value.trim(); if (v.length >= 2) eSend("endless", v); };
+    main.querySelector(".eskip").onclick = () => eSend("endless-skip", "");
+    main.querySelector(".etop").onclick = () => { sfx.tap(); eBoard(); };
+  }
+  async function eSend(action, answer) {
+    if (busy) return; busy = true;
+    const form = main.querySelector(".mform"), err = main.querySelector(".merr");
+    form?.classList.add("wait"); if (err) err.textContent = action === "endless" ? "Checking the sky charts…" : "";
+    try {
+      const d = await api("/api/moo", {method: "POST", body: JSON.stringify({action, prompt: en.prompt, answer})});
+      busy = false; const before = en.alt; en = d.state; eReveal(d.result, before);
+    } catch (e) {
+      busy = false;
+      if (e.status === 401 && e.data?.code === "name") { needName = true; return title(); }
+      if (e.data?.state) { en = e.data.state; return ePlay(); }
+      form?.classList.remove("wait");
+      if (err) err.textContent = e.message;
+      if (form) { form.classList.remove("bad"); void form.offsetWidth; form.classList.add("bad"); form.querySelector("input").select(); }
+      sfx.bad();
+    }
+  }
+  function eReveal(r, before) {
+    const t = r.tier, arrived = zoneOf(en.alt) !== zoneOf(before) ? ZONES[zoneOf(en.alt)] : null;
+    if (t < 0) return ePlay(); // skipped: straight to the next prompt
+    $m(".mprog small").textContent = "Endless · " + en.n + " answered";
+    main.className = "mmain mres";
+    main.innerHTML = `<div class="mico" style="--k:${TIERC[t]}"></div><div class="mtier" style="--k:${TIERC[t]}">${escM(en.tiers[t])}</div>
+      <div class="mrare"><small>Common</small>${TIERC.map((c, k) => `<i style="--k:${c}" class="${k === t ? "on" : ""}"></i>`).join("")}<small>Rare</small></div>
+      <div class="mans">“${escM(r.answer)}”</div><div class="mpts"><b>+${r.m.toLocaleString()}m</b> · up to ${fmt(en.alt)}</div>
+      <p class="mnote">${arrived ? `★ New sky: ${escM(arrived.name)}! ` : ""}${escM(r.note)}</p><button type="button" class="mgo mnext">Next ▸</button>`;
+    const next = main.querySelector(".mnext"); next.onclick = () => { sfx.tap(); ePlay(); };
+    const land = () => { main.classList.remove("hold"); setTimeout(() => next.focus({preventScroll: true}), 50); };
+    if (reduce) { sfx.rise(t); countTo(before, en.alt); return land(); }
+    main.classList.add("hold");
+    sfx.wind(t);
+    fly(t, before, en.alt, () => { sfx.rise(t); land(); });
+  }
+  function eBoard() {
+    main.className = "mmain mend";
+    const rows = (en.board || []).map((p, k) => `<li class="${p.me ? "me" : ""}"><span class="mrk">${k + 1}</span><b>${escM(p.name)}</b><em>${escM(ZONES[zoneOf(p.alt)].name)}</em><i>${fmt(p.alt)}</i></li>`).join("");
+    main.innerHTML = `<div class="mpanel"><small>Endless climb · all time</small><h2>Top climbers</h2>${rows ? `<ol class="mboard">${rows}</ol>` : `<p>Nobody has climbed yet. Be the first!</p>`}
+      ${en.best ? `<p>Your best answer: <b>“${escM(en.best.answer)}”</b> (+${en.best.m.toLocaleString()}m)</p>` : ""}<div class="mrow"><button type="button" class="mgo sm mback">◂ Back</button></div></div>`;
+    main.querySelector(".mback").onclick = () => ePlay();
   }
 
   /* ----- the barn: every cow skin, how to earn it, and which one you're wearing ----- */
