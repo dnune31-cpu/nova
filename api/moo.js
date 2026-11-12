@@ -26,13 +26,17 @@ const BACKUP = ["Name a dog breed", "Name a fruit", "Name a sport", "Name a coun
   "Name a vegetable", "Name a board game", "Name a body part", "Name a kind of tree", "Name a famous painter", "Name a pasta shape", "Name a dinosaur",
   "Name a car brand", "Name a planet or moon", "Name a fish", "Name a flower", "Name a breakfast food", "Name a chemical element", "Name a dance style"];
 
+// cow skins: "classic" is everyone's; the rest are earned (the set of earned ones is kept per player at moo:sk:<id>).
+// Earned here: streaks (cocoa 3, strawberry 7, highland 30), golden (a One in a Moo-llion answer), astronaut (15,000m in one flight),
+// rainbow (all six tiers in one flight), royal (#1 on the day's board with at least 2 players). Alien Party grants alien, party, robo and ghost.
+export const SKIN_IDS = ["classic", "cocoa", "strawberry", "highland", "golden", "astronaut", "rainbow", "royal", "alien", "party", "robo", "ghost"];
 const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
 const dayNum = d => Math.round((Date.parse(d + "T00:00:00Z") - EPOCH) / 86400000) + 1;
 const shift = (d, n) => new Date(Date.parse(d + "T12:00:00Z") + n * 86400000).toISOString().slice(0, 10);
 const K = {
   day: d => `moo:day:${d}`, gen: d => `moo:gen:${d}`, plays: d => `moo:p:${d}`, verdict: (d, i) => `moo:v:${d}:${i}`,
   pid: id => `moo:pid:${id}`, name: n => `moo:name:${n}`, ip: (d, ip) => `moo:ip:${d}:${ip}`,
-  user: e => `moo:u:${e}`, lock: e => `moo:lk:${e}`, judged: (d, e) => `moo:j:${d}:${e}`, recent: "moo:recent", rate: d => `moo:rate:${d}`,
+  user: e => `moo:u:${e}`, lock: e => `moo:lk:${e}`, judged: (d, e) => `moo:j:${d}:${e}`, recent: "moo:recent", rate: d => `moo:rate:${d}`, skins: id => `moo:sk:${id}`,
 };
 
 /* ----- matching answers (forgiving about case, accents, "the", plurals and small typos) ----- */
@@ -227,11 +231,11 @@ async function who(req) {
   const id = String(req.headers["x-moo-player"] || "").toLowerCase();
   if (!/^[a-f0-9]{32}$/.test(id)) return null;
   const p = await getJSON(K.pid(id));
-  return { id, key: "p:" + id, name: p?.name || null };
+  return { id, key: "p:" + id, name: p?.name || null, skin: SKIN_IDS.includes(p?.skin) ? p.skin : "classic", rec: p || {} };
 }
 const cleanName = n => String(n || "").replace(/[^\p{L}\p{N} _.'-]/gu, "").replace(/\s+/g, " ").trim().slice(0, 16);
 
-async function view(d, day, email, name) {
+async function view(d, day, email, name, me) {
   const all = (await redis("HGETALL", K.plays(d))) || [];
   const plays = {};
   for (let i = 0; i < all.length; i += 2) { try { plays[all[i]] = JSON.parse(all[i + 1]); } catch {} }
@@ -242,11 +246,21 @@ async function view(d, day, email, name) {
     const best = p.answers.reduce((b, a) => (a.m > (b?.m ?? -1) ? a : b), null);
     return { name: p.name, total: p.total, count: p.answers.length, me: e === email, best: done && best ? { answer: best.answer, tier: best.tier } : null };
   }).sort((a, b) => b.total - a.total).slice(0, 30);
+  // skins this player has earned so far (anything newly earned is saved now)
+  const streak = u.last === d || u.last === shift(d, -1) ? u.streak || 0 : 0;
+  const have = new Set((me && (await redis("SMEMBERS", K.skins(me.id)))) || []), tiers = new Set(mine.answers.map(a => a.tier)), earn = [];
+  if (streak >= 3) earn.push("cocoa"); if (streak >= 7) earn.push("strawberry"); if (streak >= 30) earn.push("highland");
+  if (tiers.has(5)) earn.push("golden"); if (mine.total >= 15000) earn.push("astronaut"); if ([0, 1, 2, 3, 4, 5].every(t => tiers.has(t))) earn.push("rainbow");
+  if (done && board.length >= 2 && board[0].me) earn.push("royal");
+  const fresh = earn.filter(x => !have.has(x));
+  if (me && fresh.length) { await redis("SADD", K.skins(me.id), ...fresh); fresh.forEach(x => have.add(x)); }
+  have.add("classic");
   return {
+    skins: { have: SKIN_IDS.filter(x => have.has(x)), on: me && have.has(me.skin) ? me.skin : "classic" },
     date: d, num: dayNum(d), count: N, tiers: TIERS, name,
     prompts: day.prompts.slice(0, Math.min(N, mine.answers.length + 1)),
     answers: mine.answers, total: mine.total, done, unrated: unrated(day),
-    streak: u.last === d || u.last === shift(d, -1) ? u.streak || 0 : 0,
+    streak,
     board,
   };
 }
@@ -284,18 +298,25 @@ export default async function handler(req, res) {
       if (owner && owner !== me.id) return res.status(409).json({ error: "That name is taken. Try another one." });
       if (!owner && !(await redis("SET", K.name(low), me.id, "NX"))) return res.status(409).json({ error: "That name is taken. Try another one." });
       if (me.name && me.name.toLowerCase() !== low && (await redis("GET", K.name(me.name.toLowerCase()))) === me.id) await redis("DEL", K.name(me.name.toLowerCase()));
-      await redis("SET", K.pid(me.id), JSON.stringify({ name: nm, since: Date.now() }));
+      me.rec = { ...me.rec, name: nm, since: me.rec.since || Date.now() };
+      await redis("SET", K.pid(me.id), JSON.stringify(me.rec));
       me.name = nm;
       const ph = await redis("HGET", K.plays(d), me.key); // keep today's leaderboard name in sync
       if (ph) { const pl = JSON.parse(ph); pl.name = nm; await redis("HSET", K.plays(d), me.key, JSON.stringify(pl)); }
     }
     if (!me.name) return res.status(401).json({ error: "Pick a name to play.", code: "name" });
+    if (action === "skin") { // wear a cow you've earned
+      const sk = String(req.body.skin || "");
+      if (!SKIN_IDS.includes(sk) || (sk !== "classic" && !(await redis("SISMEMBER", K.skins(me.id), sk)))) return res.status(403).json({ error: "You haven't earned that cow yet." });
+      me.rec = { ...me.rec, skin: sk }; me.skin = sk;
+      await redis("SET", K.pid(me.id), JSON.stringify(me.rec));
+    }
     const email = me.key, name = me.name;
     const day = await getDay(d);
     if (!day) return res.status(200).json({ preparing: true });
 
     if (req.method === "GET" && req.query?.rate) { await rateDay(d, day); return res.status(200).json({ ok: true }); } // a side request from the page: rate today's lists if they aren't yet
-    if (req.method === "GET" || action === "hello") return res.status(200).json(action === "hello" ? { state: await view(d, day, email, name) } : await view(d, day, email, name));
+    if (req.method === "GET" || action === "hello" || action === "skin") return res.status(200).json(action ? { state: await view(d, day, email, name, me) } : await view(d, day, email, name, me));
     if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
     if (action !== "answer" && action !== "skip") return res.status(400).json({ error: "Unknown action" });
     const got = await redis("SET", K.lock(email), "1", "NX", "PX", "20000");
@@ -305,7 +326,7 @@ export default async function handler(req, res) {
       const mine = plays ? JSON.parse(plays) : { name, answers: [], total: 0 };
       const i = mine.answers.length;
       if (i >= N) return res.status(400).json({ error: "You already finished today's flight." });
-      if (Number(req.body.i) !== i) return res.status(409).json({ error: "That prompt is already done.", state: await view(d, day, email, name) });
+      if (Number(req.body.i) !== i) return res.status(409).json({ error: "That prompt is already done.", state: await view(d, day, email, name, me) });
       const prompt = day.prompts[i], list = day.lists[i] || [], rare = day.rare && Array.isArray(day.rare[i]) && day.rare[i].length === list.length ? day.rare[i] : null;
       // an answer on the list scores by its own rarity rating (so it can reach any tier); until a list is rated, by its spot on the list
       const listScore = k => rare && Number.isFinite(rare[k]) ? scoreFromRating(rare[k]) : scoreFromRank(k, list.length);
@@ -347,7 +368,7 @@ export default async function handler(req, res) {
         const streak = u.last === shift(d, -1) ? (u.streak || 0) + 1 : u.last === d ? u.streak || 1 : 1;
         await redis("SET", K.user(email), JSON.stringify({ last: d, streak, best: Math.max(u.best || 0, mine.total) }));
       }
-      return res.status(200).json({ result, state: await view(d, day, email, name) });
+      return res.status(200).json({ result, state: await view(d, day, email, name, me) });
     } finally { await redis("DEL", K.lock(email)); }
   } catch (err) {
     console.error(err);

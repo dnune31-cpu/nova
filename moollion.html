@@ -130,6 +130,16 @@ body{overflow:hidden;-webkit-tap-highlight-color:transparent}
 .mboard li.me b:after{content:"you";font-family:Silkscreen,monospace;font-size:9px;letter-spacing:1px;color:#2a0b1c;background:#ec6f97;padding:1px 5px;margin-left:8px;vertical-align:middle;font-weight:400}
 .ptag .h s{text-decoration:none;color:#39426b}
 .plink{margin-top:10px}
+.mpill.new{background:#ffd23f;color:#2a1b00;border-color:#fff3a8;animation:pBlink 1s steps(2) infinite}
+.mbarn{width:min(760px,100%)}.mskins{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:8px 0 12px}
+.mskin{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 6px 9px;background:rgba(255,255,255,.04);border:2px solid #070b1a;cursor:pointer;text-align:center;border-radius:2px}
+.mskin canvas{width:76px;height:52px;image-rendering:pixelated;background:linear-gradient(#24408f,#7fb8f0);border:1px solid #070b1a}
+.mskin b{font-family:Silkscreen,monospace;font-weight:400;font-size:12px;letter-spacing:1px;color:#ffeccf;text-transform:uppercase}
+.mskin span{font-size:10.5px;line-height:1.3;color:#7fe0ff}.mskin:not(.locked):not(.on):hover{border-color:#5ad1ff}
+.mskin.on{border-color:#ffd23f;background:rgba(255,210,63,.1)}.mskin.on span{color:#ffd23f}
+.mskin.locked{cursor:default}.mskin.locked canvas{filter:grayscale(1) brightness(.55)}.mskin.locked b{color:#8f99c2}.mskin.locked span{color:#8f99c2}
+.mskin u{position:absolute;right:4px;top:4px;text-decoration:none;font-family:Silkscreen,monospace;font-size:9px;background:#ffd23f;color:#2a1b00;padding:1px 5px}
+@media (max-width:760px){.mskins{grid-template-columns:repeat(2,1fr)}}
 @media (max-width:760px){.mmenu{gap:8px}.mbar{padding:10px 8px;font-size:12px;letter-spacing:2px}.mbar em{font-size:10px;letter-spacing:1px;margin-left:6px}.mgo{padding:12px}
   .msub{letter-spacing:4px;font-size:11px}.mpanel{padding:14px 12px}.mpanel h2{font-size:26px}.mtitle{padding:70px 14px calc(16px + env(safe-area-inset-bottom))}
   .mmain,.mend{padding-bottom:calc(18px + env(safe-area-inset-bottom))}.mans{font-size:22px;overflow-wrap:anywhere}.mlist li{grid-template-columns:1fr auto;grid-template-areas:"p p" "b e" "i i"}.mlist i{justify-self:start}
@@ -218,6 +228,60 @@ async function api(path, opts = {}) {
 }
 function handleAuthError() { return false; }
 
+/* ---------- cow skins (both modes). Same 16x9 pixel cow; a skin swaps colours and adds a few pixels (y < 0 is above the cow). ---------- */
+const COW_ROWS = ["...........hh...", "..kkkkkkkkkkkkkk", ".kwwbbwwwwbwkwek", "kwbbbwwwwwwkwwwk", ".kwwbwwwbbwwkppk", "..kwwwwwbbbwwkpk", "..kkkkkkkkkkkkk.", "..k.k.....k.k...", "..n.n.....n.n..."];
+const COW_PAL = {w: "#ffffff", k: "#1a1a24", b: "#2b2b36", h: "#f2e3b3", p: "#ffb3c1", e: "#1a1a24", n: "#3a3a46"};
+const COW_RAINBOW = ["#ff5d5d", "#ff9f43", "#ffd23f", "#7bd389", "#55b3ff", "#a07bff"], COW_LEG = {2: 0, 4: 1, 10: 2, 12: 3};
+const SKINS = {
+  classic: {name: "Classic", how: "Everyone starts with this one."},
+  cocoa: {name: "Cocoa", how: "Keep a 3 day streak.", pal: {w: "#d9a066", b: "#7a4a26", p: "#f2b8a0"}},
+  strawberry: {name: "Strawberry", how: "Keep a 7 day streak.", pal: {w: "#ffd6e2", b: "#ff6f9c", p: "#ff8fb3", h: "#fff3a8"}},
+  highland: {name: "Highland", how: "Keep a 30 day streak.", pal: {w: "#e09a4a", b: "#b5651d", p: "#f2c9a0", h: "#fff6dc"},
+    extra: [[10, -1, "#fff6dc"], [13, -1, "#fff6dc"], [10, 0, "#fff6dc"], [13, 0, "#fff6dc"], [12, 1, "#b5651d"], [13, 1, "#b5651d"], [12, 2, "#b5651d"], [13, 2, "#e09a4a"]]},
+  golden: {name: "Golden", how: "Land a One in a Moo-llion answer.", pal: {w: "#ffd23f", b: "#fff3a8", k: "#8a5a00", n: "#b07a10", e: "#8a5a00", h: "#ffffff", p: "#ffb35a"},
+    extra: [[5, -2, "#fff"], [4, -1, "#fff"], [5, -1, "#fff"], [6, -1, "#fff"], [5, 0, "#fff"], [1, 6, "#fff"]]},
+  astronaut: {name: "Astronaut", how: "Reach Deep Space (15,000m in one flight).", fx: "helmet", extra: [[4, 0, "#c9d1e0"], [5, 0, "#c9d1e0"], [6, 0, "#c9d1e0"], [5, -1, "#ff5d5d"]]},
+  rainbow: {name: "Rainbow", how: "Hit all six tiers in one flight.", fx: "rainbow"},
+  royal: {name: "Royal", how: "Finish #1 on the daily leaderboard (2 or more players).",
+    extra: [[11, -2, "#ffd23f"], [13, -2, "#ffd23f"], [15, -2, "#ffd23f"], [11, -1, "#ffd23f"], [12, -1, "#ff5d8f"], [13, -1, "#ffd23f"], [14, -1, "#3fd9ff"], [15, -1, "#ffd23f"], [11, 0, "#e0a000"], [12, 0, "#e0a000"], [13, 0, "#e0a000"], [14, 0, "#e0a000"], [15, 0, "#e0a000"]]},
+  alien: {name: "Alien", how: "Win an Alien Party game.", pal: {w: "#8dffb8", b: "#2fae6a", p: "#c9a0ff", h: "#2fae6a", e: "#000000"}, extra: [[11, -1, "#2fae6a"], [13, -1, "#2fae6a"], [11, -2, "#ff6ad5"], [13, -2, "#ff6ad5"], [12, 0, "#8dffb8"]]},
+  party: {name: "Party", how: "Play Alien Party with 4 or more cows.", extra: [[13, -3, "#ffd23f"], [13, -2, "#ff5d8f"], [12, -1, "#ff5d8f"], [13, -1, "#3fd9ff"], [14, -1, "#ff5d8f"], [12, 0, "#3fd9ff"], [13, 0, "#ff5d8f"], [14, 0, "#3fd9ff"]]},
+  robo: {name: "Robo", how: "Win an Alien Party game that has a Hard bot.", pal: {w: "#c9d1e0", b: "#7a859e", p: "#9aa5bd", h: "#7a859e", e: "#ff3b3b", n: "#55607a"}, extra: [[12, -1, "#7a859e"], [12, -2, "#ff3b3b"], [11, 0, "#7a859e"], [12, 0, "#7a859e"], [3, 5, "#ffd23f"], [9, 2, "#ffd23f"]]},
+  ghost: {name: "Ghost", how: "Get abducted 10 times in Alien Party.", fx: "ghost", pal: {w: "#e6f6ff", b: "#b9d6f5", k: "#7f9bd0", p: "#cfe0ff", h: "#e6f6ff", e: "#3a4a80", n: "#7f9bd0"}},
+};
+const SKIN_ORDER = Object.keys(SKINS), cowCache = {};
+// every pixel of a skin: {x, y, c: colour, a: opacity, leg: which leg it belongs to (so legs can kick), or -1}
+function cowPixels(id) {
+  if (cowCache[id]) return cowCache[id];
+  const sk = SKINS[id] || SKINS.classic, P = {...COW_PAL, ...(sk.pal || {})}, out = [], ghost = sk.fx === "ghost";
+  COW_ROWS.forEach((r, y) => [...r].forEach((ch, x) => {
+    if (!P[ch] || (ghost && y >= 7)) return;
+    let c = P[ch]; if (sk.fx === "rainbow" && (ch === "w" || ch === "b") && x <= 11) c = COW_RAINBOW[Math.floor(x / 2)]; // stripes down the body, the head stays a cow
+    out.push({x, y, c, a: ghost ? 0.82 : 1, leg: y >= 7 ? COW_LEG[x] ?? -1 : -1});
+  }));
+  if (ghost) [[2, 7], [3, 7], [6, 7], [7, 7], [10, 7], [11, 7], [3, 8], [7, 8], [11, 8]].forEach(([x, y]) => out.push({x, y, c: P.k, a: 0.6, leg: -1})); // a wavy hem instead of legs
+  if (sk.fx === "helmet") { // a glass bubble around the head
+    const inside = (X, Y) => X >= 10 && X <= 17 && Y >= -2 && Y <= 7 && !((X === 10 || X === 17) && (Y <= -1 || Y >= 6)) && !((X === 11 || X === 16) && (Y === -2 || Y === 7));
+    for (let Y = -2; Y <= 7; Y++) for (let X = 10; X <= 17; X++) if (inside(X, Y)) {
+      const edge = !inside(X - 1, Y) || !inside(X + 1, Y) || !inside(X, Y - 1) || !inside(X, Y + 1);
+      out.push({x: X, y: Y, c: edge ? "#bff4ff" : "#7fe0ff", a: edge ? 0.95 : 0.2, leg: -1});
+    }
+    out.push({x: 15, y: -1, c: "#ffffff", a: 0.9, leg: -1}, {x: 16, y: 0, c: "#ffffff", a: 0.9, leg: -1});
+  }
+  (sk.extra || []).forEach(([x, y, c]) => out.push({x, y, c, a: 1, leg: -1}));
+  return cowCache[id] = out;
+}
+// draws a cow with its top-left corner at (ox, oy); size = how big one cow pixel is; kick = a changing number that makes the legs flail
+function paintCow(ctx, id, ox, oy, size = 1, flip = false, alpha = 1, kick = null) {
+  for (const q of cowPixels(id)) {
+    let col = q.x;
+    if (kick !== null && q.leg >= 0) col += Math.round(Math.sin(kick + q.leg * 1.9) * (q.y === 8 ? 1.6 : 0.7)); // hooves swing further than knees
+    ctx.globalAlpha = alpha * q.a; ctx.fillStyle = q.c; ctx.fillRect(ox + (flip ? 15 - col : col) * size, oy + q.y * size, size, size);
+  }
+  ctx.globalAlpha = 1;
+}
+const mySkin = () => { try { const v = localStorage.getItem("moollion-skin"); return SKINS[v] ? v : "classic"; } catch { return "classic"; } };
+
 /* ---------- Moo-llion: daily word game, the rarer your answer the higher your cow floats ---------- */
 function startMoo(root, opts = {}) {
   const IMG = "https://d8j0ntlcm91z4.cloudfront.net/user_3KOBfqwOB9ikrbu9I0UQir2iysj/hf_20261109_";
@@ -241,6 +305,8 @@ function startMoo(root, opts = {}) {
   const fmt = n => Math.round(n).toLocaleString() + "m";
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const zoneOf = m => { let z = 0; ZONES.forEach((x, i) => { if (m >= x.at) z = i; }); return z; };
+  let skin = mySkin(); // the cow you're wearing
+  const setSkins = () => { if (st && st.skins) { skin = SKINS[st.skins.on] ? st.skins.on : "classic"; try { localStorage.setItem("moollion-skin", skin); } catch {} } };
   let needName = false, st = null, stopped = false, pollT = 0, shown = 0, busy = false, scene = -1, countRaf = 0, muted = get("nova-moo-mute", false), ac = null;
 
   if (!document.getElementById("mooFonts")) {
@@ -251,8 +317,6 @@ function startMoo(root, opts = {}) {
   SCENES.forEach(u => { const i = new Image(); i.src = u; }); // warm the cache so the sky changes instantly
 
   /* ----- the little pixel cow, carried by an alien's UFO and its tractor beam ----- */
-  const COW = ["...........hh...", "..kkkkkkkkkkkkkk", ".kwwbbwwwwbwkwek", "kwbbbwwwwwwkwwwk", ".kwwbwwwbbwwkppk", "..kwwwwwbbbwwkpk", "..kkkkkkkkkkkkk.", "..k.k.....k.k...", "..n.n.....n.n..."];
-  const CP = {w: "#ffffff", k: "#1a1a24", b: "#2b2b36", h: "#f2e3b3", p: "#ffb3c1", e: "#1a1a24", n: "#3a3a46"};
   const SHIP = {hull: "#9b7bff", hullD: "#5b3fc4", dome: "#bff4ff", lights: "#7dffb0", alien: "#4ee08a", beam: "110,230,255"};
   const RW = 60, RH = 84, RS = 3, IDLE_Y = 44;
   const rig = {s: 0.06, ts: 0.06, y: IDLE_Y, ty: IDLE_Y, raf: 0, last: 0};
@@ -299,7 +363,7 @@ function startMoo(root, opts = {}) {
     x.clearRect(0, 0, RW, RH);
     drawBeam(x, 30, oy + 13, RH, rig.s, t);
     drawShip(x, 17, oy, t);
-    COW.forEach((r, yy) => [...r].forEach((ch, i) => { if (CP[ch]) { x.fillStyle = CP[ch]; x.fillRect(22 + i, cowY + yy, 1, 1); } }));
+    paintCow(x, skin, 22, cowY);
   }
   function rigLoop(now) {
     if (stopped) return;
@@ -485,7 +549,7 @@ function startMoo(root, opts = {}) {
     main.innerHTML = `<div class="mhead"><h1 class="mlogo">MOO-LLION</h1><div class="msub">The daily float${st ? " #" + st.num : ""}</div></div>
       <div class="mmenu">${help}${needName ? `<button type="button" class="mpill mhow">? How to play</button>
       <form class="mform mname" autocomplete="off"><span>&gt;</span><input maxlength="16" placeholder="what should we call you?" aria-label="Your name" spellcheck="false"></form><div class="merr" role="alert"></div>
-      <button type="button" class="mgo">▲ Lift off ▲</button>` : `<div class="mpills">${st && st.streak ? `<div class="mpill">🔥 ${st.streak} day streak</div>` : `<button type="button" class="mpill mhow">? How to play</button>`}${st && st.name ? `<button type="button" class="mpill mwho" title="Change your name">✎ ${escM(st.name)}</button>` : ""}</div>
+      <button type="button" class="mgo">▲ Lift off ▲</button>` : `<div class="mpills">${st && st.streak ? `<div class="mpill">🔥 ${st.streak} day streak</div>` : `<button type="button" class="mpill mhow">? How to play</button>`}${st && st.name ? `<button type="button" class="mpill mwho" title="Change your name">✎ ${escM(st.name)}</button>` : ""}${st && st.skins ? `<button type="button" class="mpill mcows${newSkins().length ? " new" : ""}">${newSkins().length ? "★ New cow!" : "Cows " + st.skins.have.length + "/" + SKIN_ORDER.length}</button>` : ""}</div>
       <button type="button" class="mgo">${done ? "▸ See my flight ◂" : a ? "▲ Keep floating ▲" : "▲ Lift off ▲"}</button>${opts.onParty && st ? `<button type="button" class="mbar mparty">👽 Alien Party <em>play with friends</em></button>` : ""}`}
       <button type="button" class="mbar mlb">Today's leaderboard <em>${st ? st.board.length + " played" : ""}</em></button></div>`;
     if (needName) {
@@ -495,12 +559,13 @@ function startMoo(root, opts = {}) {
       const pick = async () => {
         const n = inp.value.trim(); if (n.length < 2) { err.textContent = "Type a name with at least 2 letters."; return; }
         go.disabled = true; go.textContent = "Inflating today's sky…";
-        try { const d = await api("/api/moo", {method: "POST", body: JSON.stringify({action: "hello", name: n})}); set("nova-moo-name", n); needName = false; st = d.state || st; if (!st) return load(); sfx.tap(); play(); }
+        try { const d = await api("/api/moo", {method: "POST", body: JSON.stringify({action: "hello", name: n})}); set("nova-moo-name", n); needName = false; st = d.state || st; if (!st) return load(); setSkins(); sfx.tap(); play(); }
         catch (e) { go.disabled = false; go.textContent = "▲ Lift off ▲"; err.textContent = e.message; sfx.bad(); }
       };
       main.querySelector(".mname").onsubmit = e => { e.preventDefault(); pick(); };
       go.onclick = pick;
     } else main.querySelector(".mgo").onclick = () => { sfx.tap(); if (!st) return; done ? results() : play(); };
+    const cw = main.querySelector(".mcows"); if (cw) cw.onclick = () => { sfx.tap(); cows(); };
     const pty = main.querySelector(".mparty"); if (pty) pty.onclick = () => { sfx.tap(); opts.onParty(); };
     const who = main.querySelector(".mwho"); if (who) who.onclick = async () => {
       const n = (prompt("Change your name to:", st.name) || "").trim(); if (!n || n === st.name) return;
@@ -531,7 +596,7 @@ function startMoo(root, opts = {}) {
     form?.classList.add("wait"); if (err) err.textContent = action === "answer" ? "Checking the sky charts…" : "";
     try {
       const d = await api("/api/moo", {method: "POST", body: JSON.stringify({action, i: st.answers.length, answer})});
-      busy = false; const before = st.total; st = d.state; reveal(d.result, before);
+      busy = false; const before = st.total; st = d.state; reveal(d.result, before); // (st.skins may now hold a newly earned cow; the menu shows "New cow!")
     } catch (e) {
       busy = false; if (handleAuthError(e)) return;
       if (e.status === 401 && e.data?.code === "name") { needName = true; return title(); }
@@ -583,6 +648,30 @@ function startMoo(root, opts = {}) {
     main.querySelector(".mback").onclick = () => title();
   }
 
+  /* ----- the barn: every cow skin, how to earn it, and which one you're wearing ----- */
+  const newSkins = () => { const seen = get("moollion-skins-seen", ["classic"]); return st && st.skins ? st.skins.have.filter(x => !seen.includes(x)) : []; };
+  function cows() {
+    const fresh = newSkins(); set("moollion-skins-seen", st.skins.have);
+    const done = st.done;
+    playing(false); setScene(done ? ZONES[zoneOf(st.total)].scene : 0); placeCow(done ? "air" : "ground");
+    main.className = "mmain mend";
+    const draw = () => {
+      main.innerHTML = `<div class="mpanel mbarn"><small>The barn · ${st.skins.have.length} of ${SKIN_ORDER.length} cows</small><h2>Your cows</h2>
+        <div class="mskins">${SKIN_ORDER.map(id => { const has = st.skins.have.includes(id), on = st.skins.on === id;
+          return `<button type="button" class="mskin${has ? "" : " locked"}${on ? " on" : ""}" data-id="${id}" ${has ? "" : "disabled"}><canvas width="76" height="52"></canvas><b>${SKINS[id].name}</b>${fresh.includes(id) ? "<u>new</u>" : ""}<span>${on ? "Wearing" : has ? "Tap to wear" : "🔒 " + escM(SKINS[id].how)}</span></button>`; }).join("")}</div>
+        <div class="merr" role="alert"></div><div class="mrow"><button type="button" class="mgo sm mback">◂ Back</button></div></div>`;
+      main.querySelectorAll(".mskin canvas").forEach(c => { const x = c.getContext("2d"); paintCow(x, c.parentNode.dataset.id, 2, 14, 4); });
+      main.querySelector(".mback").onclick = () => title();
+      main.querySelectorAll(".mskin:not(.locked)").forEach(b => b.onclick = async () => {
+        const id = b.dataset.id; if (id === st.skins.on) return;
+        sfx.tap(); skin = id; st.skins.on = id; draw(); // shows at once; the server confirms
+        try { const d = await api("/api/moo", {method: "POST", body: JSON.stringify({action: "skin", skin: id})}); if (d.state) { st = d.state; setSkins(); } }
+        catch (e) { const er = main.querySelector(".merr"); if (er) er.textContent = e.message; }
+      });
+    };
+    draw();
+  }
+
   async function load() {
     const slow = setTimeout(() => { const g = main.querySelector(".mgo"); if (g && !st) g.textContent = "Inflating today's balloon…"; }, 2500);
     try {
@@ -590,7 +679,7 @@ function startMoo(root, opts = {}) {
       clearTimeout(slow);
       if (stopped) return;
       if (d.preparing) { const g = main.querySelector(".mgo"); if (g) g.textContent = "Inflating today's balloon…"; pollT = setTimeout(load, 3000); return; }
-      st = d; needName = false; title();
+      st = d; needName = false; setSkins(); title();
       if (d.unrated && !load.rated) { load.rated = true; api("/api/moo?rate=1").catch(() => {}); } // rates today's answer lists in the background if they aren't yet
     } catch (e) {
       clearTimeout(slow);
@@ -612,8 +701,6 @@ function startParty(root, opts = {}) {
     "010013_87567b9b-0dc4-43e7-b16d-ee1b203ec47e"].map(id => IMG + id + "_min.webp");
   const TIERS = ["Pasture", "Treetops", "Clouds", "Jet stream", "Stratosphere", "One in a Moo-llion"];
   const TIERC = ["#7bd389", "#3fc29a", "#55b3ff", "#a07bff", "#ff6ad5", "#ffd23f"];
-  const COW = ["...........hh...", "..kkkkkkkkkkkkkk", ".kwwbbwwwwbwkwek", "kwbbbwwwwwwkwwwk", ".kwwbwwwbbwwkppk", "..kwwwwwbbbwwkpk", "..kkkkkkkkkkkkk.", "..k.k.....k.k...", "..n.n.....n.n..."];
-  const CP = {w: "#ffffff", k: "#1a1a24", b: "#2b2b36", h: "#f2e3b3", p: "#ffb3c1", e: "#1a1a24", n: "#3a3a46"};
   const K = "#1a1a24", S = 3;
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
   const get = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } };
@@ -650,18 +737,10 @@ function startParty(root, opts = {}) {
   // Cows are drawn bigger than the rest of the art (cowPx art pixels per cow pixel, a whole number of screen pixels so they stay crisp),
   // growing from the middle of their feet, so they still stand on the same spot. kick = a number that changes over time while the cow
   // is in the air: its four legs then flail back and forth, each a little out of step with the others.
-  let cowPx = 1, shipPx = 1;
-  const LEG = {2: 0, 4: 1, 10: 2, 12: 3};
+  let cowPx = 1, shipPx = 1, cowSkin = mySkin(); // cowSkin = whose cow is being drawn right now
   function drawCow(x, ox, oy, flip, alpha = 1, kick = null) {
-    const c = cowPx, bx = ox + 8 - 8 * c, byy = oy + 9 - 9 * c;
-    x.globalAlpha = alpha;
-    COW.forEach((r, y) => [...r].forEach((ch, i) => {
-      if (!CP[ch]) return;
-      let col = i;
-      if (kick !== null && y >= 7) col += Math.round(Math.sin(kick + LEG[i] * 1.9) * (y === 8 ? 1.6 : 0.7)); // hooves swing further than knees
-      x.fillStyle = CP[ch]; x.fillRect(bx + (flip ? 15 - col : col) * c, byy + y * c, c, c);
-    }));
-    x.globalAlpha = 1;
+    const c = cowPx;
+    paintCow(x, cowSkin, ox + 8 - 8 * c, oy + 9 - 9 * c, c, flip, alpha, kick);
   }
   function drawShip(x, ox, oy, t, hot) {
     const px = (X, Y, c) => { x.fillStyle = c; x.fillRect(ox + X, oy + Y, 1, 1); }, cx = 13;
@@ -979,6 +1058,7 @@ function startParty(root, opts = {}) {
     const dt = Math.min(3, (now - (lastFrame || now)) / 16.7); lastFrame = now;
     const W = AW, H = AH, t = now / 1000; cx.clearRect(0, 0, W, H);
     if (!room || !room.players.length) { // menu: a lone UFO drifting over a cow
+      cowSkin = mySkin();
       const x0 = snap(W / 2 + Math.sin(t * 0.7) * 30), y0 = Math.round(H * (AW < 170 ? 0.27 : 0.36)), sy = snap(y0 + Math.sin(t * 2) * 1.2);
       bigBeam(cx, x0, sy + 13, y0 + 46, 0.15, t, 0); bigShip(cx, x0 - 13, sy, t, 0); drawCow(cx, x0 - 8, snap(y0 + 38 + Math.sin(t * 2.6) * 1.2), false);
       return;
@@ -1011,6 +1091,7 @@ function startParty(root, opts = {}) {
     } else if (playing && ti >= 0) bigBeam(cx, ux, ufoY + 13, by + 9, 0.15 + heat * 0.75, t, heat);
     for (let i = 0; i < n; i++) {
       const p = room.players[i], x0 = seatX(i) - 8, flip = i >= n / 2;
+      cowSkin = p.skin || "classic";
       const lift = lifts[i] || 0, sway = lift > 1 ? Math.sin(t * 5 + i) * Math.min(1.2, lift * 0.06) : 0; // a cow in the beam drifts a little
       let y0 = snap(by - lift);
       if (abd && abd.i === i) {

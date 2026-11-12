@@ -269,6 +269,14 @@ const tierAt = (list, k) => list.rare && Number.isFinite(list.rare[k]) ? rareTie
 
 /* ----- game helpers ----- */
 function fuseRange(round, level = 0) { const f = Math.pow(0.95, round - 1), bonus = [0, 1000, 2500][level] || 0; return [Math.max(8500, Math.round(14500 * f)) + bonus, Math.max(12000, Math.round(22000 * f)) + bonus]; }
+// cow skins earned in Alien Party: noted on the room as things happen, written to the players' records when the room is saved
+const grant = (room, id, what) => { if (id && !String(id).startsWith("bot:")) (room.grants = room.grants || []).push([id, what]); };
+async function flushGrants(g) {
+  for (const [id, what] of g) {
+    if (what !== "abd") await redis("SADD", `moo:sk:${id}`, what);
+    else if ((await redis("INCR", `moo:abd:${id}`)) >= 10) await redis("SADD", `moo:sk:${id}`, "ghost"); // abducted 10 times, across all games
+  }
+}
 function event(room, e) { room.seq = (room.seq || 0) + 1; room.event = { seq: room.seq, ...e, at: Date.now() }; }
 const inGame = p => p.alive && !p.left;
 function nextAlive(room, from) { const n = room.players.length; for (let s = 1; s <= n; s++) { const i = (from + s) % n; if (inGame(room.players[i])) return i; } return from; }
@@ -302,7 +310,11 @@ function newTurn(room, i, newPrompt) { room.turn = i; room.turnId = (room.turnId
 const promptDone = room => { room.promptLeft = (room.promptLeft || 1) - 1; return room.promptLeft <= 0; };
 function checkOver(room) {
   const alive = room.players.map((p, i) => [p, i]).filter(([p]) => inGame(p));
-  if (alive.length === 0 || (!room.solo && alive.length <= 1)) { room.status = "over"; room.winner = alive.length ? alive[0][1] : -1; return true; }
+  if (alive.length === 0 || (!room.solo && alive.length <= 1)) {
+    room.status = "over"; room.winner = alive.length ? alive[0][1] : -1;
+    if (alive.length && !room.solo) { grant(room, alive[0][0].id, "alien"); if (room.players.some(p => p.bot === "hard")) grant(room, alive[0][0].id, "robo"); } // won a game / beat a Hard bot
+    return true;
+  }
   return false;
 }
 // too slow: the UFO beams the cow up and it loses a heart (checked whenever anyone looks at the room)
@@ -311,6 +323,7 @@ function tick(room, pend) {
   if (room.status !== "playing" || Date.now() < room.beam.deadline || held(room, pend)) return false;
   const i = room.turn, p = room.players[i];
   p.lives = Math.max(0, p.lives - 1); if (p.lives === 0) p.alive = false;
+  grant(room, p.id, "abd");
   const e = { type: "abduct", by: i, prompt: room.prompt, out: !p.alive };
   if (!checkOver(room)) { if (endTurn(room)) e.round = room.round; const np = promptDone(room); if (np) e.newPrompt = true; newTurn(room, nextAlive(room, i), np); newBeam(room); }
   else e.win = true;
@@ -368,7 +381,7 @@ function view(room, me, typing, pend) {
   const mi = room.players.findIndex(p => p.id === me), playing = room.status === "playing";
   return {
     code: room.code, status: room.status, me: mi, host: mi === 0,
-    players: room.players.map((p, i) => ({ name: p.name, lives: p.lives ?? START_LIVES, power: p.power || 0, alive: p.alive !== false, left: !!p.left, last: p.last || null, best: p.best || null, answers: p.answers || 0, bot: p.bot || null, me: i === mi })),
+    players: room.players.map((p, i) => ({ name: p.name, lives: p.lives ?? START_LIVES, power: p.power || 0, alive: p.alive !== false, left: !!p.left, skin: p.skin || "classic", last: p.last || null, best: p.best || null, answers: p.answers || 0, bot: p.bot || null, me: i === mi })),
     turn: room.turn ?? 0, turnId: room.turnId || 0, prompt: room.prompt || null, round: room.round || 1, level: room.level || 0, usedCount: (room.used || []).length,
     // the beam: when it started (ms from now, negative once running), how long it lasts, how much checking time was given back, and whether an answer is being checked
     beamIn: playing ? room.beam.start - Date.now() : 0, beamMs: playing ? room.beam.total : 0, fz: playing ? room.beam.frozen || 0 : 0, hold: held(room, pend),
@@ -378,7 +391,11 @@ function view(room, me, typing, pend) {
     maxLives: MAX_LIVES, preparing: !!room.preparing,
   };
 }
-async function save(room) { await redis("SET", key(room.code), JSON.stringify(room), "EX", String(TTL)); }
+async function save(room) {
+  const g = room.grants; delete room.grants;
+  await redis("SET", key(room.code), JSON.stringify(room), "EX", String(TTL));
+  if (g && g.length) await flushGrants(g).catch(e => console.error("abduct skins", e.message));
+}
 async function setTyping(room, text, bad) { await redis("SET", tkey(room.code), JSON.stringify({ turnId: room.turnId, text: String(text).slice(0, 40), bad: bad || null }), "EX", String(TTL)); }
 const UNLOCK = "if redis.call('get',KEYS[1])==ARGV[1] then return redis.call('del',KEYS[1]) end return 0";
 async function withLock(code, fn) {
@@ -433,13 +450,13 @@ export default async function handler(req, res) {
     if (req.method !== "POST") return res.status(405).json({ error: "Not allowed" });
     const { action } = req.body || {}, code = clean(req.body?.code);
     const first = await pipeline([["GET", `moo:pid:${id}`], ["GET", key(code || "-")]]);
-    const me = { id, name: parse(first[0])?.name }, room0 = parse(first[1]);
+    const me = { id, name: parse(first[0])?.name, skin: parse(first[0])?.skin || "classic" }, room0 = parse(first[1]);
     if (!me.name) return noName();
 
     if (action === "create") {
       let code = "";
       for (let t = 0; t < 8; t++) { code = Array.from(crypto.randomBytes(5), b => LETTERS[b % LETTERS.length]).join(""); if (!(await redis("EXISTS", key(code)))) break; }
-      const room = { code, status: "lobby", players: [{ id, name: me.name }], game: 1, seq: 0, used: [] };
+      const room = { code, status: "lobby", players: [{ id, name: me.name, skin: me.skin }], game: 1, seq: 0, used: [] };
       await save(room);
       return res.status(200).json({ room: view(room, id) });
     }
@@ -524,11 +541,11 @@ export default async function handler(req, res) {
           if (room.status === "playing") return [409, { error: "That game already started. Wait for the next one." }];
           if (room.players.filter(p => !p.left).length >= MAX_PLAYERS) return [409, { error: "That room is full (8 cows)." }];
           if (room.status === "over") room.players = room.players.filter(p => !p.left);
-          room.players.push({ id, name: me.name });
+          room.players.push({ id, name: me.name, skin: me.skin });
           room.players.sort((a, b) => (a.bot ? 1 : 0) - (b.bot ? 1 : 0));
           event(room, { type: "join", by: room.players.findIndex(p => p.id === id) });
           await save(room);
-        } else if (room.players[mi].name !== me.name && room.status !== "playing") { room.players[mi].name = me.name; await save(room); }
+        } else if ((room.players[mi].name !== me.name || room.players[mi].skin !== me.skin) && room.status !== "playing") { room.players[mi].name = me.name; room.players[mi].skin = me.skin; await save(room); }
         return reply(200);
       }
       if (mi < 0) return [403, { error: "You're not in this room." }];
@@ -559,6 +576,8 @@ export default async function handler(req, res) {
         room.players = room.players.filter(p => !p.left).sort((a, b) => (a.bot ? 1 : 0) - (b.bot ? 1 : 0));
         room.players.forEach(p => { p.lives = START_LIVES; p.power = 0; p.answers = 0; p.alive = true; p.last = null; p.best = null; });
         room.solo = room.players.length === 1;
+        room.players[mi >= 0 ? room.players.findIndex(p => p.id === id) : 0].skin = me.skin; // the host's current cow
+        if (room.players.length >= 4) room.players.forEach(p => grant(room, p.id, "party")); // a party of 4 or more cows
         if (room.status === "over") room.game = (room.game || 1) + 1;
         room.winner = null; room.status = "playing"; room.round = 1; room.roundTurns = 0; room.prompt = null;
         newTurn(room, crypto.randomInt(room.players.length), true); newBeam(room);
