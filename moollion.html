@@ -121,6 +121,19 @@ body{overflow:hidden;-webkit-tap-highlight-color:transparent}
 @media (max-width:760px){.moo{height:clamp(540px,calc(100vh - 120px),760px)}.mzone,.mruler{display:none!important}.mprog{top:58px;left:auto;right:12px;transform:none}
   .moohud{left:12px;top:12px}.mtopr{right:12px;top:12px}.mmain,.mend{padding:104px 14px 18px}.moocowwrap{transform-origin:0 0}.moocowwrap.air{left:-24px;top:15%;scale:.7}.moocowwrap.center{left:calc(50% - 99px);top:14%;scale:1.1}.mq h2{font-size:24px}.mgo{font-size:16px;letter-spacing:4px}}
 @media (prefers-reduced-motion:reduce){.moo *{animation:none!important;transition:none!important}}
+/* polish: sizes that include their padding (so nothing spills off a phone screen), keyboard focus rings, press feedback */
+.mform,.mgo,.mbar,.mpanel,.mhelp,.pform{box-sizing:border-box}
+.moo button:focus-visible{outline:2px solid #ffd23f;outline-offset:2px}.mform:focus-within{border-color:#ffd23f}
+.mbar:active,.mpill:active,.mbtn:active,.pcopy:active{transform:translateY(1px)}.mpill{transition:border-color .15s}button.mpill:hover{border-color:#5ad1ff}
+.mgo{text-indent:6px}.mgo.sm,.mbar{text-indent:3px}.mgo:disabled{text-indent:2px}
+.mboard li:nth-child(2) .mrk{color:#cfd6ee}.mboard li:nth-child(3) .mrk{color:#e0965a}.mboard li:nth-child(n+4) .mrk{color:#8f99c2}
+.mboard li.me b:after{content:"you";font-family:Silkscreen,monospace;font-size:9px;letter-spacing:1px;color:#2a0b1c;background:#ec6f97;padding:1px 5px;margin-left:8px;vertical-align:middle;font-weight:400}
+.ptag .h s{text-decoration:none;color:#39426b}
+.plink{margin-top:10px}
+@media (max-width:760px){.mmenu{gap:8px}.mbar{padding:10px 8px;font-size:12px;letter-spacing:2px}.mbar em{font-size:10px;letter-spacing:1px;margin-left:6px}.mgo{padding:12px}
+  .msub{letter-spacing:4px;font-size:11px}.mpanel{padding:14px 12px}.mpanel h2{font-size:26px}.mtitle{padding:70px 14px calc(16px + env(safe-area-inset-bottom))}
+  .mmain,.mend{padding-bottom:calc(18px + env(safe-area-inset-bottom))}.mans{font-size:22px;overflow-wrap:anywhere}.mlist li{grid-template-columns:1fr auto;grid-template-areas:"p p" "b e" "i i"}.mlist i{justify-self:start}
+  .pq{box-sizing:border-box}.pform{width:94%}.pmsg{white-space:normal;text-align:center;width:90%}.ppanel h2{font-size:22px}.padd{flex-wrap:wrap;justify-content:center}.pmain .msub{letter-spacing:2px;font-size:10px}}
 /* Alien Party (pass-the-turn mode on moollion.cc) */
 .party .pcv{position:absolute;inset:0;width:100%;height:100%;z-index:2;image-rendering:pixelated;pointer-events:none}
 .pcode{position:absolute;left:16px;top:14px;z-index:6;padding:6px 10px;display:flex;align-items:center;gap:8px}
@@ -757,6 +770,7 @@ function startParty(root, opts = {}) {
     const rj = main.querySelector(".prejoin"); if (rj) rj.onclick = () => go("join", saved);
     main.querySelector(".mhow").onclick = () => { const h = main.querySelector(".mhelp"); h.hidden = !h.hidden; };
     main.querySelector(".pback").onclick = () => opts.onBack && opts.onBack();
+    if (opts.join) { const c = opts.join; opts.join = null; ci.value = c; go("join", c); } // came in through an invite link
   }
 
   /* ----- in a room ----- */
@@ -806,7 +820,8 @@ function startParty(root, opts = {}) {
       const el = holder.querySelector(`[data-i="${i}"]`); if (!el) return;
       const playing = room.status === "playing";
       el.classList.toggle("me", p.me); el.classList.toggle("turn", playing && room.turn === i); el.classList.toggle("out", playing && (!p.alive || p.left));
-      el.querySelector(".h").textContent = !playing && room.status !== "over" ? "" : p.left ? "left" : !p.alive ? "abducted" : "♥".repeat(p.lives);
+      const hs = !playing && room.status !== "over" ? "" : p.left ? "left" : !p.alive ? "abducted" : "♥".repeat(p.lives) + "<s>" + "♥".repeat(Math.max(0, 3 - p.lives)) + "</s>"; // lost hearts stay as dim outlines
+      const hEl = el.querySelector(".h"); if (hEl.dataset.v !== hs) { hEl.dataset.v = hs; hEl.innerHTML = hs; }
       const bar = el.querySelector(".bar i"); if (!bar.dataset.hold) { bar.style.width = Math.min(100, p.power) + "%"; }
       el.querySelector(".bar").hidden = !playing || !p.alive;
       const bb = el.querySelector(".bot");
@@ -826,7 +841,8 @@ function startParty(root, opts = {}) {
     form.hidden = !playing || !alive;
     const turnChanged = !old || old.turnId !== room.turnId;
     if (turnChanged && old && old.turn === room.me) { inp.value = ""; lastSent = ""; }
-    inp.placeholder = myTurn() ? "your turn! type an answer" : "type ahead, it sends on your turn";
+    const small = wrap.clientWidth < 520;
+    inp.placeholder = myTurn() ? (small ? "your turn!" : "your turn! type an answer") : small ? "type ahead…" : "type ahead, it sends on your turn";
     form.classList.toggle("mine", myTurn());
     if (myTurn() && document.activeElement !== inp) inp.focus({preventScroll: true});
     if (turnChanged && myTurn() && inp.value.trim().length >= 2 && form.dataset.armed) { delete form.dataset.armed; setTimeout(submit, Math.max(0, revealEnd - Date.now()) + 30); }
@@ -863,12 +879,14 @@ function startParty(root, opts = {}) {
     const over = room.status === "over", w = over ? room.players[room.winner] : null;
     main.className = "mmain pmain plobby";
     const best = over ? room.players.filter(p => p.best).map(p => `<li><b>${esc(p.name)}</b> “${esc(p.best.answer)}” <i style="--k:${TIERC[p.best.tier]}">${TIERS[p.best.tier]}</i></li>`).join("") : "";
-    main.innerHTML = `<div class="mpanel ppanel"><small>${over ? "Game over" : "Room " + esc(room.code)}</small>
+    main.innerHTML = `<div class="mpanel ppanel"><small>${over ? "Game over" : "Room " + esc(room.code) + " · " + room.players.length + " of 8 cows"}</small>
       <h2>${over ? (room.winner === room.me ? "You win! 🏆" : w ? esc(w.name) + " wins!" : "Everyone got abducted!") : room.players.length < 2 ? "Waiting for cows…" : "Everyone's here!"}</h2>
       ${over && best ? `<p>Best answers</p><ol class="pbest">${best}</ol>` : `<p>${room.host ? "Share the code <b>" + esc(room.code) + "</b>, add bots, or practice alone." : "Waiting for the host to start…"}</p>`}
       ${room.host ? `<div class="mrow"><button type="button" class="mgo sm pstart">${over ? "Play again" : room.players.length < 2 ? "Practice alone" : "Start ▸"}</button>
         <span class="padd"><span>Add bot</span>${["easy", "medium", "hard"].map(l => `<button type="button" class="mpill" data-l="${l}">${l}</button>`).join("")}</span></div>` : ""}
+      ${over ? "" : `<button type="button" class="mbar sm plink">Copy invite link</button>`}
       <div class="merr" role="alert"></div></div>`;
+    const lk = main.querySelector(".plink"); if (lk) lk.onclick = () => navigator.clipboard?.writeText(location.origin + location.pathname + "#party-" + room.code).then(() => { lk.textContent = "Link copied!"; setTimeout(() => { lk.textContent = "Copy invite link"; }, 1400); }, () => {});
     const s = main.querySelector(".pstart"); if (s) s.onclick = () => { sfx.tap(); s.disabled = true; s.textContent = "Beaming in…"; act("start"); };
     main.querySelectorAll(".padd button").forEach(b => b.onclick = () => act("addbot", {level: b.dataset.l}));
   }
@@ -929,7 +947,8 @@ function startParty(root, opts = {}) {
   function handle(ev, old) {
     const nm = i => i === room.me ? "You" : room.players[i]?.name || "Someone";
     if (ev.type === "start") { banner("Beam me up!", "Answer before the UFO gets you"); return; }
-    if (ev.type === "join" && room.status !== "playing") { msg.textContent = (room.players[ev.by]?.name || "Someone") + " joined"; setTimeout(() => msg.textContent = "", 1800); return; }
+    const note = text => { const el = (room.status !== "playing" && main.querySelector(".merr")) || msg; el.textContent = text; setTimeout(() => { if (el.textContent === text) el.textContent = ""; }, 1800); };
+    if (ev.type === "join" && room.status !== "playing") { note((room.players[ev.by]?.name || "Someone") + " joined"); return; }
     if (ev.type === "answer") {
       pop(ev.by, `“${esc(ev.answer)}” <b>${TIERS[ev.tier]}</b> <em>+${ev.pts}</em>`, TIERC[ev.tier]);
       sfx.good(ev.tier);
@@ -947,7 +966,7 @@ function startParty(root, opts = {}) {
       setTimeout(() => pop(ev.by, ev.out ? `${esc(nm(ev.by))} got abducted!` : "-1 ♥", "#ff5a4a", "life"), 450);
       if (ev.round) setTimeout(() => banner("Round " + ev.round, "Higher up · a bit faster"), 1300);
     }
-    if (ev.type === "leave") { msg.textContent = (old?.players[ev.by]?.name || "Someone") + " left"; setTimeout(() => msg.textContent = "", 1800); }
+    if (ev.type === "leave") note((old?.players[ev.by]?.name || "Someone") + " left");
   }
 
   /* ----- every frame: the UFO, its beam, the cows, and live typing ----- */
@@ -960,7 +979,7 @@ function startParty(root, opts = {}) {
     const dt = Math.min(3, (now - (lastFrame || now)) / 16.7); lastFrame = now;
     const W = AW, H = AH, t = now / 1000; cx.clearRect(0, 0, W, H);
     if (!room || !room.players.length) { // menu: a lone UFO drifting over a cow
-      const x0 = snap(W / 2 + Math.sin(t * 0.7) * 30), y0 = Math.round(H * 0.5), sy = snap(y0 + Math.sin(t * 2) * 1.2);
+      const x0 = snap(W / 2 + Math.sin(t * 0.7) * 30), y0 = Math.round(H * (AW < 170 ? 0.27 : 0.36)), sy = snap(y0 + Math.sin(t * 2) * 1.2);
       bigBeam(cx, x0, sy + 13, y0 + 46, 0.15, t, 0); bigShip(cx, x0 - 13, sy, t, 0); drawCow(cx, x0 - 8, snap(y0 + 38 + Math.sin(t * 2.6) * 1.2), false);
       return;
     }
@@ -1034,8 +1053,9 @@ function startParty(root, opts = {}) {
 const ROOT = document.getElementById("root");
 let CUR = null;
 function goDaily() { if (CUR) CUR.stop(); CUR = startMoo(ROOT, {onParty: goParty}); history.replaceState(null, "", location.pathname); }
-function goParty() { if (CUR) CUR.stop(); CUR = startParty(ROOT, {onBack: goDaily}); history.replaceState(null, "", location.pathname + "#party"); }
-if (location.hash === "#party") goParty(); else goDaily();
+function goParty(join) { if (CUR) CUR.stop(); CUR = startParty(ROOT, {onBack: goDaily, join: typeof join === "string" ? join : null}); history.replaceState(null, "", location.pathname + "#party"); }
+const INVITE = /^#party-([A-Za-z0-9]{4,6})$/.exec(location.hash); // an invite link: moollion.cc/play#party-CODE
+if (INVITE) goParty(INVITE[1].toUpperCase()); else if (location.hash === "#party") goParty(); else goDaily();
 </script>
 </body>
 </html>
