@@ -44,6 +44,14 @@ export default async function handler(req, res) {
       const user = await getJSON(`user:${email}`);
       if (!user) return res.status(404).json({ error: "User not found." });
     if (user.admin) return res.status(400).json({ error: "You can't change an admin account." });
+      // Deletes one person's account for good: their login, chats and saved study data. They can register again afterwards (block them instead to keep them out).
+      if (req.body.remove === true) {
+        const flat = (await redis("HGETALL", `chatlist:${email}`)) || [];
+        const ids = flat.filter((_, i) => i % 2 === 0);
+        await pipeline([...ids.map(id => ["DEL", `chat:${email}:${id}`]), ["DEL", `chatlist:${email}`], ["DEL", `neuron:${email}`], ["DEL", `user:${email}`], ["SREM", "users", email],
+          ["LPUSH", "loginlog", JSON.stringify({ type: "deleted by admin", email, time: Date.now() })], ["LTRIM", "loginlog", 0, 299]]);
+        return res.status(200).json({ ok: true, removed: email });
+      }
       if (Array.isArray(req.body.models)) {
         const models = ALL_MODELS.filter(m => req.body.models.includes(m));
         user.models = models.length ? models : ["haiku"];

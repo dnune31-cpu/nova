@@ -3164,6 +3164,15 @@ try { await api("/api/admin", {method: "POST", body: JSON.stringify({email: u.em
 catch (err) { alert(err.message); }
 };
 acc.appendChild(tb);
+      // delete the account for good (their chats and saved data go with it)
+      const db = document.createElement("button"); db.type = "button"; db.className = "pill no"; db.textContent = "Delete"; db.title = "Delete this account and everything saved for it";
+      db.onclick = async () => {
+        if (!confirm(`Delete ${u.name} (${u.email}) for good?\n\nTheir account, chats and saved progress are erased and can't be brought back. They could sign up again later; use Block to keep someone out.`)) return;
+        db.disabled = true; db.textContent = "Deleting…";
+        try { await api("/api/admin", {method: "POST", body: JSON.stringify({email: u.email, remove: true})}); tr.remove(); }
+        catch (err) { db.disabled = false; db.textContent = "Delete"; alert(err.message); }
+      };
+      acc.appendChild(db);
     }
     rows.appendChild(tr);
   }
