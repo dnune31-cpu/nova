@@ -1,4 +1,4 @@
-import { redis, pipeline, getJSON, setJSON, getAuth, normEmail, isAdminEmail, ALL_MODELS } from "./_lib.js";
+import { redis, pipeline, getJSON, setJSON, getAuth, normEmail, isAdminEmail, ALL_MODELS, setDeviceBan } from "./_lib.js";
 
 const today = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
 
@@ -12,7 +12,7 @@ export default async function handler(req, res) {
       const raw = await pipeline(emails.map(e => ["GET", `user:${e}`]));
       const users = raw.filter(Boolean).map(v => JSON.parse(v)).map(u => ({
         name: u.name, email: u.email, created: u.created, lastLogin: u.lastLogin, lastActive: u.lastActive || null,
-        models: u.models || ["haiku"], blocked: !!u.blocked, troll: !!u.troll, cost: u.cost || 0, dailyLimit: u.dailyLimit || 0, todayMsgs: u.day === today() ? u.dayMsgs || 0 : 0, todayCost: u.day === today() ? u.dayCost || 0 : 0, messages: u.messages || 0, usage: u.usage || {}, admin: !!u.admin,
+        models: u.models || ["haiku"], blocked: !!u.blocked, devban: !!u.devban, troll: !!u.troll, cost: u.cost || 0, dailyLimit: u.dailyLimit || 0, todayMsgs: u.day === today() ? u.dayMsgs || 0 : 0, todayCost: u.day === today() ? u.dayCost || 0 : 0, messages: u.messages || 0, usage: u.usage || {}, admin: !!u.admin,
       })).sort((a, b) => (b.lastLogin || 0) - (a.lastLogin || 0));
       const log = ((await redis("LRANGE", "loginlog", 0, 99)) || []).map(x => JSON.parse(x));
       return res.status(200).json({ users, log, announce: await getJSON("announce"), cheats: !!auth.user.cheats });
@@ -66,10 +66,13 @@ export default async function handler(req, res) {
         user.models = models.length ? models : ["haiku"];
       }
       if (typeof req.body.blocked === "boolean") user.blocked = req.body.blocked;
+      // Device ban: the cover stops opening on every device this person has used, and on any device they log in from later
+      let devices;
+      if (typeof req.body.devban === "boolean") { user.devban = req.body.devban; devices = await setDeviceBan(email, user.devban); }
     if (typeof req.body.troll === "boolean") user.troll = req.body.troll;
     if (req.body.dailyLimit !== undefined) user.dailyLimit = Math.max(0, Math.min(1000, parseInt(req.body.dailyLimit) || 0));
       await setJSON(`user:${email}`, user);
-      return res.status(200).json({ ok: true, models: user.models, blocked: user.blocked, troll: !!user.troll, dailyLimit: user.dailyLimit || 0 });
+      return res.status(200).json({ ok: true, models: user.models, blocked: user.blocked, devban: !!user.devban, devices, troll: !!user.troll, dailyLimit: user.dailyLimit || 0 });
     }
 
     return res.status(405).json({ error: "Not allowed" });

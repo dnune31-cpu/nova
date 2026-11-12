@@ -2367,8 +2367,18 @@ html[dir='rtl'].offline .icon-offline {
 (function () {
   var gate = document.getElementById("gate"), src = document.getElementById("gateDoc"), realTitle = document.title, typed = "";
   var icon = document.querySelector('link[rel="icon"]'), realIcon = icon && icon.getAttribute("href");
-  try { if (sessionStorage.getItem("nova-gate") === "1") { gate.remove(); src.remove(); return; } } catch (e) {}
+  // A banned device: the cover behaves exactly as if the word were wrong, forever. (The server also refuses its logins.)
+  var banned = false, devId = "";
+  try { banned = localStorage.getItem("nova-x") === "1"; devId = localStorage.getItem("nova-dev") || ""; } catch (e) {}
+  if (banned) { try { sessionStorage.removeItem("nova-gate"); } catch (e) {} }
+  fetch("/api/auth?gate=1", {headers: devId ? {"x-nova-dev": devId} : {}}).then(function (r) { return r.json(); }).then(function (d) {
+    try { if (d.dev) localStorage.setItem("nova-dev", d.dev); if (d.banned) localStorage.setItem("nova-x", "1"); else localStorage.removeItem("nova-x"); } catch (e) {}
+    var was = banned; banned = !!d.banned;
+    if (banned && !was) { var inside = !document.getElementById("gate"); try { sessionStorage.removeItem("nova-gate"); } catch (e) {} if (inside) location.reload(); } // banned while already inside: back to the cover
+  }).catch(function () {});
+  try { if (!banned && sessionStorage.getItem("nova-gate") === "1") { gate.remove(); src.remove(); return; } } catch (e) {} // already let in on this tab
   function open() {
+    if (banned) return;
     try { sessionStorage.setItem("nova-gate", "1"); } catch (e) {}
     document.title = realTitle; if (icon && realIcon) icon.setAttribute("href", realIcon);
     document.removeEventListener("keydown", key, true); document.removeEventListener("focusin", hold, true); gate.remove(); src.remove();
@@ -3204,6 +3214,16 @@ try { await api("/api/admin", {method: "POST", body: JSON.stringify({email: u.em
 catch (err) { alert(err.message); }
 };
 acc.appendChild(tb);
+      // device ban: the cover stops opening on their devices
+      const vb = document.createElement("button"); vb.type = "button";
+      const paintV = () => { vb.className = "pill " + (u.devban ? "no" : "ok"); vb.textContent = u.devban ? "Device banned" : "Ban device"; vb.title = u.devban ? "Click to let their devices open Nova again" : "The cover page stops opening on every device they've used, and on any device they log in from later"; };
+      paintV();
+      vb.onclick = async () => {
+        if (!u.devban && !confirm(`Ban ${u.name}'s devices?\n\nThe secret word will stop working on every browser they've used, and on any they log in from later. They can still get in from a private window or a new browser until they try to log in there.`)) return;
+        try { const d = await api("/api/admin", {method: "POST", body: JSON.stringify({email: u.email, devban: !u.devban})}); u.devban = !!d.devban; paintV(); vb.title = (d.devices || 0) + " device" + (d.devices === 1 ? "" : "s") + " affected"; }
+        catch (err) { alert(err.message); }
+      };
+      acc.appendChild(vb);
       // delete the account for good (their chats and saved data go with it)
       const db = document.createElement("button"); db.type = "button"; db.className = "pill no"; db.textContent = "Delete"; db.title = "Delete this account and everything saved for it";
       db.onclick = async () => {

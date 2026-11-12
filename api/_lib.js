@@ -62,32 +62,64 @@ function getCookie(req, name) {
   return m ? decodeURIComponent(m[1]) : null;
 }
 
+// several cookies can be set on one reply
+function addCookie(res, cookie) {
+  const prev = res.getHeader ? res.getHeader("Set-Cookie") : undefined;
+  res.setHeader("Set-Cookie", [].concat(prev || [], cookie));
+}
+/* ----- device bans -----
+   Every browser that opens Nova gets a random device id, kept in a long-lived cookie (and a copy in the page's storage, sent back
+   as the x-nova-dev header, so clearing one of the two doesn't shake it off). The admin can ban a person's devices: the cover then
+   never opens on them and every request from them is treated as logged out. A banned person who logs in somewhere new gets that
+   device banned too. It can't follow someone to a private window or another browser until they log in there. */
+const DEV_AGE = 60 * 60 * 24 * 730;
+const devOk = v => /^[a-f0-9]{32}$/.test(v || "");
+export function getDevice(req) {
+  const c = getCookie(req, "nova_dev"), h = String(req.headers["x-nova-dev"] || "");
+  return devOk(c) ? c : devOk(h) ? h : null;
+}
+export function ensureDevice(req, res) { // gives this browser an id if it has none, and (re)plants the cookie
+  const id = getDevice(req) || crypto.randomBytes(16).toString("hex");
+  addCookie(res, `nova_dev=${id}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${DEV_AGE}`);
+  return id;
+}
+export const deviceBanned = async id => !!id && !!(await redis("GET", `devban:${id}`));
+export const noteDevice = (email, id) => (id ? redis("SADD", `devs:${email}`, id) : null); // remembers which devices an account has used
+export const banDevice = (id, email) => redis("SET", `devban:${id}`, email || "1");
+export async function setDeviceBan(email, on) { // bans or unbans every device this account has used
+  const ids = (await redis("SMEMBERS", `devs:${email}`)) || [];
+  if (ids.length) await pipeline(ids.map(id => (on ? ["SET", `devban:${id}`, email] : ["DEL", `devban:${id}`])));
+  return ids.length;
+}
+
 // A login is remembered on the device for a year, and every visit starts that year again, so a device that keeps coming back stays logged in.
 const REMEMBER = 60 * 60 * 24 * 365;
 const sessionCookie = token => `nova_session=${token}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${REMEMBER}`;
 export async function createSession(res, email, admin = false) {
   const token = crypto.randomBytes(32).toString("hex");
   await setJSON(`session:${token}`, { email, admin }, "EX", REMEMBER);
-  res.setHeader("Set-Cookie", sessionCookie(token));
+  addCookie(res, sessionCookie(token));
 }
 // called when the page opens and finds you still logged in: pushes the expiry of this device's login back out to a full year
 export async function renewSession(req, res) {
   const token = getCookie(req, "nova_session");
   if (!token || !/^[a-f0-9]{64}$/.test(token)) return;
-  if (await redis("EXPIRE", `session:${token}`, REMEMBER)) res.setHeader("Set-Cookie", sessionCookie(token));
+  if (await redis("EXPIRE", `session:${token}`, REMEMBER)) addCookie(res, sessionCookie(token));
 }
 
 export async function clearSession(req, res) {
   const token = getCookie(req, "nova_session");
   if (token && /^[a-f0-9]{64}$/.test(token)) await redis("DEL", `session:${token}`);
-  res.setHeader("Set-Cookie", "nova_session=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0");
+  addCookie(res, "nova_session=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0");
 }
 
 export async function getAuth(req) {
   const token = getCookie(req, "nova_session");
   if (!token || !/^[a-f0-9]{64}$/.test(token)) return null;
-  const s = await getJSON(`session:${token}`);
-  if (!s) return null;
+  const dev = getDevice(req);
+  const [sv, banned] = await pipeline([["GET", `session:${token}`], ["GET", `devban:${dev || "-"}`]]);
+  if (banned || !sv) return null; // a banned device is treated as logged out everywhere
+  const s = JSON.parse(sv);
   const user = await getJSON(`user:${s.email}`);
   if (!user || user.blocked) return null;
   return { user, admin: !!s.admin && !!user.admin };

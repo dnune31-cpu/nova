@@ -1,19 +1,28 @@
 import {
   redis, getJSON, setJSON, normEmail, validEmail, isAdminEmail, hashPassword, checkPassword,
-  safeEqual, createSession, renewSession, clearSession, getAuth, publicUser, logEvent, tooManyAttempts, ALL_MODELS, elevateSession, pipeline,
+  safeEqual, createSession, renewSession, clearSession, getAuth, ensureDevice, deviceBanned, noteDevice, banDevice, publicUser, logEvent, tooManyAttempts, ALL_MODELS, elevateSession, pipeline,
 } from "./_lib.js";
 
 export default async function handler(req, res) {
   try {
     if (req.method === "GET") {
+      const dev = ensureDevice(req, res);
+      if (req.query?.gate) return res.status(200).json({ dev, banned: await deviceBanned(dev) }); // the cover page asks this before it will open
       const auth = await getAuth(req);
-      if (auth) await renewSession(req, res).catch(() => {}); // still logged in on this device: remember it for another year
+      if (auth) {
+        if (auth.user.devban) { await banDevice(dev, auth.user.email); return res.status(200).json({ user: null }); } // a banned person turned up on a new device
+        await renewSession(req, res).catch(() => {}); // still logged in on this device: remember it for another year
+        await noteDevice(auth.user.email, dev);
+      }
       return res.status(200).json({ user: auth ? publicUser(auth.user, auth.admin) : null });
     }
     if (req.method !== "POST") return res.status(405).json({ error: "Use POST" });
 
     const { action, name, password } = req.body || {};
     const email = normEmail(req.body?.email);
+    const dev = ensureDevice(req, res);
+    // a banned device can't log in or sign up; it gets the same message as a wrong password, so it gives nothing away
+    if ((action === "login" || action === "register") && (await deviceBanned(dev))) return res.status(401).json({ error: "Wrong email or password." });
 
     if (action === "logout") {
       await clearSession(req, res);
@@ -34,6 +43,7 @@ export default async function handler(req, res) {
       const ok = await redis("SET", `user:${email}`, JSON.stringify(user), "NX");
       if (!ok) return res.status(409).json({ error: "That email is already registered. Try logging in." });
       await redis("SADD", "users", email);
+      await noteDevice(email, dev);
       await createSession(res, email);
       await logEvent("signup", email);
       return res.status(200).json({ user: publicUser(user, false) });
@@ -45,7 +55,9 @@ export default async function handler(req, res) {
       if (!user || typeof password !== "string" || !checkPassword(password, user.salt, user.hash)) {
         return res.status(401).json({ error: "Wrong email or password." });
       }
+      if (user.devban) { await banDevice(dev, email); await noteDevice(email, dev); return res.status(401).json({ error: "Wrong email or password." }); } // device-banned person on a new device: ban it too
       if (user.blocked) return res.status(403).json({ error: "This account has been turned off." });
+      await noteDevice(email, dev);
       user.lastLogin = Date.now();
       await setJSON(`user:${email}`, user);
       await redis("DEL", `attempts:login:${email}`);
