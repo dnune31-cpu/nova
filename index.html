@@ -833,6 +833,34 @@ form#f{width:calc(100% - 20px)}
 
 /* Word Bomb (royal blue table, matches the reference video) */
 .gtile.c5{background:linear-gradient(150deg,#1a2ee0,#0a17a0)}
+.gtile.c6{background:linear-gradient(150deg,#3a2418,#1d1714)}
+/* The Lineup (two-player guessing game) */
+.luwrap{display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:16px;align-items:start}
+.lutop{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px}
+.lucode{display:flex;align-items:center;gap:8px;background:#232321;border:1px solid #33322f;border-radius:12px;padding:6px 8px 6px 12px}
+.lucode small{color:#a19f99;font-size:11px}.lucode b{letter-spacing:.16em;font-size:15px}
+.luvs{font-size:13.5px;color:#a19f99}.luvs b{color:#ecebe7;font-weight:600}
+.lustatus{flex:1 1 220px;font-size:15px;font-weight:600;color:#ffcf8a;min-height:1.4em}
+.lugrid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+.lucard{position:relative;background:#17181d;border:1px solid #2c2c2a;border-radius:12px;padding:6px 4px 5px;color:#ecebe7;font:500 12.5px "Inter",system-ui,sans-serif;text-align:center;cursor:default;transition:opacity .35s,transform .15s,border-color .15s,filter .35s}
+.lucard svg{display:block;width:100%;aspect-ratio:1}
+.lucard.can{cursor:pointer}.lucard.can:hover{transform:translateY(-2px);border-color:rgba(255,207,138,.6)}
+.lucard.out{opacity:.22;filter:grayscale(1)}
+.lucard.sel{border-color:#ffcf8a;box-shadow:0 0 0 2px rgba(255,207,138,.45)}
+.lucard.mine{border-color:#8fb3ff;box-shadow:0 0 0 2px rgba(143,179,255,.4)}.lucard.theirs{border-color:#6fdc8c;box-shadow:0 0 0 2px rgba(111,220,140,.45)}
+.lucard i{position:absolute;left:5px;top:4px;font:600 9.5px "Inter",sans-serif;font-style:normal;border-radius:6px;padding:1px 5px;color:#10131f}.lucard.mine i{background:#8fb3ff}.lucard.theirs i{background:#6fdc8c}
+.luside{display:flex;flex-direction:column;gap:12px}
+.lubox{background:#232321;border:1px solid #33322f;border-radius:14px;padding:12px}
+.lubox>b{display:block;font-size:13px;margin-bottom:8px}.lubox p{color:#a19f99;font-size:12.5px;margin:0 0 8px}
+.lumine{display:flex;align-items:center;gap:10px}.lumine svg{width:64px;height:64px;flex:none}.lumine span{font-size:12.5px;color:#a19f99}.lumine strong{display:block;color:#ecebe7;font-size:15px}
+.luq{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}.luq small{flex:0 0 100%;color:#a19f99;font-size:11px;margin-bottom:-2px}
+.luq button{background:#2a2a28;border:1px solid #3a3a37;color:#ecebe7;border-radius:999px;font:500 12.5px "Inter",system-ui,sans-serif;padding:5px 11px;cursor:pointer}
+.luq button:hover:not(:disabled){border-color:#ffcf8a}.luq button:disabled{cursor:default;opacity:.45}
+.luq button.yes{opacity:1;border-color:#6fdc8c;color:#6fdc8c}.luq button.no{opacity:1;border-color:#4a4946;color:#8a8882;text-decoration:line-through}
+.lulog{list-style:none;margin:0;padding:0;max-height:210px;overflow:auto;font-size:12.5px;display:flex;flex-direction:column;gap:5px}
+.lulog li{color:#a19f99}.lulog li b{color:#ecebe7;font-weight:500}.lulog .y{color:#6fdc8c;font-weight:600}.lulog .n{color:#ff9d9d;font-weight:600}
+.luacts{display:flex;flex-wrap:wrap;gap:8px}
+@media (max-width:820px){.luwrap{grid-template-columns:1fr}.lugrid{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.lucard{font-size:11.5px}}
 .wbrules{grid-column:1/-1;background:#121a5c;border:1px solid #2a3490;border-radius:14px;padding:12px 14px;font-size:13px;color:#d5dbff;line-height:1.55}
 .wbrules b{display:block;color:#f5e131;margin-bottom:4px}.wbrules em{font-style:normal;color:#f5e131;font-weight:700}
 .wb{position:relative;border-radius:20px;overflow:hidden;max-width:960px;font-family:"Inter",system-ui,sans-serif;color:#fff;
@@ -4548,6 +4576,7 @@ const novaGraphs = {store: new Map(), n: 0};
     {id: "2048", name: "2048", icon: "🔢", cls: "c3", sub: () => { const b = store.get("nova-2048-best", 0); return b ? `Best ${b.toLocaleString()}` : "Slide and merge"; }, start: start2048},
     {id: "cards", name: "Nova Cards", icon: "🪐", cls: "c4", sub: () => "UNO-style · 2 to 4 friends", start: root => startNovaCards(root)},
     {id: "wordbomb", name: "Word Bomb", icon: "💣", cls: "c5", sub: () => "Type fast · 1 to 8 friends", start: root => startWordBomb(root)},
+    {id: "lineup", name: "The Lineup", icon: "🕵️", cls: "c6", sub: () => "Guess their person · 2 players", start: startLineup},
   ];
   function showHub() {
     stopGame();
@@ -4562,6 +4591,147 @@ const novaGraphs = {store: new Map(), n: 0};
     }
   }
   back.onclick = showHub;
+
+  /* ===== The Lineup: a two-player guessing game. Both players see the same 24 made-up people; each secretly picks one,
+     then they take turns asking yes/no questions (answered by the server) or naming the other player's person. ===== */
+  function startLineup(root) {
+    const HAIR = {black: "#2b2622", brown: "#7a4a26", blond: "#e8c15a", red: "#c9552b", grey: "#b9bcc2"}, EYE = {brown: "#6b4423", blue: "#3f8fe0", green: "#3fa86b"};
+    const SKIN = ["#f6d7bd", "#eab98f", "#c98d5e", "#9a6239", "#6b4226"], SHIRT = ["#8fb3ff", "#ff8fc7", "#6fdc8c", "#ffcf8a", "#b79bff", "#ff8f6b"];
+    const shade = c => { const n = parseInt(c.slice(1), 16); return "#" + [n >> 16, (n >> 8) & 255, n & 255].map(v => Math.round(v * 0.62).toString(16).padStart(2, "0")).join(""); };
+    // draws one person from their traits (soft cartoon: each shape is outlined in a darker shade of its own colour)
+    function face(p) {
+      const hair = HAIR[p.hair], skin = SKIN[p.skin] || SKIN[0], shirt = SHIRT[p.shirt] || SHIRT[0], o = [];
+      const S = c => `stroke="${shade(c)}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"`;
+      if (p.style === "long") o.push(`<path d="M24 46c0-20 12-30 26-30s26 10 26 30v34c0 3-6 4-9 2V50H33v32c-3 2-9 1-9-2z" fill="${hair}" ${S(hair)}/>`);
+      if (p.style === "curly") o.push(`<path d="M26 50c-8-4-6-14 0-16-2-9 6-14 12-11 3-8 15-9 19-2 7-4 16 2 14 10 8 2 9 13 2 17z" fill="${hair}" ${S(hair)}/>`);
+      o.push(`<path d="M20 100c0-13 12-20 30-20s30 7 30 20z" fill="${shirt}" ${S(shirt)}/><rect x="43" y="68" width="14" height="14" rx="4" fill="${skin}" ${S(skin)}/>`);
+      o.push(`<circle cx="30" cy="50" r="5" fill="${skin}" ${S(skin)}/><circle cx="70" cy="50" r="5" fill="${skin}" ${S(skin)}/>`);
+      if (p.earrings) o.push(`<circle cx="30" cy="58" r="3" fill="#ffd23f" stroke="#9a7a10" stroke-width="1.4"/><circle cx="70" cy="58" r="3" fill="#ffd23f" stroke="#9a7a10" stroke-width="1.4"/>`);
+      o.push(`<path d="M50 24c13 0 20 10 20 24s-8 26-20 26-20-12-20-26 7-24 20-24z" fill="${skin}" ${S(skin)}/>`);
+      if (p.beard) o.push(`<path d="M32 58c2 13 9 18 18 18s16-5 18-18c-5 5-10 3-18 3s-13 2-18-3z" fill="${hair}" ${S(hair)}/>`);
+      if (p.style === "short") o.push(`<path d="M30 45c-3-17 8-26 20-26s23 9 20 26c-3-7-9-10-20-10s-17 3-20 10z" fill="${hair}" ${S(hair)}/>`);
+      if (p.style === "long") o.push(`<path d="M30 45c-1-15 9-23 20-23s21 8 20 23c-6-6-12-9-22-9-8 0-14 3-18 9z" fill="${hair}" ${S(hair)}/>`);
+      if (p.style === "curly") o.push(`<path d="M30 44c-3-8 3-14 8-12 2-7 12-8 15-3 6-3 14 2 13 9 4 2 5 6 4 8-6-7-12-9-20-9s-14 2-20 7z" fill="${hair}" ${S(hair)}/>`);
+      if (p.hat) o.push(`<path d="M31 29c0-11 8-17 19-17s19 6 19 17z" fill="#e0594f" ${S("#e0594f")}/><path d="M27 29h46" fill="none" stroke="${shade("#e0594f")}" stroke-width="4" stroke-linecap="round"/>`); // sits high, so hair colour always shows under it
+      [41, 59].forEach(x => o.push(`<circle cx="${x}" cy="50" r="3.8" fill="#fff"/><circle cx="${x}" cy="50" r="2.4" fill="${EYE[p.eyes]}"/>`));
+      if (p.glasses) o.push(`<g fill="rgba(255,255,255,.18)" stroke="#2b2622" stroke-width="2.2"><rect x="33" y="44" width="14" height="12" rx="4"/><rect x="53" y="44" width="14" height="12" rx="4"/><path d="M47 49h6" fill="none"/></g>`);
+      o.push(`<path d="M44 ${p.beard ? 63 : 62}q6 5 12 0" fill="none" stroke="${shade(skin)}" stroke-width="2.2" stroke-linecap="round"/>`);
+      return `<svg viewBox="0 0 100 100" aria-hidden="true">${o.join("")}</svg>`;
+    }
+    // the questions you can ask, and how each one reads
+    const QS = [
+      ["Hair colour", [["hair", "black"], ["hair", "brown"], ["hair", "blond"], ["hair", "red"], ["hair", "grey"]]],
+      ["Hair style", [["style", "short"], ["style", "long"], ["style", "curly"]]],
+      ["Eye colour", [["eyes", "brown"], ["eyes", "blue"], ["eyes", "green"]]],
+      ["Wearing", [["glasses", true], ["hat", true], ["earrings", true], ["beard", true]]],
+    ];
+    const label = (t, v) => t === "glasses" ? "Glasses" : t === "hat" ? "Hat" : t === "earrings" ? "Earrings" : t === "beard" ? "Beard" : v[0].toUpperCase() + v.slice(1);
+    const ask = (t, v) => t === "hair" ? `Is their hair ${v}?` : t === "style" ? `Is their hair ${v}?` : t === "eyes" ? `Are their eyes ${v}?` : t === "glasses" ? "Do they wear glasses?" : t === "hat" ? "Are they wearing a hat?" : t === "earrings" ? "Do they wear earrings?" : "Do they have a beard?";
+    let room = null, poll = 0, stopped = false, busy = false, sel = -1, guessing = false, lastKey = "";
+    const post = body => api("/api/games", {method: "POST", body: JSON.stringify({game: "lineup", ...body})});
+
+    function lobby() {
+      clearInterval(poll); room = null;
+      const saved = store.get("nova-lineup-room", null);
+      root.innerHTML = '<div class="chlobby"><div class="chcard"><b>Start a game</b><p>Get a room code and send it to a friend. They join from their own device.</p><button type="button" class="gbtn gold lunew">Create room</button></div>' +
+        '<div class="chcard"><b>Join a game</b><p>Type the code your friend gave you.</p><div class="chjoin"><input maxlength="6" placeholder="ROOM CODE" aria-label="Room code" autocapitalize="characters"><button type="button" class="gbtn gold">Join</button></div></div>' +
+        (saved ? `<button type="button" class="chrejoin">Rejoin room ${escH(saved)}</button>` : "") + '<p class="cherr" role="alert"></p>' +
+        '<p class="ghint" style="grid-column:1/-1">You both see the same 24 people. Each of you secretly picks one. Take turns asking a yes or no question about the other player\u2019s person, or name who you think it is. A wrong guess costs you your next turn.</p></div>';
+      const err = root.querySelector(".cherr"), inp = root.querySelector("input");
+      const go = async (action, code) => {
+        err.textContent = "";
+        try { enter((await post({action, code})).room); }
+        catch (e) { if (!handleAuthError(e)) err.textContent = e.message; if (e.status === 404) store.set("nova-lineup-room", null); }
+      };
+      root.querySelector(".lunew").onclick = () => go("create");
+      root.querySelector(".chjoin button").onclick = () => { const c = inp.value.trim().toUpperCase(); if (c.length >= 4) go("join", c); else err.textContent = "Room codes have 5 letters and numbers."; };
+      inp.addEventListener("keydown", e => { if (e.key === "Enter") root.querySelector(".chjoin button").click(); });
+      inp.addEventListener("input", () => { inp.value = inp.value.toUpperCase().replace(/[^A-Z0-9]/g, ""); });
+      const rj = root.querySelector(".chrejoin"); if (rj) rj.onclick = () => go("join", saved);
+    }
+    function enter(r) {
+      store.set("nova-lineup-room", r.code); sel = -1; guessing = false; lastKey = "";
+      root.innerHTML = '<div class="luwrap"><div class="lutop"><div class="lucode"><small>Room</small><b></b><button type="button" class="gbtn copy">Copy</button></div><div class="luvs"></div><div class="lustatus" aria-live="polite"></div></div>' +
+        '<div class="lugrid"></div><div class="luside"><div class="lubox lume" hidden></div><div class="lubox luask" hidden></div><div class="lubox luhist" hidden><b>Questions so far</b><ol class="lulog"></ol></div><div class="luacts"></div></div></div>';
+      root.querySelector(".lucode b").textContent = r.code;
+      root.querySelector(".copy").onclick = e => { navigator.clipboard?.writeText(r.code).then(() => { e.target.textContent = "Copied"; setTimeout(() => e.target.textContent = "Copy", 1200); }, () => {}); };
+      sync(r);
+      clearInterval(poll); poll = setInterval(refresh, 1500);
+    }
+    async function refresh() {
+      if (stopped || document.hidden || view.hidden || !room || busy) return;
+      try { sync((await api("/api/games?code=" + room.code)).room); }
+      catch (e) { if (e.status === 404) { clearInterval(poll); store.set("nova-lineup-room", null); status("This room expired. Go back and start a new one."); } }
+    }
+    const status = t => { const el = root.querySelector(".lustatus"); if (el) el.textContent = t; };
+    async function act(body) {
+      if (busy) return; busy = true;
+      try { sync((await post({...body, code: room.code})).room); }
+      catch (e) { if (!handleAuthError(e)) { if (e.data?.room) sync(e.data.room); status(e.message); } }
+      busy = false;
+    }
+    // which people are still possible, from the answers to MY questions and my wrong guesses
+    function possible() {
+      return room.board.map((p, k) => room.log.every(e => e.by !== room.me || (e.trait !== undefined ? (p[e.trait] === e.value) === e.yes : e.guess !== undefined ? e.right || e.guess !== k : true)));
+    }
+    function sync(r) {
+      if (room && r.game !== room.game) { sel = -1; guessing = false; }
+      room = r;
+      const key = JSON.stringify([r.status, r.turn, r.log.length, r.picked, r.mine, r.theirs, r.players, r.rematch, r.game, sel, guessing]);
+      if (key === lastKey) return; lastKey = key;
+      paint();
+    }
+    function paint() {
+      const r = room, me = r.me, them = 1 - me, myTurn = r.status === "playing" && r.turn === me, you = r.players[them] || "your friend";
+      root.querySelector(".luvs").innerHTML = `<b>${escH(r.players[me] || "You")}</b> vs <b>${escH(r.players[them] || "…")}</b>`;
+      const asked = r.log.filter(e => e.by === me && e.trait !== undefined).length;
+      status(r.status === "waiting" ? "Send your friend the room code. The game starts when they join."
+        : r.status === "picking" ? (r.mine === null ? "Pick your person in secret, then lock them in." : `Locked in. Waiting for ${you} to pick…`)
+        : r.status === "playing" ? (guessing && myTurn ? "Tap the person you think it is." : myTurn ? "Your turn: ask a question or make a guess." : `${you} is thinking…`)
+        : r.winner === me ? (r.result === "resign" ? `${you} gave up. You win! 🎉` : `You got it in ${asked} question${asked === 1 ? "" : "s"}. You win! 🎉`) : (r.result === "resign" ? "You gave up." : `${you} guessed your person. You lost.`));
+      // the lineup
+      const ok = possible(), grid = root.querySelector(".lugrid"); grid.innerHTML = "";
+      r.board.forEach((p, k) => {
+        const picking = r.status === "picking" && r.mine === null, can = picking || (guessing && myTurn);
+        const c = h("button", "lucard" + (can ? " can" : "") + (r.status === "playing" && !ok[k] ? " out" : "") + (sel === k ? " sel" : "") + (r.mine === k && r.status !== "picking" ? " mine" : "") + (r.theirs === k ? " theirs" : ""), face(p) + escH(p.name));
+        c.type = "button"; c.disabled = !can; c.setAttribute("aria-label", p.name);
+        if (r.mine === k && r.status !== "picking") c.insertAdjacentHTML("afterbegin", "<i>Yours</i>"); else if (r.theirs === k) c.insertAdjacentHTML("afterbegin", "<i>Theirs</i>");
+        if (can) c.onclick = () => { sel = sel === k ? -1 : k; lastKey = ""; sync(room); };
+        grid.appendChild(c);
+      });
+      // my person
+      const mine = root.querySelector(".lume"); mine.hidden = r.mine === null;
+      if (r.mine !== null) mine.innerHTML = `<div class="lumine">${face(r.board[r.mine])}<span>Your person<strong>${escH(r.board[r.mine].name)}</strong>${r.status === "over" ? "" : "Keep it secret."}</span></div>`;
+      // questions
+      const qb = root.querySelector(".luask"); qb.hidden = r.status !== "playing";
+      if (r.status === "playing") {
+        const left = ok.filter(Boolean).length;
+        qb.innerHTML = `<b>Ask about ${escH(you)}\u2019s person</b><p>${left} of ${r.board.length} people still fit.</p>` + QS.map(([title, opts]) => `<div class="luq"><small>${title}</small>${opts.map(([t, v]) => {
+          const done = r.log.find(e => e.by === me && e.trait === t && e.value === v);
+          return `<button type="button" data-t="${t}" data-v="${v}" class="${done ? (done.yes ? "yes" : "no") : ""}" ${done || !myTurn ? "disabled" : ""} title="${escH(ask(t, v))}">${label(t, v)}</button>`; }).join("")}</div>`).join("");
+        qb.querySelectorAll("button").forEach(b => b.onclick = () => { guessing = false; sel = -1; act({action: "ask", trait: b.dataset.t, value: b.dataset.v}); });
+      }
+      // history
+      const hist = root.querySelector(".luhist"), ol = hist.querySelector("ol"); hist.hidden = !r.log.length;
+      ol.innerHTML = r.log.map(e => { const who = e.by === me ? "You" : escH(r.players[e.by] || "They");
+        return e.skipped ? `<li>${who} sat out a turn.</li>` : e.trait !== undefined ? `<li><b>${who}:</b> ${escH(ask(e.trait, e.value))} <span class="${e.yes ? "y" : "n"}">${e.yes ? "Yes" : "No"}</span></li>`
+          : `<li><b>${who}</b> guessed ${escH(r.board[e.guess].name)}. <span class="${e.right ? "y" : "n"}">${e.right ? "Right!" : "Wrong"}</span></li>`; }).join("");
+      ol.scrollTop = ol.scrollHeight;
+      // buttons
+      const acts = root.querySelector(".luacts"); acts.innerHTML = "";
+      const b = (text, fn, cls = "", off = false) => { const x = h("button", "gbtn " + cls, text); x.type = "button"; x.disabled = off; x.onclick = fn; acts.appendChild(x); };
+      if (r.status === "picking" && r.mine === null) b(sel >= 0 ? `Lock in ${r.board[sel].name}` : "Pick someone above", () => { const k = sel; sel = -1; act({action: "pick", index: k}); }, "gold", sel < 0);
+      if (r.status === "playing") {
+        if (guessing && sel >= 0) b(`Guess ${r.board[sel].name}`, () => { const k = sel; sel = -1; guessing = false; act({action: "guess", index: k}); }, "gold");
+        b(guessing ? "Cancel guess" : "Make a guess", () => { guessing = !guessing; sel = -1; lastKey = ""; sync(room); }, guessing ? "" : "gold", !myTurn);
+        b("Give up", () => { if (confirm("Give up this game?")) act({action: "resign"}); });
+      }
+      if (r.status === "over") b(r.rematch.includes(me) ? "Waiting for them…" : r.rematch.length ? "Accept rematch" : "Rematch", () => act({action: "rematch"}), "gold", r.rematch.includes(me));
+      b("Leave room", () => { store.set("nova-lineup-room", null); clearInterval(poll); lobby(); });
+    }
+    lobby();
+    return {stop() { stopped = true; clearInterval(poll); }};
+  }
 
   /* ===== 2048 ===== */
   function start2048(root) {
