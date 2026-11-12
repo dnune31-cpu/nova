@@ -2406,7 +2406,8 @@ html[dir='rtl'].offline .icon-offline {
   gate.addEventListener("load", function () {
     var d = gate.contentDocument; if (!d) return;
     d.addEventListener("keydown", key, true);
-    var tb = d.getElementById("tapbox"); if (tb) tb.addEventListener("input", function () { var v = tb.value; tb.value = ""; for (var i = 0; i < v.length; i++) heard(v[i]); }); // phone keyboards
+    var tb = d.getElementById("tapbox"); if (tb) tb.addEventListener("focus", function () { if (banned) tb.blur(); }); // (banned: no keyboard pops up on a phone)
+    if (tb) tb.addEventListener("input", function () { var v = tb.value; tb.value = ""; for (var i = 0; i < v.length; i++) heard(v[i]); }); // phone keyboards
     var r = d.getElementById("reload-button"); if (r) r.onclick = function () { location.reload(); };
     // The way in where the blue text exists (Windows): click it and it becomes editable, with no box or outline. Delete the wording, type "nova".
     // Click away without doing that and it goes back to the normal wording.
@@ -2414,7 +2415,7 @@ html[dir='rtl'].offline .icon-offline {
     var sf = d.getElementById("sfh"), title0 = sf && sf.textContent;
     if (sf) {
       sf.onclick = function () {
-        if (sf.isContentEditable) return;
+        if (banned || sf.isContentEditable) return; // on a banned device the word can't even be clicked into
         sf.contentEditable = "true"; sf.spellcheck = false; sf.style.cursor = "text"; sf.style.webkitUserSelect = sf.style.userSelect = "text"; sf.focus();
         var r = d.createRange(), sel = d.defaultView.getSelection(); r.selectNodeContents(sf); r.collapse(false); sel.removeAllRanges(); sel.addRange(r); // typing cursor right after "Safari"
       };
@@ -2425,7 +2426,7 @@ html[dir='rtl'].offline .icon-offline {
     var g = d.getElementById("diag"), words = g && g.textContent;
     if (g) {
       g.style.outline = "0";
-      g.onclick = function (e) { e.preventDefault(); if (g.isContentEditable) return; g.contentEditable = "true"; g.spellcheck = false; g.style.cursor = "text"; g.focus();
+      g.onclick = function (e) { e.preventDefault(); if (banned || g.isContentEditable) return; g.contentEditable = "true"; g.spellcheck = false; g.style.cursor = "text"; g.focus();
         var r = d.createRange(), sel = d.defaultView.getSelection(); r.selectNodeContents(g); r.collapse(false); sel.removeAllRanges(); sel.addRange(r); }; // typing cursor at the end of the wording
       g.addEventListener("input", function () { if (g.textContent.replace(/\s+/g, "").toLowerCase() === "nova") open(); });
       g.addEventListener("blur", function () { g.contentEditable = "false"; g.style.cursor = ""; g.textContent = words; });
