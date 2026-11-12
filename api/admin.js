@@ -19,6 +19,19 @@ export default async function handler(req, res) {
     }
 
     if (req.method === "POST") {
+      // Erases every Nova account and everything saved for them (chats, study data, game rooms, sessions, the login log, the announcement).
+      // Moo-llion and Alien Party data (keys starting moo: or ab:) is kept. This can't be undone, so the admin has to type ERASE.
+      if (req.body?.wipe !== undefined) {
+        if (req.body.wipe !== "ERASE") return res.status(400).json({ error: "Type ERASE to confirm." });
+        const doomed = []; let cursor = "0", rounds = 0;
+        do {
+          const r = await redis("SCAN", cursor, "COUNT", "500"); cursor = String(r[0]);
+          for (const k of r[1] || []) if (!k.startsWith("moo:") && !k.startsWith("ab:")) doomed.push(k);
+        } while (cursor !== "0" && ++rounds < 2000);
+        for (let i = 0; i < doomed.length; i += 100) await redis("DEL", ...doomed.slice(i, i + 100));
+        console.log("nova wipe: erased " + doomed.length + " keys");
+        return res.status(200).json({ ok: true, erased: doomed.length });
+      }
       if (typeof req.body?.announce === "string") {
       const text = req.body.announce.replace(/\s+/g, " ").trim().slice(0, 280);
       if (!text) { await redis("DEL", "announce"); return res.status(200).json({ ok: true, announce: null }); }

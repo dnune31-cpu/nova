@@ -1032,6 +1032,23 @@ form#f{width:calc(100% - 20px)}
 </style>
 </head>
 <body>
+<!-- The front door: a black screen with one small box in the corner. Typing "nova" lets you in (for this browser tab). -->
+<div id="gate" style="position:fixed;inset:0;z-index:2147483647;background:#000">
+  <input id="gateIn" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="12" aria-label="Enter"
+    style="position:fixed;right:max(12px,env(safe-area-inset-right,0px));bottom:max(12px,env(safe-area-inset-bottom,0px));width:84px;height:30px;padding:0 8px;background:#000;color:#9a9a9a;border:1px solid #2a2a2a;border-radius:4px;font:16px ui-monospace,Menlo,monospace;outline:0">
+</div>
+<script>
+(function () {
+  var gate = document.getElementById("gate"), box = document.getElementById("gateIn"), realTitle = document.title;
+  function open() { try { sessionStorage.setItem("nova-gate", "1"); } catch (e) {} document.title = realTitle; document.removeEventListener("keydown", grab, true); document.removeEventListener("focusin", grab, true); gate.remove(); }
+  function grab(e) { if (e.target !== box) box.focus(); } // anything typed goes to the box, never to the page hidden behind
+  try { if (sessionStorage.getItem("nova-gate") === "1") { gate.remove(); return; } } catch (e) {}
+  document.title = "\u200e"; // no name on the tab until you're in
+  document.addEventListener("keydown", grab, true); document.addEventListener("focusin", grab, true);
+  box.addEventListener("input", function () { if (box.value.trim().toLowerCase() === "nova") open(); });
+  box.focus();
+})();
+</script>
 <canvas id="sky"></canvas>
 
 <section id="authView" hidden>
@@ -1710,7 +1727,16 @@ function renderAdmin({users, log: events, announce}) {
       <tbody id="uRows"></tbody>
     </table></div>
     <h3 class="sect">Recent logins</h3>
-    <div class="loglist" id="logRows"></div>`;
+    <div class="loglist" id="logRows"></div>
+    <h3 class="sect">Start over</h3>
+    <div class="annbox"><input id="wipeIn" maxlength="5" placeholder="Type ERASE" aria-label="Type ERASE to confirm" autocomplete="off"><button type="button" class="ghost" id="wipeGo">Erase all accounts and progress</button><span class="saved" id="wipeMsg">Deletes every Nova account, chat and saved progress, yours included. Moo-llion is kept. This can't be undone.</span></div>`;
+  $("wipeGo").onclick = async () => {
+    const wm = $("wipeMsg");
+    if ($("wipeIn").value.trim() !== "ERASE") { wm.textContent = "Type ERASE (in capitals) in the box first."; return; }
+    $("wipeGo").disabled = true; wm.textContent = "Erasing…";
+    try { const d = await api("/api/admin", {method: "POST", body: JSON.stringify({wipe: "ERASE"})}); wm.textContent = "Done. Erased " + d.erased + " saved items. Reloading…"; setTimeout(() => location.reload(), 1500); }
+    catch (err) { $("wipeGo").disabled = false; wm.textContent = err.message; }
+  };
 
   const rows = $("uRows");
 const ai = $("annIn"), am = $("annMsg");
