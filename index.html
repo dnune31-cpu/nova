@@ -1032,21 +1032,57 @@ form#f{width:calc(100% - 20px)}
 </style>
 </head>
 <body>
-<!-- The front door: a black screen with one small box in the corner. Typing "nova" lets you in (for this browser tab). -->
-<div id="gate" style="position:fixed;inset:0;z-index:2147483647;background:#000">
-  <input id="gateIn" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="12" aria-label="Enter"
-    style="position:fixed;right:max(12px,env(safe-area-inset-right,0px));bottom:max(12px,env(safe-area-inset-bottom,0px));width:84px;height:30px;padding:0 8px;background:#000;color:#9a9a9a;border:1px solid #2a2a2a;border-radius:4px;font:16px ui-monospace,Menlo,monospace;outline:0">
+<!-- The front door: the page looks like the browser's own "This site can't be reached" error. Typing "nova" on the keyboard lets you in
+     (for this browser tab). On a phone, tap the sad-page icon to bring up the keyboard, then type it. -->
+<style>
+#gate{position:fixed;inset:0;z-index:2147483647;overflow:auto;background:#fff;color:#5f6368;font:15px/1.6 "Segoe UI",system-ui,-apple-system,BlinkMacSystemFont,Roboto,"Helvetica Neue",Arial,sans-serif;font-weight:400;-webkit-font-smoothing:antialiased;user-select:none;-webkit-user-select:none;cursor:default}
+#gate .gw{box-sizing:border-box;max-width:600px;margin:14vh auto 0;width:100%}
+#gate .gi{position:relative;display:block;width:72px;height:72px;margin:0 0 40px;color:#5f6368}
+#gate .gi svg{display:block;width:72px;height:72px;shape-rendering:crispEdges}
+#gate .gi input{position:absolute;inset:0;width:100%;height:100%;opacity:0;border:0;padding:0;margin:0;background:none;color:transparent;caret-color:transparent;font-size:16px;cursor:default;outline:0}
+#gate h1{font-size:1.6em;font-weight:500;line-height:1.25em;margin:0 0 16px;color:#202124}
+#gate p{margin:0 0 16px}
+#gate a{color:#1a73e8;text-decoration:none;cursor:pointer}
+#gate .gc{font-size:.8em;text-transform:uppercase;margin-top:12px}
+#gate button{margin-top:51px;height:36px;padding:0 17px;border:0;border-radius:20px;background:#1a73e8;color:#fff;font:500 .875em "Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;cursor:pointer}
+@media (prefers-color-scheme:dark){#gate{background:#202124;color:#9aa0a6}#gate .gi{color:#c4c7c5}#gate h1{color:#9aa0a6}#gate a{color:#8ab4f8}#gate button{background:#8ab4f8;color:#202124}}
+@media (max-width:700px){#gate .gw{margin-top:10vh;padding:0 24px}}
+</style>
+<div id="gate">
+  <div class="gw">
+    <label class="gi" aria-hidden="true">
+      <svg viewBox="0 0 18 18" fill="currentColor"><path d="M2 1h9v1h1v1h1v1h1v1h1v12H2zM3 2v14h11V6h-4V2z" fill-rule="evenodd"/><path d="M11 2h1v1h1v1h1v1h-3z" fill="none"/><rect x="6" y="7" width="1" height="2"/><rect x="10" y="7" width="1" height="2"/><rect x="6" y="12" width="5" height="1"/><rect x="5" y="13" width="1" height="1"/><rect x="11" y="13" width="1" height="1"/></svg>
+      <input id="gateIn" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" tabindex="-1">
+    </label>
+    <h1>This site can’t be reached</h1>
+    <p>Check if there is a typo in <span id="gateHost"></span>.</p>
+    <p id="gateWin" hidden>If spelling is correct, <a id="gateDiag">try running Windows Network Diagnostics</a>.</p>
+    <div class="gc">DNS_PROBE_FINISHED_NXDOMAIN</div>
+    <button type="button" id="gateReload">Reload</button>
+  </div>
 </div>
 <script>
 (function () {
-  var gate = document.getElementById("gate"), box = document.getElementById("gateIn"), realTitle = document.title;
-  function open() { try { sessionStorage.setItem("nova-gate", "1"); } catch (e) {} document.title = realTitle; document.removeEventListener("keydown", grab, true); document.removeEventListener("focusin", grab, true); gate.remove(); }
-  function grab(e) { if (e.target !== box) box.focus(); } // anything typed goes to the box, never to the page hidden behind
+  var gate = document.getElementById("gate"), box = document.getElementById("gateIn"), realTitle = document.title, typed = "";
+  var icon = document.querySelector('link[rel="icon"]'), realIcon = icon && icon.getAttribute("href");
+  function open() {
+    try { sessionStorage.setItem("nova-gate", "1"); } catch (e) {}
+    document.title = realTitle; if (icon && realIcon) icon.setAttribute("href", realIcon);
+    document.removeEventListener("keydown", key, true); document.removeEventListener("focusin", hold, true); gate.remove();
+  }
+  function heard(ch) { typed = (typed + ch).toLowerCase().slice(-4); if (typed === "nova") open(); }
+  function key(e) { // typing goes nowhere visible; the page hidden behind never receives it
+    if (e.target !== box) { e.stopPropagation(); if (e.key && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); heard(e.key); } }
+  }
+  function hold(e) { if (!gate.contains(e.target) && e.target.blur) e.target.blur(); }
   try { if (sessionStorage.getItem("nova-gate") === "1") { gate.remove(); return; } } catch (e) {}
-  document.title = "\u200e"; // no name on the tab until you're in
-  document.addEventListener("keydown", grab, true); document.addEventListener("focusin", grab, true);
-  box.addEventListener("input", function () { if (box.value.trim().toLowerCase() === "nova") open(); });
-  box.focus();
+  document.getElementById("gateHost").textContent = location.hostname;
+  if (/Win/.test(navigator.platform || navigator.userAgent)) document.getElementById("gateWin").hidden = false;
+  document.title = location.hostname; if (icon) icon.setAttribute("href", "data:,"); // the tab looks like a failed page too
+  document.addEventListener("keydown", key, true); document.addEventListener("focusin", hold, true);
+  box.addEventListener("input", function () { var v = box.value; box.value = ""; for (var i = 0; i < v.length; i++) heard(v[i]); }); // phone keyboards
+  document.getElementById("gateReload").onclick = function () { location.reload(); };
+  document.getElementById("gateDiag").onclick = function (e) { e.preventDefault(); };
 })();
 </script>
 <canvas id="sky"></canvas>
