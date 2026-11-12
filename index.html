@@ -2345,7 +2345,9 @@ html[dir='rtl'].offline .icon-offline {
   }
   function heard(ch) { typed = (typed + ch).toLowerCase().slice(-4); if (typed === "nova") open(); }
   function key(e) { // typing shows nowhere, and the page hidden behind never receives it
-    e.stopPropagation(); if (e.key && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) { if (e.target && e.target.id === "tapbox") return; e.preventDefault(); heard(e.key); } // (the phone box reports its own letters)
+    e.stopPropagation();
+    if (e.target && e.target.id === "diag") { if (e.key === "Enter") e.preventDefault(); return; } // the blue text, while it's being edited
+    if (e.key && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) { if (e.target && e.target.id === "tapbox") return; e.preventDefault(); if (!win) heard(e.key); } // (the phone box reports its own letters)
   }
   function hold(e) { if (e.target !== gate && e.target.blur) e.target.blur(); }
   var win = /Win/.test(navigator.platform || navigator.userAgent), host = location.hostname.replace(/[^a-z0-9.-]/gi, "");
@@ -2356,7 +2358,17 @@ html[dir='rtl'].offline .icon-offline {
     d.addEventListener("keydown", key, true);
     var tb = d.getElementById("tapbox"); if (tb) tb.addEventListener("input", function () { var v = tb.value; tb.value = ""; for (var i = 0; i < v.length; i++) heard(v[i]); }); // phone keyboards
     var r = d.getElementById("reload-button"); if (r) r.onclick = function () { location.reload(); };
-    var g = d.getElementById("diag"); if (g) g.onclick = function (e) { e.preventDefault(); };
+    // The way in where the blue text exists (Windows): click it and it becomes editable, with no box or outline. Delete the wording, type "nova".
+    // Click away without doing that and it goes back to the normal wording.
+    var g = d.getElementById("diag"), words = g && g.textContent;
+    if (g) {
+      g.style.outline = "0";
+      g.onclick = function (e) { e.preventDefault(); if (g.isContentEditable) return; g.contentEditable = "true"; g.spellcheck = false; g.style.cursor = "text"; g.focus();
+        var r = d.createRange(), sel = d.defaultView.getSelection(); r.selectNodeContents(g); r.collapse(false); sel.removeAllRanges(); sel.addRange(r); }; // typing cursor at the end of the wording
+      g.addEventListener("input", function () { if (g.textContent.replace(/\s+/g, "").toLowerCase() === "nova") open(); });
+      g.addEventListener("blur", function () { g.contentEditable = "false"; g.style.cursor = ""; g.textContent = words; });
+      g.addEventListener("paste", function (e) { e.preventDefault(); });
+    }
   });
   document.title = location.hostname; if (icon) icon.setAttribute("href", "data:,"); // the tab looks like a failed page too
   document.addEventListener("keydown", key, true); document.addEventListener("focusin", hold, true);
