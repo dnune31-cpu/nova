@@ -29,6 +29,14 @@ const BACKUP = ["Name a dog breed", "Name a fruit", "Name a sport", "Name a coun
 // cow skins: "classic" is everyone's; the rest are earned (the set of earned ones is kept per player at moo:sk:<id>).
 // Earned here: streaks (cocoa 3, strawberry 7, highland 30), golden (a One in a Moo-llion answer), astronaut (15,000m in one flight),
 // rainbow (all six tiers in one flight), royal (#1 on the day's board with at least 2 players). Alien Party grants alien, party, robo and ghost.
+// "dev" is the developer's own cow: it belongs to whoever holds the name below (names are unique), and they wear it unless they pick another.
+const DEV_NAME = "dieg";
+export const isDev = name => String(name || "").trim().toLowerCase() === DEV_NAME;
+export function skinOf(rec) { // the skin a saved player record is wearing
+  const dev = isDev(rec?.name), sk = rec?.skin;
+  if (sk === "dev" || !sk) return dev ? "dev" : "classic";
+  return SKIN_IDS.includes(sk) ? sk : "classic";
+}
 export const SKIN_IDS = ["classic", "cocoa", "strawberry", "highland", "golden", "astronaut", "rainbow", "royal", "alien", "party", "robo", "ghost"];
 const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" }).format(new Date());
 const dayNum = d => Math.round((Date.parse(d + "T00:00:00Z") - EPOCH) / 86400000) + 1;
@@ -231,7 +239,7 @@ async function who(req) {
   const id = String(req.headers["x-moo-player"] || "").toLowerCase();
   if (!/^[a-f0-9]{32}$/.test(id)) return null;
   const p = await getJSON(K.pid(id));
-  return { id, key: "p:" + id, name: p?.name || null, skin: SKIN_IDS.includes(p?.skin) ? p.skin : "classic", rec: p || {} };
+  return { id, key: "p:" + id, name: p?.name || null, skin: skinOf(p), rec: p || {} };
 }
 const cleanName = n => String(n || "").replace(/[^\p{L}\p{N} _.'-]/gu, "").replace(/\s+/g, " ").trim().slice(0, 16);
 
@@ -254,9 +262,9 @@ async function view(d, day, email, name, me) {
   if (done && board.length >= 2 && board[0].me) earn.push("royal");
   const fresh = earn.filter(x => !have.has(x));
   if (me && fresh.length) { await redis("SADD", K.skins(me.id), ...fresh); fresh.forEach(x => have.add(x)); }
-  have.add("classic");
+  have.add("classic"); if (isDev(name)) have.add("dev");
   return {
-    skins: { have: SKIN_IDS.filter(x => have.has(x)), on: me && have.has(me.skin) ? me.skin : "classic" },
+    skins: { have: [...SKIN_IDS, "dev"].filter(x => have.has(x)), on: me && have.has(me.skin) ? me.skin : "classic" },
     date: d, num: dayNum(d), count: N, tiers: TIERS, name,
     prompts: day.prompts.slice(0, Math.min(N, mine.answers.length + 1)),
     answers: mine.answers, total: mine.total, done, unrated: unrated(day),
@@ -299,6 +307,8 @@ export default async function handler(req, res) {
       if (!owner && !(await redis("SET", K.name(low), me.id, "NX"))) return res.status(409).json({ error: "That name is taken. Try another one." });
       if (me.name && me.name.toLowerCase() !== low && (await redis("GET", K.name(me.name.toLowerCase()))) === me.id) await redis("DEL", K.name(me.name.toLowerCase()));
       me.rec = { ...me.rec, name: nm, since: me.rec.since || Date.now() };
+      if (isDev(nm)) me.rec.skin = "dev"; else if (me.rec.skin === "dev") delete me.rec.skin; // the dev cow comes and goes with the name
+      me.skin = skinOf(me.rec);
       await redis("SET", K.pid(me.id), JSON.stringify(me.rec));
       me.name = nm;
       const ph = await redis("HGET", K.plays(d), me.key); // keep today's leaderboard name in sync
@@ -307,7 +317,7 @@ export default async function handler(req, res) {
     if (!me.name) return res.status(401).json({ error: "Pick a name to play.", code: "name" });
     if (action === "skin") { // wear a cow you've earned
       const sk = String(req.body.skin || "");
-      if (!SKIN_IDS.includes(sk) || (sk !== "classic" && !(await redis("SISMEMBER", K.skins(me.id), sk)))) return res.status(403).json({ error: "You haven't earned that cow yet." });
+      if (sk === "dev" ? !isDev(me.name) : !SKIN_IDS.includes(sk) || (sk !== "classic" && !(await redis("SISMEMBER", K.skins(me.id), sk)))) return res.status(403).json({ error: "You haven't earned that cow yet." });
       me.rec = { ...me.rec, skin: sk }; me.skin = sk;
       await redis("SET", K.pid(me.id), JSON.stringify(me.rec));
     }

@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { redis, pipeline, getJSON, MODEL_IDS } from "./_lib.js";
-import { norm, findInList, scoreFromRank, RARITY_SCALE, rareTier, rateList } from "./moo.js";
+import { norm, findInList, scoreFromRank, RARITY_SCALE, rareTier, rateList, skinOf } from "./moo.js";
 
 // Alien Party (moollion.cc): a pass-the-turn party mode for 1 to 8 friends with a room code.
 // Cows stand in a line. The alien's UFO hovers over whoever's turn it is and slowly beams them up
@@ -450,7 +450,7 @@ export default async function handler(req, res) {
     if (req.method !== "POST") return res.status(405).json({ error: "Not allowed" });
     const { action } = req.body || {}, code = clean(req.body?.code);
     const first = await pipeline([["GET", `moo:pid:${id}`], ["GET", key(code || "-")]]);
-    const me = { id, name: parse(first[0])?.name, skin: parse(first[0])?.skin || "classic" }, room0 = parse(first[1]);
+    const me = { id, name: parse(first[0])?.name, skin: skinOf(parse(first[0])) }, room0 = parse(first[1]);
     if (!me.name) return noName();
 
     if (action === "create") {
