@@ -249,8 +249,8 @@ const SKINS = {
   robo: {name: "Robo", how: "Win an Alien Party game that has a Hard bot.", pal: {w: "#c9d1e0", b: "#7a859e", p: "#9aa5bd", h: "#7a859e", e: "#ff3b3b", n: "#55607a"}, extra: [[12, -1, "#7a859e"], [12, -2, "#ff3b3b"], [11, 0, "#7a859e"], [12, 0, "#7a859e"], [3, 5, "#ffd23f"], [9, 2, "#ffd23f"]]},
   ghost: {name: "Ghost", how: "Get abducted 10 times in Alien Party.", fx: "ghost", pal: {w: "#e6f6ff", b: "#b9d6f5", k: "#7f9bd0", p: "#cfe0ff", h: "#e6f6ff", e: "#3a4a80", n: "#7f9bd0"}},
 };
-// the developer's cow: not in the barn for anyone else. It's worn automatically by whoever holds the developer's name.
-SKINS.dev = {name: "Dev", how: "Only the developer has this one.", hidden: true, pal: {w: "#0f1a33", b: "#1fa35c", k: "#39ff88", n: "#1fa35c", h: "#f2e3b3", p: "#ff5d8f", e: "#ffffff"},
+// the developer's cow: not a collectable and never in the barn. The server puts it on whoever holds the developer's name, over any chosen cow.
+SKINS.dev = {name: "Dev", how: "", hidden: true, pal: {w: "#0f1a33", b: "#1fa35c", k: "#39ff88", n: "#1fa35c", h: "#f2e3b3", p: "#ff5d8f", e: "#ffffff"},
   extra: [[2, -2, "#7fe0ff"], [3, -3, "#7fe0ff"], [3, -1, "#7fe0ff"], [5, -1, "#ffd23f"], [6, -2, "#ffd23f"], [7, -3, "#ffd23f"], [9, -3, "#7fe0ff"], [10, -2, "#7fe0ff"], [9, -1, "#7fe0ff"]]}; // a tiny </> floating over its back
 const SKIN_ORDER = Object.keys(SKINS).filter(id => !SKINS[id].hidden), cowCache = {};
 // every pixel of a skin: {x, y, c: colour, a: opacity, leg: which leg it belongs to (so legs can kick), or -1}
@@ -309,7 +309,7 @@ function startMoo(root, opts = {}) {
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const zoneOf = m => { let z = 0; ZONES.forEach((x, i) => { if (m >= x.at) z = i; }); return z; };
   let skin = mySkin(); // the cow you're wearing
-  const setSkins = () => { if (st && st.skins) { skin = SKINS[st.skins.on] ? st.skins.on : "classic"; try { localStorage.setItem("moollion-skin", skin); } catch {} } };
+  const setSkins = () => { if (st && st.skins) { const w = st.skins.wear || st.skins.on; skin = SKINS[w] ? w : "classic"; try { localStorage.setItem("moollion-skin", skin); } catch {} } };
   let needName = false, st = null, stopped = false, pollT = 0, shown = 0, busy = false, scene = -1, countRaf = 0, muted = get("nova-moo-mute", false), ac = null;
 
   if (!document.getElementById("mooFonts")) {
@@ -552,7 +552,7 @@ function startMoo(root, opts = {}) {
     main.innerHTML = `<div class="mhead"><h1 class="mlogo">MOO-LLION</h1><div class="msub">The daily float${st ? " #" + st.num : ""}</div></div>
       <div class="mmenu">${help}${needName ? `<button type="button" class="mpill mhow">? How to play</button>
       <form class="mform mname" autocomplete="off"><span>&gt;</span><input maxlength="16" placeholder="what should we call you?" aria-label="Your name" spellcheck="false"></form><div class="merr" role="alert"></div>
-      <button type="button" class="mgo">▲ Lift off ▲</button>` : `<div class="mpills">${st && st.streak ? `<div class="mpill">🔥 ${st.streak} day streak</div>` : `<button type="button" class="mpill mhow">? How to play</button>`}${st && st.name ? `<button type="button" class="mpill mwho" title="Change your name">✎ ${escM(st.name)}</button>` : ""}${st && st.skins ? `<button type="button" class="mpill mcows${newSkins().length ? " new" : ""}">${newSkins().length ? "★ New cow!" : "Cows " + st.skins.have.length + "/" + barnList().length}</button>` : ""}</div>
+      <button type="button" class="mgo">▲ Lift off ▲</button>` : `<div class="mpills">${st && st.streak ? `<div class="mpill">🔥 ${st.streak} day streak</div>` : `<button type="button" class="mpill mhow">? How to play</button>`}${st && st.name ? `<button type="button" class="mpill mwho" title="Change your name">✎ ${escM(st.name)}</button>` : ""}${st && st.skins ? `<button type="button" class="mpill mcows${newSkins().length ? " new" : ""}">${newSkins().length ? "★ New cow!" : "Cows " + st.skins.have.length + "/" + SKIN_ORDER.length}</button>` : ""}</div>
       <button type="button" class="mgo">${done ? "▸ See my flight ◂" : a ? "▲ Keep floating ▲" : "▲ Lift off ▲"}</button>${opts.onParty && st ? `<button type="button" class="mbar mparty">👽 Alien Party <em>play with friends</em></button>` : ""}`}
       <button type="button" class="mbar mlb">Today's leaderboard <em>${st ? st.board.length + " played" : ""}</em></button></div>`;
     if (needName) {
@@ -652,7 +652,6 @@ function startMoo(root, opts = {}) {
   }
 
   /* ----- the barn: every cow skin, how to earn it, and which one you're wearing ----- */
-  const barnList = () => (st && st.skins && st.skins.have.includes("dev") ? ["dev"] : []).concat(SKIN_ORDER);
   const newSkins = () => { const seen = get("moollion-skins-seen", ["classic"]); return st && st.skins ? st.skins.have.filter(x => !seen.includes(x)) : []; };
   function cows() {
     const fresh = newSkins(); set("moollion-skins-seen", st.skins.have);
@@ -660,15 +659,15 @@ function startMoo(root, opts = {}) {
     playing(false); setScene(done ? ZONES[zoneOf(st.total)].scene : 0); placeCow(done ? "air" : "ground");
     main.className = "mmain mend";
     const draw = () => {
-      main.innerHTML = `<div class="mpanel mbarn"><small>The barn · ${st.skins.have.length} of ${barnList().length} cows</small><h2>Your cows</h2>
-        <div class="mskins">${barnList().map(id => { const has = st.skins.have.includes(id), on = st.skins.on === id;
+      main.innerHTML = `<div class="mpanel mbarn"><small>The barn · ${st.skins.have.length} of ${SKIN_ORDER.length} cows</small><h2>Your cows</h2>${st.skins.wear === "dev" ? `<p>You're wearing the dev cow while your name is ${escM(st.name)}. Your pick below is kept for other names.</p>` : ""}
+        <div class="mskins">${SKIN_ORDER.map(id => { const has = st.skins.have.includes(id), on = st.skins.on === id;
           return `<button type="button" class="mskin${has ? "" : " locked"}${on ? " on" : ""}" data-id="${id}" ${has ? "" : "disabled"}><canvas width="76" height="52"></canvas><b>${SKINS[id].name}</b>${fresh.includes(id) ? "<u>new</u>" : ""}<span>${on ? "Wearing" : has ? "Tap to wear" : "🔒 " + escM(SKINS[id].how)}</span></button>`; }).join("")}</div>
         <div class="merr" role="alert"></div><div class="mrow"><button type="button" class="mgo sm mback">◂ Back</button></div></div>`;
       main.querySelectorAll(".mskin canvas").forEach(c => { const x = c.getContext("2d"); paintCow(x, c.parentNode.dataset.id, 2, 14, 4); });
       main.querySelector(".mback").onclick = () => title();
       main.querySelectorAll(".mskin:not(.locked)").forEach(b => b.onclick = async () => {
         const id = b.dataset.id; if (id === st.skins.on) return;
-        sfx.tap(); skin = id; st.skins.on = id; draw(); // shows at once; the server confirms
+        sfx.tap(); if (st.skins.wear !== "dev") skin = id; st.skins.on = id; draw(); // shows at once; the server confirms
         try { const d = await api("/api/moo", {method: "POST", body: JSON.stringify({action: "skin", skin: id})}); if (d.state) { st = d.state; setSkins(); } }
         catch (e) { const er = main.querySelector(".merr"); if (er) er.textContent = e.message; }
       });
