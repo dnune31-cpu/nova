@@ -250,8 +250,7 @@ const SKINS = {
   ghost: {name: "Ghost", how: "Get abducted 10 times in Alien Party.", fx: "ghost", pal: {w: "#e6f6ff", b: "#b9d6f5", k: "#7f9bd0", p: "#cfe0ff", h: "#e6f6ff", e: "#3a4a80", n: "#7f9bd0"}},
 };
 // the developer's cow: not a collectable and never in the barn. The server puts it on whoever holds the developer's name, over any chosen cow.
-SKINS.dev = {name: "Dev", how: "", hidden: true, pal: {w: "#0f1a33", b: "#1fa35c", k: "#39ff88", n: "#1fa35c", h: "#f2e3b3", p: "#ff5d8f", e: "#ffffff"},
-  extra: [[2, -2, "#7fe0ff"], [3, -3, "#7fe0ff"], [3, -1, "#7fe0ff"], [5, -1, "#ffd23f"], [6, -2, "#ffd23f"], [7, -3, "#ffd23f"], [9, -3, "#7fe0ff"], [10, -2, "#7fe0ff"], [9, -1, "#7fe0ff"]]}; // a tiny </> floating over its back
+SKINS.dev = {name: "Dev", how: "", hidden: true, fx: "matrix", pal: {w: "#04140a", b: "#04140a", k: "#0f5c33", n: "#0f5c33", h: "#39ff88", p: "#1fa35c", e: "#39ff88"}}; // black, with green code raining down its body
 const SKIN_ORDER = Object.keys(SKINS).filter(id => !SKINS[id].hidden), cowCache = {};
 // every pixel of a skin: {x, y, c: colour, a: opacity, leg: which leg it belongs to (so legs can kick), or -1}
 function cowPixels(id) {
@@ -260,7 +259,7 @@ function cowPixels(id) {
   COW_ROWS.forEach((r, y) => [...r].forEach((ch, x) => {
     if (!P[ch] || (ghost && y >= 7)) return;
     let c = P[ch]; if (sk.fx === "rainbow" && (ch === "w" || ch === "b") && x <= 11) c = COW_RAINBOW[Math.floor(x / 2)]; // stripes down the body, the head stays a cow
-    out.push({x, y, c, a: ghost ? 0.82 : 1, leg: y >= 7 ? COW_LEG[x] ?? -1 : -1});
+    out.push({x, y, c, a: ghost ? 0.82 : 1, leg: y >= 7 ? COW_LEG[x] ?? -1 : -1, rain: sk.fx === "matrix" && (ch === "w" || ch === "b")});
   }));
   if (ghost) [[2, 7], [3, 7], [6, 7], [7, 7], [10, 7], [11, 7], [3, 8], [7, 8], [11, 8]].forEach(([x, y]) => out.push({x, y, c: P.k, a: 0.6, leg: -1})); // a wavy hem instead of legs
   if (sk.fx === "helmet") { // a glass bubble around the head
@@ -276,10 +275,12 @@ function cowPixels(id) {
 }
 // draws a cow with its top-left corner at (ox, oy); size = how big one cow pixel is; kick = a changing number that makes the legs flail
 function paintCow(ctx, id, ox, oy, size = 1, flip = false, alpha = 1, kick = null) {
+  const tm = performance.now() / 1000;
   for (const q of cowPixels(id)) {
-    let col = q.x;
+    let col = q.x, c = q.c;
+    if (q.rain) { const v = (q.x * 7 + (q.y + 20 - Math.floor(tm * 6 + q.x * 1.7) % 20) * 3) % 5; c = v === 0 ? "#39ff88" : v === 1 ? "#1fa35c" : v === 3 ? "#0c3d22" : c; } // each column of code falls at its own pace
     if (kick !== null && q.leg >= 0) col += Math.round(Math.sin(kick + q.leg * 1.9) * (q.y === 8 ? 1.6 : 0.7)); // hooves swing further than knees
-    ctx.globalAlpha = alpha * q.a; ctx.fillStyle = q.c; ctx.fillRect(ox + (flip ? 15 - col : col) * size, oy + q.y * size, size, size);
+    ctx.globalAlpha = alpha * q.a; ctx.fillStyle = c; ctx.fillRect(ox + (flip ? 15 - col : col) * size, oy + q.y * size, size, size);
   }
   ctx.globalAlpha = 1;
 }
