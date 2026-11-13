@@ -1060,6 +1060,50 @@ form#f{width:calc(100% - 20px)}
 .chlv button.on{border-color:transparent;color:#0b0b14}
 .chlv button.on.easy{background:#4ee08a}.chlv button.on.medium{background:#f4d03f}.chlv button.on.hard{background:#ff6a5a}.chlv button.on.side{background:#ffcf8a}
 .chbotlv{display:flex;align-items:center;gap:8px}
+/* ===== Document mode: the chat dressed up as a plain document editor (white page on grey, toolbar on top).
+   You type on the page, press Enter, and the answer is written into the document as ordinary text. ===== */
+#docTop,#docSide{display:none}
+body.docmode{background:#f8f9fb}
+body.docmode .rail,body.docmode #panel,body.docmode #chatView>header.top,body.docmode .sbtop,body.docmode #sidebar,body.docmode .mobtop{display:none!important}
+body.docmode #appView{display:block;padding:0;background:#f8f9fb}
+body.docmode #docTop{display:block;position:fixed;left:0;right:0;top:0;z-index:40;background:#f8f9fb;font:14px Arial,Helvetica,sans-serif;color:#1f1f1f}
+#docTop .dt1{display:flex;align-items:center;gap:10px;padding:8px 16px 0}
+#docTop .dicon{width:28px;height:36px;border:0;background:none;padding:0;cursor:pointer;flex:none}
+#docTop .dname{font-size:18px;color:#1f1f1f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:46vw}
+#docTop .dstar{color:#5f6368;font-size:17px}
+#docTop .dmenu{display:flex;gap:14px;padding:0 16px 0 54px;margin-top:-6px;font-size:14px;color:#1f1f1f}
+#docTop .dright{margin-left:auto;display:flex;align-items:center;gap:12px}
+#docTop .dshare{background:#c9dcfb;color:#0b2a5c;border-radius:999px;padding:9px 20px;font-weight:500}
+#docTop .dme{width:32px;height:32px;border-radius:50%;background:#5a3b2e;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px}
+#docTop .dbar{display:flex;align-items:center;gap:14px;margin:8px 16px 0;padding:6px 16px;background:#edf2fa;border-radius:999px;color:#444746;font-size:14px;white-space:nowrap;overflow:hidden}
+#docTop .dbar i{font-style:normal;width:1px;height:18px;background:#c7cdd6;flex:none}#docTop .dbar b{font-weight:700;color:#1f1f1f}#docTop .dbar em{font-style:italic}#docTop .dbar u{text-decoration:underline}
+#docTop .dbar .box{border:1px solid #747775;border-radius:4px;padding:1px 8px;color:#1f1f1f}
+#docTop .druler{height:18px;margin:6px 0 0;border-bottom:1px solid #dadce0;background:repeating-linear-gradient(90deg,transparent 0 11px,#c4c7c5 11px 12px) center/816px 6px no-repeat;background-position:center bottom}
+body.docmode #docSide{display:block;position:fixed;left:0;top:150px;width:300px;padding:10px 20px;z-index:30;font:14px Arial,Helvetica,sans-serif;color:#1f1f1f}
+#docSide .dback{background:none;border:0;font-size:22px;color:#444746;cursor:pointer;padding:4px 8px;margin-left:-8px}
+#docSide .dhead{display:flex;justify-content:space-between;align-items:center;margin:18px 0 12px;font-weight:500}
+#docSide .dhead button{background:none;border:0;font-size:20px;color:#444746;cursor:pointer}
+#docSide .dtab{display:flex;align-items:center;gap:10px;background:#dfe7f7;color:#0b2a5c;border-radius:999px;padding:11px 18px;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#docSide p{font-style:italic;color:#444746;font-size:13px;margin:12px 6px}
+body.docmode #chatView{display:block!important;background:#f8f9fb;height:100%;overflow-y:auto;padding:154px 0 60px}
+body.docmode #log,body.docmode #f{width:min(816px,calc(100% - 24px));max-width:none;margin:0 auto;background:#fff;border:0;border-radius:0;box-shadow:none;border-left:1px solid #dadce0;border-right:1px solid #dadce0}
+body.docmode #log{overflow:visible;height:auto;flex:none;padding:96px 96px 0;border-top:1px solid #dadce0;display:flow-root}
+body.docmode #f{padding:0 96px 420px;border-bottom:1px solid #dadce0;position:static;backdrop-filter:none}
+body.docmode #log .empty{display:none}
+body.docmode .ccopy,body.docmode .atool,body.docmode .atools,body.docmode .mtools{display:none!important}
+body.docmode #log{margin:0 auto!important}body.docmode #f{margin:0 auto!important;gap:0;transform:none}body.docmode #chatView{gap:0!important}body.docmode #ferr:empty,body.docmode #tray:empty{display:none}
+body.docmode .msg.ai .body th,body.docmode .msg.ai .body td{color:#000;font:11pt Arial,Helvetica,sans-serif}
+body.docmode .msg{display:block;margin:0 0 11pt;padding:0;max-width:none;animation:none}
+body.docmode .msg .dot,body.docmode .msg .model,body.docmode .msg .acts,body.docmode .msg .mcopy,body.docmode .msg .copybtn,body.docmode #f .tools,body.docmode #send,body.docmode #stopBtn,body.docmode .fnote,body.docmode #f+p,body.docmode .disclaimer{display:none!important}
+body.docmode .msg.user .stack,body.docmode .msg.user .txt,body.docmode .msg.ai .body{display:block;background:none;border:0;box-shadow:none;border-radius:0;padding:0;margin:0;max-width:none;color:#000;font:11pt/1.5 Arial,Helvetica,sans-serif;text-align:left}
+body.docmode .msg.ai .body h1,body.docmode .msg.ai .body h2,body.docmode .msg.ai .body h3{font-family:Arial,Helvetica,sans-serif;color:#000}
+body.docmode .msg.ai .body pre{background:#f6f8fa;border:0;border-radius:0}
+body.docmode #f .row{display:block;background:none;border:0;box-shadow:none;padding:0;margin:0}
+body.docmode #q{display:block;width:100%;background:none;border:0;outline:0;box-shadow:none;padding:0;margin:0;color:#000;font:11pt/1.5 Arial,Helvetica,sans-serif;min-height:1.5em;resize:none}
+body.docmode #q::placeholder{color:transparent}
+body.docmode #ferr{font:11pt Arial,sans-serif;color:#b3261e;margin:0}
+@media (max-width:1180px){body.docmode #docSide{display:none}}
+@media (max-width:700px){#docTop .dmenu,#docTop .dshare{display:none}body.docmode #chatView{padding-top:128px}body.docmode #log{padding:40px 24px 0}body.docmode #f{padding:0 24px 300px}}
 /* ===== Prism · Sunbeam theme (light) =====
    The colours above were converted from the old dark palette. This block adds the sunbeam background and fixes what a straight conversion can't. */
 :root{--beam:linear-gradient(104deg,transparent 0 22%,rgba(255,214,120,.30) 22% 30%,transparent 30% 38%,rgba(255,224,150,.22) 38% 52%,transparent 52% 61%,rgba(255,214,120,.16) 61% 66%,transparent 66%),linear-gradient(#fffdf7,#f7f0df)}
@@ -3946,6 +3990,49 @@ function igniteLoader(el, model) {
     .observe($("chatTitle"), {childList: true, characterData: true, subtree: true});
 
   startSwirl("sbSwirl", 120);
+
+  /* ---------- Document mode: the chat looks like a plain document editor. "Document" in the sidebar turns it on;
+     the back arrow at the left (or the page icon at the top left) turns it off. ---------- */
+  (() => {
+    const btn = document.createElement("button"); btn.className = "rbtn"; btn.id = "rDoc"; btn.type = "button"; btn.title = "Document"; btn.setAttribute("aria-label", "Document");
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg><span>Document</span>';
+    $("rNeuron").after(btn);
+    const top = document.createElement("div"); top.id = "docTop";
+    top.innerHTML = '<div class="dt1"><button type="button" class="dicon" title="Close document view" aria-label="Close document view"><svg viewBox="0 0 28 36"><path d="M3 0h15l10 10v23a3 3 0 0 1-3 3H3a3 3 0 0 1-3-3V3a3 3 0 0 1 3-3z" fill="#4a86e8"/><path d="M18 0l10 10H21a3 3 0 0 1-3-3z" fill="#a9c4f5"/><path d="M7 18h14M7 23h14M7 28h9" stroke="#fff" stroke-width="2"/></svg></button>' +
+      '<span class="dname"></span><span class="dstar">☆</span><div class="dright"><span class="dshare">Share</span><span class="dme"></span></div></div>' +
+      '<div class="dmenu"><span>File</span><span>Edit</span><span>View</span><span>Insert</span><span>Format</span><span>Tools</span><span>Help</span></div>' +
+      '<div class="dbar"><span>↶</span><span>↷</span><span>⎙</span><i></i><span>100% ▾</span><i></i><span>Normal text ▾</span><i></i><span>Arial ▾</span><i></i><span>−</span><span class="box">11</span><span>+</span><i></i><b>B</b><em>I</em><u>U</u><span>A</span><i></i><span>≡ ▾</span><span>☰ ▾</span></div><div class="druler"></div>';
+    const side = document.createElement("div"); side.id = "docSide";
+    side.innerHTML = '<button type="button" class="dback" title="Back to Prism" aria-label="Back to Prism">←</button><div class="dhead"><span>Document tabs</span><button type="button" class="dnew" title="New document" aria-label="New document">+</button></div><div class="dtab">▤ <span></span></div><p>Headings you add to the document will appear here.</p>';
+    document.body.append(top, side);
+    const KEY = "nova-doc", realIcon = document.querySelector('link[rel="icon"]');
+    const iconHref = realIcon ? realIcon.getAttribute("href") : "", docIcon = "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 36'><path d='M3 0h15l10 10v23a3 3 0 0 1-3 3H3a3 3 0 0 1-3-3V3a3 3 0 0 1 3-3z' fill='%234a86e8'/><path d='M7 18h14M7 23h14M7 28h9' stroke='white' stroke-width='2'/></svg>";
+    const on = () => document.body.classList.contains("docmode");
+    function names() {
+      const t = $("chatTitle").textContent.trim() || "Untitled document";
+      top.querySelector(".dname").textContent = t; side.querySelector(".dtab span").textContent = t; top.querySelector(".dme").textContent = (($("meName") && $("meName").textContent) || "?").trim().charAt(0).toUpperCase();
+      if (on()) document.title = t;
+    }
+    function set(v) {
+      document.body.classList.toggle("docmode", v);
+      try { v ? localStorage.setItem(KEY, "1") : localStorage.removeItem(KEY); } catch {}
+      if (realIcon) realIcon.setAttribute("href", v ? docIcon : iconHref);
+      if (v) {
+        if (typeof closePops === "function") closePops();
+        ["neuronView", "adminView", "gamesView"].forEach(id => { if ($(id)) $(id).hidden = true; });
+        $("chatView").hidden = false; names(); setTimeout(() => $("q").focus(), 50);
+      } else { const t = $("chatTitle").textContent.trim(); document.title = t ? t + " · Prism" : "Prism · study helper"; }
+    }
+    btn.onclick = e => { e.stopPropagation(); set(true); };
+    top.querySelector(".dicon").onclick = side.querySelector(".dback").onclick = () => set(false);
+    side.querySelector(".dnew").onclick = () => { newChat(); names(); $("q").focus(); };
+    new MutationObserver(names).observe($("chatTitle"), {childList: true, characterData: true, subtree: true});
+    // keep the newest text in view as the answer is written, and let a click anywhere on the page put the cursor on the typing line
+    new MutationObserver(() => { if (on()) { const cv = $("chatView"); cv.scrollTop = cv.scrollHeight; } }).observe($("log"), {childList: true, subtree: true, characterData: true});
+    $("chatView").addEventListener("click", e => { if (on() && !e.target.closest("a,button,textarea,input,select") && !String(getSelection())) $("q").focus(); });
+    document.addEventListener("keydown", e => { if (on() && e.key === "Escape") set(false); });
+    try { if (localStorage.getItem(KEY) === "1") set(true); } catch {}
+  })();
 })();
 
 /* ---------- settings + hidden admin ---------- */
