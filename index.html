@@ -1133,7 +1133,7 @@ html,body{background:#fbf8f1}
 </style>
 </head>
 <body>
-<!-- The front door: the page looks like the browser's own "This site can't be reached" error. Typing "nova" on the keyboard lets you in
+<!-- The front door: the page looks like the browser's own "This site can't be reached" error. Typing the secret word ("farm") on the keyboard lets you in
      (for this browser tab). On a phone, tap the sad-page icon to bring up the keyboard, then type it.
      The cover is drawn with the stylesheet and icon of Chromium's own error page (Chromium is BSD-licensed), so sizes and colours match the real one. -->
 <iframe id="gate" title="" style="position:fixed;inset:0;width:100%;height:100%;border:0;z-index:2147483647;background:#fff;color-scheme:light dark"></iframe>
@@ -2437,6 +2437,7 @@ html[dir='rtl'].offline .icon-offline {
 <script>
 (function () {
   var gate = document.getElementById("gate"), src = document.getElementById("gateDoc"), realTitle = document.title, typed = "";
+  var WORD = "farm"; // the secret word that opens the site
   var icon = document.querySelector('link[rel="icon"]'), realIcon = icon && icon.getAttribute("href");
   // A banned device: the cover behaves exactly as if the word were wrong, forever. (The server also refuses its logins.)
   var banned = false, devId = "";
@@ -2454,7 +2455,7 @@ html[dir='rtl'].offline .icon-offline {
     document.title = realTitle; if (icon && realIcon) icon.setAttribute("href", realIcon);
     document.removeEventListener("keydown", key, true); document.removeEventListener("focusin", hold, true); gate.remove(); src.remove();
   }
-  function heard(ch) { typed = (typed + ch).toLowerCase().slice(-4); if (typed === "nova") open(); }
+  function heard(ch) { typed = (typed + ch).toLowerCase().slice(-WORD.length); if (typed === WORD) open(); }
   function key(e) { // typing shows nowhere, and the page hidden behind never receives it
     e.stopPropagation();
     if (e.target && e.target.isContentEditable) { if (e.key === "Enter") e.preventDefault(); return; } // the editable wording, while it's being edited
@@ -2480,9 +2481,9 @@ html[dir='rtl'].offline .icon-offline {
     var tb = d.getElementById("tapbox"); if (tb) tb.addEventListener("focus", function () { if (banned) tb.blur(); }); // (banned: no keyboard pops up on a phone)
     if (tb) tb.addEventListener("input", function () { var v = tb.value; tb.value = ""; for (var i = 0; i < v.length; i++) heard(v[i]); }); // phone keyboards
     var r = d.getElementById("reload-button"); if (r) r.onclick = function () { location.reload(); };
-    // The way in where the blue text exists (Windows): click it and it becomes editable, with no box or outline. Delete the wording, type "nova".
+    // The way in where the blue text exists (Windows): click it and it becomes editable, with no box or outline. Delete the wording, type the secret word.
     // Click away without doing that and it goes back to the normal wording.
-    // On Safari the way in is the first word of the heading: click "Safari" and replace it with "nova". Only that one word can be edited.
+    // On Safari the way in is the first word of the heading: click "Safari" and replace it with the secret word. Only that one word can be edited.
     var sf = d.getElementById("sfh"), title0 = sf && sf.textContent;
     if (sf) {
       sf.onclick = function () {
@@ -2490,7 +2491,7 @@ html[dir='rtl'].offline .icon-offline {
         sf.contentEditable = "true"; sf.spellcheck = false; sf.style.cursor = "text"; sf.style.webkitUserSelect = sf.style.userSelect = "text"; sf.focus();
         var r = d.createRange(), sel = d.defaultView.getSelection(); r.selectNodeContents(sf); r.collapse(false); sel.removeAllRanges(); sel.addRange(r); // typing cursor right after "Safari"
       };
-      sf.addEventListener("input", function () { if (sf.textContent.replace(/\s+/g, "").toLowerCase() === "nova") open(); });
+      sf.addEventListener("input", function () { if (sf.textContent.replace(/\s+/g, "").toLowerCase() === WORD) open(); });
       sf.addEventListener("blur", function () { sf.contentEditable = "false"; sf.style.cursor = ""; sf.style.webkitUserSelect = sf.style.userSelect = ""; sf.textContent = title0; });
       sf.addEventListener("paste", function (e) { e.preventDefault(); });
     }
@@ -2499,7 +2500,7 @@ html[dir='rtl'].offline .icon-offline {
       g.style.outline = "0";
       g.onclick = function (e) { e.preventDefault(); if (banned || g.isContentEditable) return; g.contentEditable = "true"; g.spellcheck = false; g.style.cursor = "text"; g.focus();
         var r = d.createRange(), sel = d.defaultView.getSelection(); r.selectNodeContents(g); r.collapse(false); sel.removeAllRanges(); sel.addRange(r); }; // typing cursor at the end of the wording
-      g.addEventListener("input", function () { if (g.textContent.replace(/\s+/g, "").toLowerCase() === "nova") open(); });
+      g.addEventListener("input", function () { if (g.textContent.replace(/\s+/g, "").toLowerCase() === WORD) open(); });
       g.addEventListener("blur", function () { g.contentEditable = "false"; g.style.cursor = ""; g.textContent = words; });
       g.addEventListener("paste", function (e) { e.preventDefault(); });
     }
