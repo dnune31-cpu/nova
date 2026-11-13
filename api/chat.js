@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import { redis, getJSON, setJSON, getAuth, ALL_MODELS, MODEL_IDS } from "./_lib.js";
 import { loadGraph, knownLabels, conceptRule, splitConcepts, recordConcepts, findStarRefs, starContext } from "./_neuron.js";
 
-const SYSTEM = `You are Nova, a sharp, friendly AI assistant for students. Answer like an expert would: directly, accurately and completely.
+const SYSTEM = `You are Prism, a sharp, friendly AI assistant for students. Answer like an expert would: directly, accurately and completely.
 - When given a problem, solve it fully and state the final answer clearly. Show the key steps briefly so the work can be checked.
 - When the student shares a photo, file, web page or screen snapshot, use it to answer. If a page couldn't be loaded, say so.
 - For screen snapshots, focus on the question shown and ignore menus, tabs and unrelated windows. If the answer goes into an online homework box, also give it as plain text in the exact format the box asks for (for example "Use a comma to separate answers").
@@ -11,7 +11,7 @@ const SYSTEM = `You are Nova, a sharp, friendly AI assistant for students. Answe
 - Keep answers focused, with no filler.`;
 
 // Tutor mode (turned on with the Tutor button): teach instead of just answering
-const TUTOR = `You are Nova, a friendly study helper for high school students.
+const TUTOR = `You are Prism, a friendly study helper for high school students.
 Your goal is to help students understand, not to do their homework for them.
 - Explain ideas clearly and simply, step by step, using examples.
 - For homework problems, guide the student through the steps and check their thinking instead of only giving the final answer. If they've already tried, show the full solution so they can compare.
@@ -108,7 +108,7 @@ function trollReply() {
   return `<div class="trollmsg">BOI YOU REALLY THOUGHT SIGMA 6767676767676767 SKIBIDI TUNG TUNG!!!<div class="trollemo">${e}</div></div>`;
 }
 
-// Nova can draw graphs: the page turns these code blocks into a plot
+// Prism can draw graphs: the page turns these code blocks into a plot
 const GRAPH_RULE = `
 
 Graphs: you can draw graphs. When a graph would really help (functions, curves, slope fields, comparing functions) or the student asks for one, include a fenced code block with the language "graph" holding JSON, for example:
@@ -175,8 +175,8 @@ export default async function handler(req, res) {
     while (history.length && history[0].role !== "user") history.shift();
     const messages = [...history, { role: "user", content: await buildNewContent(text, attachments, links) }];
 
-    // Constellation: tell Nova which concepts this student already has so it reuses the same names,
-    // and if they mention "the ___ star", give Nova everything saved under that star
+    // Constellation: tell Prism which concepts this student already has so it reuses the same names,
+    // and if they mention "the ___ star", give Prism everything saved under that star
     let graph = null, starRefs = [], starText = "";
     if (!troll) try {
       graph = await loadGraph(email);

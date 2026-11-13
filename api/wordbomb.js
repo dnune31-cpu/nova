@@ -227,7 +227,7 @@ export default async function handler(req, res) {
   try {
     const auth = await getAuth(req);
     if (!auth) return res.status(401).json({ error: "Please log in again." });
-    // players can type their own name for the game; otherwise their Nova name is used
+    // players can type their own name for the game; otherwise their Prism name is used
     const nick = String(req.body?.nick || "").replace(/[^\p{L}\p{N} _.'-]/gu, "").replace(/\s+/g, " ").trim().slice(0, 16);
     const email = auth.user.email, name = nick || String(auth.user.name || "Player").slice(0, 24);
 

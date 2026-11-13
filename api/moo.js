@@ -352,7 +352,7 @@ export default async function handler(req, res) {
       if (!day) return res.status(503).json({ error: "Someone else is making today's prompts right now. Try again in a minute." });
       return res.status(200).json({ ok: true, date: d, prompts: day.prompts });
     }
-    if (action === "reset") { // the site owner (logged in to Nova) can wipe a player's flight for today
+    if (action === "reset") { // the site owner (logged in to Prism) can wipe a player's flight for today
       const auth = await getAuth(req);
       if (!auth || (!auth.admin && !isAdminEmail(auth.user.email))) return res.status(403).json({ error: "Only the site owner can restart a day." });
       const pid = String(req.body.pid || "").toLowerCase();

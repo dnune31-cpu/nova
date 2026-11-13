@@ -21,7 +21,7 @@ export default async function handler(req, res) {
       do {
         const r = await redis("SCAN", cur, "MATCH", "devban:*", "COUNT", "500"); cur = String(r[0]);
         const keys = r[1] || [], owners = keys.length ? await pipeline(keys.map(k => ["GET", k])) : [];
-        owners.forEach(o => { if (o && !have.has(o)) lost[o] = (lost[o] || 0) + 1; });
+        owners.forEach((o, i) => { if (o && keys[i].startsWith("devban:") && !have.has(o)) lost[o] = (lost[o] || 0) + 1; });
       } while (cur !== "0" && ++rounds < 200);
       const orphans = Object.entries(lost).map(([email, devices]) => ({ email, devices }));
       // deleted accounts that can still be restored
@@ -29,14 +29,14 @@ export default async function handler(req, res) {
       do {
         const r = await redis("SCAN", cur, "MATCH", "trash:user:*", "COUNT", "500"); cur = String(r[0]);
         const keys = r[1] || [], vals = keys.length ? await pipeline(keys.map(k => ["GET", k])) : [];
-        vals.forEach(v => { try { const u = JSON.parse(v); trash.push({ name: u.name, email: u.email, deletedAt: u.deletedAt || 0, daysLeft: Math.max(0, TRASH_DAYS - Math.floor((Date.now() - (u.deletedAt || Date.now())) / 86400000)) }); } catch {} });
+        vals.forEach((v, i) => { try { if (!keys[i].startsWith("trash:user:")) return; const u = JSON.parse(v); trash.push({ name: u.name, email: u.email, deletedAt: u.deletedAt || 0, daysLeft: Math.max(0, TRASH_DAYS - Math.floor((Date.now() - (u.deletedAt || Date.now())) / 86400000)) }); } catch {} });
       } while (cur !== "0" && ++rounds < 200);
       trash.sort((a, b) => b.deletedAt - a.deletedAt);
       return res.status(200).json({ users, log, announce: await getJSON("announce"), cheats: !!auth.user.cheats, orphans, trash });
     }
 
     if (req.method === "POST") {
-      // Erases every Nova account and everything saved for them (chats, study data, game rooms, sessions, the login log, the announcement).
+      // Erases every Prism account and everything saved for them (chats, study data, game rooms, sessions, the login log, the announcement).
       // Moo-llion and Alien Party data (keys starting moo: or ab:) is kept. This can't be undone, so the admin has to type ERASE.
       if (req.body?.wipe !== undefined) {
         if (req.body.wipe !== "ERASE") return res.status(400).json({ error: "Type ERASE to confirm." });

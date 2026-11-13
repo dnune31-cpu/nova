@@ -68,7 +68,7 @@ function addCookie(res, cookie) {
   res.setHeader("Set-Cookie", [].concat(prev || [], cookie));
 }
 /* ----- device bans -----
-   Every browser that opens Nova gets a random device id, kept in a long-lived cookie (and a copy in the page's storage, sent back
+   Every browser that opens Prism gets a random device id, kept in a long-lived cookie (and a copy in the page's storage, sent back
    as the x-nova-dev header, so clearing one of the two doesn't shake it off). The admin can ban a person's devices: the cover then
    never opens on them and every request from them is treated as logged out. A banned person who logs in somewhere new gets that
    device banned too. It can't follow someone to a private window or another browser until they log in there. */

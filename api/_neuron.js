@@ -1,6 +1,6 @@
 import { getJSON, setJSON, MODEL_IDS } from "./_lib.js";
 
-// Constellation: each user's map of concepts they've studied with Nova.
+// Constellation: each user's map of concepts they've studied with Prism.
 // One JSON doc per user: { nodes: { key: {label, subject, count, first, last, chats, notes, summary} }, links: { "a|b": weight } }
 
 const MAX_NODES = 200, MAX_NOTES = 40;
@@ -37,7 +37,7 @@ export function knownLabels(g, n = 60) {
   return Object.values(g.nodes).sort((a, b) => b.last - a.last).slice(0, n).map(x => x.label);
 }
 
-// Added to Nova's system prompt so concepts come back inside the normal reply (no extra API call).
+// Added to Prism's system prompt so concepts come back inside the normal reply (no extra API call).
 export function conceptRule(known) {
   return `
 
@@ -169,7 +169,7 @@ export async function starSummary(email, g, key, force = false) {
     }
   }
   if (!material.trim()) {
-    n.summary = "Nothing has been saved about this star yet. Ask Nova about it and the details will build up here.";
+    n.summary = "Nothing has been saved about this star yet. Ask Prism about it and the details will build up here.";
   } else {
     n.summary = (await callClaude("haiku", SUMMARY_SYSTEM,
       `Concept: ${n.label}${n.subject ? ` (${n.subject})` : ""}\n\nEverything the student has covered about it:\n${material}`, 700)).trim();

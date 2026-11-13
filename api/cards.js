@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { redis, getJSON, getAuth } from "./_lib.js";
 
-// Nova Cards: an UNO-style card game for 2 to 4 players with a room code. Empty seats can be filled with bots.
+// Prism Cards: an UNO-style card game for 2 to 4 players with a room code. Empty seats can be filled with bots.
 // The server keeps the deck and everyone's hands, so each player only ever sees their own cards.
 const TTL = 6 * 3600;
 const LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
