@@ -1108,6 +1108,26 @@ body.docmode #ferr{font:11pt Arial,sans-serif;color:#b3261e;margin:0}
    Dark neutral greys with one warm accent. No starfield: the page is plain and quiet. */
 #sky{display:none}
 #authView{background:var(--c-bg,#1f1f1e)}
+/* sidebar: roomy and quiet, like a familiar chat app. A serif wordmark, plain rows, a small "Recents" label, the account at the bottom. */
+.rail{width:288px;padding:12px 8px 8px;background:#1a1918;gap:2px}
+.sbtop{padding:2px 2px 14px 8px}
+.brand{font-family:"Source Serif 4",Georgia,serif;font-weight:600;font-size:21px;letter-spacing:-.01em;gap:9px}
+.brand canvas{width:22px;height:22px}
+.rail .rbtn{padding:6px 10px;min-height:34px;font-size:14px;border-radius:8px;gap:12px;color:#d6d4ce}
+.rail .rbtn svg{width:18px;height:18px}
+.rail .rbtn:hover,.rail .rbtn.on,.rail .rbtn[aria-expanded=true]{background:#2a2927;color:#f2f1ed}
+.rail .rbtn.on svg{color:#f2f1ed}
+.rail .rbtn.new{color:var(--gold);font-weight:500;margin-bottom:4px}
+.rail .rbtn.new svg{width:24px;height:24px;padding:4px;margin-left:-3px}
+.sbhead{font-size:12px;font-weight:500;letter-spacing:.01em;color:#8a8882;padding:20px 10px 6px}
+.rail .citem{border-radius:8px}.rail .citem:hover,.rail .citem.on{background:#2a2927}
+.rail .copen{padding:6px 10px;gap:0}.rail .copen::before{display:none}
+.rail .ctitle{font-size:14px;color:#c9c7c1}.rail .citem:hover .ctitle,.rail .citem.on .ctitle{color:#f2f1ed}
+.rail .cempty{font-size:13px;padding:6px 10px}
+.merow{padding:10px 8px 4px;gap:11px}
+.merow .avatar{width:32px;height:32px;font-size:13px;font-weight:600;background:#c9c7c1;color:#1f1f1e}
+.mename{font-size:14px;font-weight:500}
+.sbicon{width:32px;height:32px;border-radius:8px}.sbicon svg{width:18px;height:18px}
 #authView .card{background:#232321;border:1px solid #33322f;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
 @media (max-width:560px){#model{max-width:28vw;text-overflow:ellipsis}}
 </style>
@@ -3908,7 +3928,7 @@ function igniteLoader(el, model) {
 
   // the chat list lives in the sidebar
   const head = document.createElement("div");
-  head.className = "sbhead"; head.textContent = "Chats";
+  head.className = "sbhead"; head.textContent = "Recents";
   const search = document.createElement("input");
   search.className = "sbsearch"; search.type = "search"; search.placeholder = "Search chats";
   search.setAttribute("aria-label", "Search chats"); search.hidden = true;
