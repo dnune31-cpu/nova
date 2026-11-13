@@ -10,6 +10,8 @@ function checkDb() {
   if (!DB_URL || !DB_TOKEN) throw new Error("The database isn't connected yet. Add Upstash Redis in Vercel's Storage tab.");
 }
 
+// the database's own error for a used-up request allowance is long and technical; people get a plain sentence instead
+const friendly = e => (/max requests limit/i.test(String(e)) ? "The site has hit its usage limit for now. Please try again later." : String(e));
 export async function redis(...cmd) {
   checkDb();
   const r = await fetch(DB_URL, {
@@ -18,7 +20,7 @@ export async function redis(...cmd) {
     body: JSON.stringify(cmd.map(String)),
   });
   const d = await r.json();
-  if (d.error) throw new Error(d.error);
+  if (d.error) throw new Error(friendly(d.error));
   return d.result;
 }
 
@@ -31,7 +33,7 @@ export async function pipeline(cmds) {
     body: JSON.stringify(cmds.map(c => c.map(String))),
   });
   const d = await r.json();
-  if (!Array.isArray(d)) throw new Error(d.error || "Database error");
+  if (!Array.isArray(d)) throw new Error(friendly(d.error || "Database error"));
   return d.map(x => x.result);
 }
 

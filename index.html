@@ -2636,6 +2636,17 @@ const MAX_ATTACH = 6, MAX_PDF = 3 * 1024 * 1024;
 let me = null, chatId = null, chats = [], busy = false, pending = {attachments: [], links: []};
 let authMode = "login", swirlsStarted = {};
 
+// Open tabs slow their checks down when nothing is happening (and speed back up the moment something changes or you touch the page),
+// so a game left open doesn't keep using up the database's request allowance.
+const IDLE = (() => {
+  let change = Date.now(), last = 0, sig = "";
+  const touch = () => { change = Date.now(); };
+  ["pointerdown", "pointermove", "keydown", "touchstart"].forEach(e => addEventListener(e, touch, {passive: true}));
+  return {
+    ok() { const idle = Date.now() - change, need = idle < 30000 ? 0 : idle < 180000 ? 4000 : idle < 1200000 ? 12000 : 60000; if (Date.now() - last < need) return false; last = Date.now(); return true; },
+    seen(x) { const s = typeof x === "string" ? x : JSON.stringify(x); if (s !== sig) { sig = s; change = Date.now(); } },
+  };
+})();
 async function api(path, opts = {}) {
   const r = await fetch(path, {credentials: "same-origin", headers: {"Content-Type": "application/json"}, ...opts});
   let d = {};
@@ -4778,11 +4789,11 @@ const novaGraphs = {store: new Map(), n: 0};
       root.querySelector(".lucode b").textContent = r.code;
       root.querySelector(".copy").onclick = e => { navigator.clipboard?.writeText(r.code).then(() => { e.target.textContent = "Copied"; setTimeout(() => e.target.textContent = "Copy", 1200); }, () => {}); };
       sync(r);
-      clearInterval(poll); poll = setInterval(refresh, 1500);
+      clearInterval(poll); poll = setInterval(refresh, 2000);
     }
     async function refresh() {
-      if (stopped || document.hidden || view.hidden || !room || busy) return;
-      try { sync((await api("/api/games?code=" + room.code)).room); }
+      if (stopped || document.hidden || view.hidden || !room || busy || !IDLE.ok()) return;
+      try { const d = await api("/api/games?code=" + room.code); IDLE.seen(d.room.updated); sync(d.room); }
       catch (e) { if (e.status === 404) { clearInterval(poll); store.set("nova-lineup-room", null); status("This room expired. Go back and start a new one."); } }
     }
     const status = t => { const el = root.querySelector(".lustatus"); if (el) el.textContent = t; };
@@ -5087,11 +5098,11 @@ const novaGraphs = {store: new Map(), n: 0};
       root.querySelector(".copy").onclick = e => { navigator.clipboard?.writeText(r.code).then(() => { e.target.textContent = "Copied"; setTimeout(() => e.target.textContent = "Copy", 1200); }, () => {}); };
       sync(r, true);
       clearInterval(poll);
-      poll = setInterval(refresh, 1600);
+      poll = setInterval(refresh, 2000);
     }
     async function refresh() {
-      if (stopped || document.hidden || view.hidden || !room || busyMove) return;
-      try { const d = await api("/api/games?code=" + room.code); sync(d.room); }
+      if (stopped || document.hidden || view.hidden || !room || busyMove || !IDLE.ok()) return;
+      try { const d = await api("/api/games?code=" + room.code); IDLE.seen(d.room.updated); sync(d.room); }
       catch (e) { if (e.status === 404) { clearInterval(poll); store.set("nova-chess-room", null); setStatus("This room expired. Go back and start a new one."); } }
     }
     function sync(r, force) {
@@ -5312,11 +5323,11 @@ function startNovaCards(root) {
       set("nova-cards-room", null); lobby();
     };
     apply(r, true);
-    clearInterval(poll); poll = setInterval(refresh, 1200);
+    clearInterval(poll); poll = setInterval(refresh, 1500);
   }
   async function refresh() {
-    if (stopped || !code || document.hidden || $("gamesView").hidden || sending) return;
-    try { apply((await api("/api/cards?code=" + code)).room); }
+    if (stopped || !code || document.hidden || $("gamesView").hidden || sending || !IDLE.ok()) return;
+    try { const d = await api("/api/cards?code=" + code); IDLE.seen(d.room); apply(d.room); }
     catch (e) { if (e.status === 404) { clearInterval(poll); set("nova-cards-room", null); toast("This room closed."); setTimeout(lobby, 1500); } }
   }
 
@@ -5662,8 +5673,8 @@ function startWordBomb(root) {
   function disarm() { prefire = ""; const inp = root.querySelector(".wbinp"); if (inp) inp.classList.remove("armed"); }
   function setPoll(ms) { if (ms === pollMs) return; pollMs = ms; clearInterval(poll); poll = setInterval(refresh, ms); }
   async function refresh() {
-    if (stopped || !code || document.hidden || $("gamesView").hidden || sending) return;
-    try { apply((await api("/api/wordbomb?code=" + code)).room); }
+    if (stopped || !code || document.hidden || $("gamesView").hidden || sending || !IDLE.ok()) return;
+    try { const d = await api("/api/wordbomb?code=" + code); IDLE.seen([d.room.seq, d.room.status, d.room.turnId, d.room.players.length, d.room.typing]); apply(d.room); }
     catch (e) { if (e.status === 404) { clearInterval(poll); pollMs = 0; set("nova-wb-room", null); toast("This room closed."); setTimeout(lobby, 1500); } }
   }
 
@@ -5675,7 +5686,7 @@ function startWordBomb(root) {
     const old = room, ev = r.event;
     room = r; recvAt = Date.now(); revealEnd = recvAt + (r.revealIn || 0);
     if (r.botType && botStart.turnId !== r.botType.turnId) botStart = {turnId: r.botType.turnId, at: recvAt + r.botType.startIn};
-    setPoll(r.status === "playing" ? 450 : 1500);
+    setPoll(r.status === "playing" ? 600 : 2500);
     update(old);
     if (r.status === "playing" && !raf && !reduce) raf = requestAnimationFrame(frame);
     if (ev && ev.seq > seq && !first) handleEvent(ev, old);
@@ -5862,7 +5873,7 @@ function startWordBomb(root) {
       const inp = root.querySelector(".wbinp"); if (!inp || !myTurn() || inp.value === lastSent) return;
       lastSent = inp.value;
       api("/api/wordbomb", {method: "POST", body: JSON.stringify({action: "type", code, text: inp.value, turnId: room.turnId})}).catch(() => {});
-    }, 100);
+    }, 350);
   }
 
   async function submit() {

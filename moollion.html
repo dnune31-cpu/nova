@@ -228,6 +228,18 @@ async function api(path, opts = {}) {
   return d;
 }
 function handleAuthError() { return false; }
+// Open tabs slow their checks down when nothing is happening (and speed back up the moment something changes or you touch the page),
+// so a game left open doesn't keep using up the database's request allowance.
+const IDLE = (() => {
+  let change = Date.now(), last = 0, sig = "";
+  const touch = () => { change = Date.now(); };
+  ["pointerdown", "pointermove", "keydown", "touchstart"].forEach(e => addEventListener(e, touch, {passive: true}));
+  return {
+    ok() { const idle = Date.now() - change, need = idle < 30000 ? 0 : idle < 180000 ? 4000 : idle < 1200000 ? 12000 : 60000; if (Date.now() - last < need) return false; last = Date.now(); return true; },
+    seen(x) { const s = typeof x === "string" ? x : JSON.stringify(x); if (s !== sig) { sig = s; change = Date.now(); } },
+  };
+})();
+
 
 /* ---------- cow skins (both modes). Same 16x9 pixel cow; a skin swaps colours and adds a few pixels (y < 0 is above the cow). ---------- */
 const COW_ROWS = ["...........hh...", "..kkkkkkkkkkkkkk", ".kwwbbwwwwbwkwek", "kwbbbwwwwwwkwwwk", ".kwwbwwwbbwwkppk", "..kwwwwwbbbwwkpk", "..kkkkkkkkkkkkk.", "..k.k.....k.k...", "..n.n.....n.n..."];
@@ -950,9 +962,9 @@ function startParty(root, opts = {}) {
   function schedule() { clearTimeout(poll); if (!stopped && code && pollMs) poll = setTimeout(async () => { await refresh(); schedule(); }, pollMs); }
   function setPoll(ms) { if (ms === pollMs) return; pollMs = ms; schedule(); }
   async function refresh() {
-    if (stopped || !code || document.hidden || sending) return;
+    if (stopped || !code || document.hidden || sending || !IDLE.ok()) return;
     const c = code;
-    try { const d = await api("/api/abduct?code=" + c); if (c === code && !sending) apply(d.room); }
+    try { const d = await api("/api/abduct?code=" + c); if (c === code && !sending) { IDLE.seen([d.room.seq, d.room.status, d.room.turnId, d.room.players.length, d.room.typing]); apply(d.room); } }
     catch (e) { if (e.status === 404 && c === code) { set("moollion-party-room", null); msg.textContent = "This room closed."; pollMs = 0; setTimeout(menu, 1500); } }
   }
   const onShow = () => { if (!document.hidden) refresh(); }; document.addEventListener("visibilitychange", onShow);
@@ -964,8 +976,8 @@ function startParty(root, opts = {}) {
       const k = r.game + ":" + r.turnId + ":" + r.fz, s0 = recvAt + r.beamIn;
       beamRef = beamRef.key === k ? {key: k, start: Math.min(beamRef.start, s0)} : {key: k, start: s0};
     }
-    setPoll(r.status === "playing" ? 300 : 1500);
-    if (r.status !== "playing" && Date.now() - lastGrow > 45000) { lastGrow = Date.now(); api("/api/abduct?grow=1&code=" + code).catch(() => {}); } // grows the prompt bank in the background
+    setPoll(r.status === "playing" ? 500 : 2500);
+    if (r.status !== "playing" && Date.now() - lastGrow > 180000) { lastGrow = Date.now(); api("/api/abduct?grow=1&code=" + code).catch(() => {}); } // grows the prompt bank in the background
     if (old && old.turnId !== r.turnId) { hideSug(); if (r.turn === r.me && r.status === "playing") sfx.turn(); }
     render(old);
     if (ev && ev.seq > seq && !first) handle(ev, old);
@@ -1078,7 +1090,7 @@ function startParty(root, opts = {}) {
     typeTimer = setTimeout(() => {
       typeTimer = 0; if (!myTurn() || inp.value === lastSent) return; lastSent = inp.value;
       api("/api/abduct", {method: "POST", body: JSON.stringify({action: "type", code, text: inp.value, turnId: room.turnId})}).catch(() => {});
-    }, 120);
+    }, 350);
   }
   // "did you mean …?": Enter swaps in the fix, Enter again sends it
   let sug = null;

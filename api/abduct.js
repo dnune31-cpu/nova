@@ -426,9 +426,8 @@ export default async function handler(req, res) {
 
     if (req.method === "GET") { // the room poll: one trip to the database
       const code = clean(req.query?.code);
-      const got = await pipeline([["GET", `moo:pid:${id}`], ["GET", key(code)], ["GET", tkey(code)], ["GET", pkey(code)]]);
-      if (!parse(got[0])?.name) return noName();
-      let room = parse(got[1]), typing = parse(got[2]), pend = parse(got[3]);
+      const got = await pipeline([["GET", key(code)], ["GET", tkey(code)], ["GET", pkey(code)]]); // (no name lookup here: only people already in the room have its code)
+      let room = parse(got[0]), typing = parse(got[1]), pend = parse(got[2]);
       if (!room) return res.status(404).json({ error: "That room doesn't exist anymore." });
       if (room.status === "playing" && ((Date.now() >= room.beam.deadline && !held(room, pend)) || botNeeds(room))) {
         const list = await listFor(room.prompt);
