@@ -6,14 +6,33 @@ const DB_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST
 export const ALL_MODELS = ["haiku", "sonnet", "opus"];
 export const MODEL_IDS = { haiku: "claude-haiku-5-5", sonnet: "claude-sonnet-5-5", opus: "claude-opus-5-5" };
 
+// Where the data lives. If Supabase is set up (SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY in Vercel), the site uses it:
+// every command goes to the "kv" function made by supabase-setup.sql, which understands the same Redis-style commands
+// the rest of the code already sends. If those two settings are missing, it falls back to the old Upstash database.
+const SB_URL = (process.env.SUPABASE_URL || "").replace(/\/+$/, ""), SB_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+const useSupabase = !!(SB_URL && SB_KEY);
+
 function checkDb() {
-  if (!DB_URL || !DB_TOKEN) throw new Error("The database isn't connected yet. Add Upstash Redis in Vercel's Storage tab.");
+  if (!useSupabase && (!DB_URL || !DB_TOKEN)) throw new Error("The database isn't connected yet. Add SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in Vercel.");
+}
+// the old database's error for a used-up request allowance is long and technical; people get a plain sentence instead
+const friendly = e => (/max requests limit/i.test(String(e)) ? "The site has hit its usage limit for now. Please try again later." : String(e));
+
+// sends a batch of commands to Supabase in one request; returns one {result} or {error} per command
+async function supabase(cmds) {
+  const r = await fetch(`${SB_URL}/rest/v1/rpc/kv`, {
+    method: "POST",
+    headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ cmds: cmds.map(c => c.map(String)) }),
+  });
+  const d = await r.json().catch(() => null);
+  if (!r.ok || !Array.isArray(d)) throw new Error((d && (d.message || d.error)) || "Database error (" + r.status + ")");
+  return d;
 }
 
-// the database's own error for a used-up request allowance is long and technical; people get a plain sentence instead
-const friendly = e => (/max requests limit/i.test(String(e)) ? "The site has hit its usage limit for now. Please try again later." : String(e));
 export async function redis(...cmd) {
   checkDb();
+  if (useSupabase) { const [d] = await supabase([cmd]); if (d.error) throw new Error(d.error); return d.result; }
   const r = await fetch(DB_URL, {
     method: "POST",
     headers: { Authorization: `Bearer ${DB_TOKEN}`, "Content-Type": "application/json" },
@@ -27,6 +46,7 @@ export async function redis(...cmd) {
 export async function pipeline(cmds) {
   if (!cmds.length) return [];
   checkDb();
+  if (useSupabase) return (await supabase(cmds)).map(x => x.result);
   const r = await fetch(`${DB_URL}/pipeline`, {
     method: "POST",
     headers: { Authorization: `Bearer ${DB_TOKEN}`, "Content-Type": "application/json" },
