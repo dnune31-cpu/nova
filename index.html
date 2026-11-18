@@ -691,7 +691,10 @@ form#f{width:calc(100% - 20px)}
 .chsq.lt{background:#ecdcb8}.chsq.dk{background:#b58863}
 .chsq.last{box-shadow:inset 0 0 0 100px rgba(255,207,138,.38)}
 .chsq.sel{box-shadow:inset 0 0 0 100px rgba(143,179,255,.5)}
-.chsq.hint{outline:3px solid #6fdc8c;outline-offset:-3px}
+/* (admin cheats) the best move, marked so faintly that only someone looking for it sees it: a pin-prick dot in the corner of the
+   square to move from (top left) and the square to move to (top right), a shade darker than the square itself */
+.chsq.hintf:before,.chsq.hintt:before{content:"";position:absolute;top:5%;width:6%;height:6%;min-width:3px;min-height:3px;border-radius:50%;background:rgba(0,0,0,.2);pointer-events:none}
+.chsq.hintf:before{left:5%}.chsq.hintt:before{right:5%}
 .lucard.peek:after{content:"👀";position:absolute;right:4px;top:2px;font-size:12px;line-height:1}
 .chsq.check{background:radial-gradient(circle,#ff6b6b 0,#e04848 45%,transparent 75%)}
 .chsq.dot:after{content:"";position:absolute;width:28%;height:28%;border-radius:50%;background:rgba(20,30,60,.35)}
@@ -3184,7 +3187,7 @@ function renderAdmin({users, log: events, announce, cheats, orphans, trash}) {
     <h3 class="sect">Announcement</h3>
 <div class="annbox"><input id="annIn" maxlength="280" placeholder="Write a message everyone sees when they open Prism" aria-label="Announcement"><button type="button" class="sprim" id="annPost">Post</button><button type="button" class="ghost" id="annClear">Clear</button><span class="saved" id="annMsg"></span></div>
 <h3 class="sect">Cheats</h3>
-<div class="annbox"><button type="button" class="ghost" id="cheatBtn"></button><span class="saved" id="cheatMsg">Only you see these. Word Bomb shows you a word to type (Tab fills it in), chess marks the best move, and The Lineup marks the other player's person with 👀.</span></div>
+<div class="annbox"><button type="button" class="ghost" id="cheatBtn"></button><span class="saved" id="cheatMsg">Only you see these. Word Bomb shows you a word to type (Tab fills it in), chess puts a tiny dot in the top corner of the square to move from (left corner) and to (right corner), and The Lineup marks the other player's person with 👀.</span></div>
 <h3 class="sect">People</h3>
     <div class="twrap"><table>
       <thead><tr><th>Person</th><th>Joined</th><th>Last login</th><th>Messages</th><th title="Estimated from Oct 28, 2026 on">Spent</th><th>Daily limit</th><th>Models allowed</th><th>Access</th></tr></thead>
@@ -5230,7 +5233,7 @@ const novaGraphs = {store: new Map(), n: 0};
         if (last && (last.from === sq || last.to === sq)) d.classList.add("last");
         if (sel === sq) d.classList.add("sel");
         if (targets.includes(sq)) d.classList.add(p ? "cap" : "dot");
-        if (hint && hintFen === game.fen() && (hint.from === sq || hint.to === sq)) d.classList.add("hint"); // (admin cheats) the best move
+        if (hint && hintFen === game.fen() && (hint.from === sq || hint.to === sq)) d.classList.add(hint.from === sq ? "hintf" : "hintt"); // (admin cheats) the best move
         if (p && p.type === "k" && p.color === turn && game.in_check()) d.classList.add("check");
         if (p) { const s = h("span", "pc " + (p.color === "w" ? "w" : "b")); s.textContent = GLYPH[p.type] + VS; d.appendChild(s); }
         if (ff === 0) d.appendChild(h("i", "rk", String(r + 1)));
