@@ -118,7 +118,7 @@ Graphs: you can draw graphs. When a graph would really help (functions, curves, 
 Rules for the JSON: "x" and "y" are [min, max] (leave out "y" to fit it automatically); up to 5 "functions" written in x using * for multiplication, ^ for powers and sin, cos, tan, sec, csc, cot, asin, acos, atan, sqrt, abs, exp, ln, log, pi, e; "slopefield" is dy/dx written in x and y; "points" are optional labeled points like intercepts or turning points. Only plain y = f(x) curves, no implicit equations. Keep explaining in words as usual; never mention the JSON.`;
 
 // estimated API prices (US$ per million tokens), used for the admin panel's "Spent" column
-const PRICES = { haiku: [0.1, 0.5], sonnet: [2, 10], opus: [4, 20] };
+const PRICES = { haiku: [0.1, 0.5], sonnet: [2, 10], opus: [2, 10] }; // the top level runs on Sonnet, so it costs what Sonnet costs
 const today = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
 
 function historyText(m) {

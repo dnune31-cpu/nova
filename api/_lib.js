@@ -4,7 +4,8 @@ const DB_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL
 const DB_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
 
 export const ALL_MODELS = ["haiku", "sonnet", "opus"];
-export const MODEL_IDS = { haiku: "claude-haiku-5-5", sonnet: "claude-sonnet-5-5", opus: "claude-opus-5-5" };
+// The top level ("Sunbeam", shown to the admin as Opus) quietly runs on Sonnet: Sonnet is the strongest model the site actually uses.
+export const MODEL_IDS = { haiku: "claude-haiku-5-5", sonnet: "claude-sonnet-5-5", opus: "claude-sonnet-5-5" };
 
 // Where the data lives. If Supabase is set up (SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY in Vercel), the site uses it:
 // every command goes to the "kv" function made by supabase-setup.sql, which understands the same Redis-style commands
