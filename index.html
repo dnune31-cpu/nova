@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Prism · study helper</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%231f1f1e'/><path d='M32 14l19 34H13z' fill='none' stroke='%23ecebe7' stroke-width='4' stroke-linejoin='round'/></svg>">
-<meta name="theme-color" content="#1f1f1e">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%2314151d'/><path d='M32 11 9 52h46z' fill='%237a74d6'/><path d='M32 11 9 52l20-14z' fill='%23f4f5ff'/><path d='M9 52h46L29 38z' fill='%23c2b4ff'/><path d='M32 11 9 52h46z' fill='none' stroke='%23fff' stroke-width='2' stroke-linejoin='round'/></svg>">
+<meta name="theme-color" content="#14151d">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Sora:wght@300;400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
@@ -1130,6 +1130,35 @@ body.docmode #ferr{font:11pt Arial,sans-serif;color:#b3261e;margin:0}
 .sbicon{width:32px;height:32px;border-radius:8px}.sbicon svg{width:18px;height:18px}
 #authView .card{background:#232321;border:1px solid #33322f;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
 @media (max-width:560px){#model{max-width:28vw;text-overflow:ellipsis}}
+/* ===== Prism · glass theme =====
+   One soft glow of colour sits behind everything; the sidebar, typing box, bubbles and cards are frosted panes on top of it. */
+:root{--c-bg:#12131a;--c-side:rgba(255,255,255,.045);--c-line:rgba(255,255,255,.09);--c-line2:rgba(255,255,255,.14);--c-text:#eef0f6;--c-muted:#a2a8ba;--c-input:rgba(255,255,255,.075);--c-user:rgba(255,255,255,.09);--c-hover:rgba(255,255,255,.07);
+  --glass-bg:radial-gradient(1100px 620px at 82% -12%,#3a4670 0,transparent 62%),radial-gradient(900px 640px at -6% 108%,#4d2f5c 0,transparent 60%),radial-gradient(700px 500px at 55% 120%,#1f3d55 0,transparent 60%),#101116}
+html{background:#101116}
+body{background:var(--glass-bg) fixed;background-color:#101116}
+#appView,.stage,#authView,#neuronView,#gamesView{background:transparent}
+.rail{background:var(--c-side);border-right:1px solid var(--c-line);-webkit-backdrop-filter:blur(22px) saturate(1.2);backdrop-filter:blur(22px) saturate(1.2)}
+.brand{font-family:"Inter",system-ui,sans-serif;font-weight:600;font-size:19px;letter-spacing:-.01em}
+.brand canvas{width:26px;height:26px}
+.rail .rbtn{color:#d4d8e4;border-radius:10px}
+.rail .rbtn:hover,.rail .rbtn.on,.rail .rbtn[aria-expanded=true]{background:rgba(255,255,255,.09);color:#fff}
+.rail .rbtn.on svg{color:#fff}
+.rail .rbtn.new{color:#fff;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:12px;margin-bottom:8px;box-shadow:inset 0 1px 0 rgba(255,255,255,.1)}
+.rail .rbtn.new:hover{background:rgba(255,255,255,.14)}
+.sbhead{color:#8d93a6;text-transform:uppercase;font-size:11px;letter-spacing:.08em}
+.rail .citem{border-radius:10px}.rail .citem:hover,.rail .citem.on{background:rgba(255,255,255,.09)}
+.rail .ctitle{color:#c9cedb}.rail .citem:hover .ctitle,.rail .citem.on .ctitle{color:#fff}
+.merow .avatar{background:linear-gradient(140deg,#fff,#b9c0ff);color:#15161d}
+.user .txt{border:1px solid rgba(255,255,255,.14);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+form#f{border:1px solid rgba(255,255,255,.15);-webkit-backdrop-filter:blur(24px) saturate(1.2);backdrop-filter:blur(24px) saturate(1.2);box-shadow:0 14px 44px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.1)}
+form#f:focus-within{border-color:rgba(255,255,255,.3)}
+#authView .card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);box-shadow:0 24px 70px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.1);-webkit-backdrop-filter:blur(26px) saturate(1.2);backdrop-filter:blur(26px) saturate(1.2)}
+/* the warm gold accent becomes a cool pale lilac, and the remaining solid cards become glass too */
+:root{--gold:#cfd3ff;--glass-bg:radial-gradient(1200px 700px at 84% -14%,#46548a 0,transparent 62%),radial-gradient(1000px 720px at -8% 110%,#5c3670 0,transparent 60%),radial-gradient(800px 560px at 58% 122%,#234a66 0,transparent 60%),#101116}
+.stat,.twrap,.loglist,.nwrap{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px)}
+.gtile{border-color:rgba(255,255,255,.12)}
+/* Document mode keeps its own plain white-page look */
+body.docmode{background:#f8f9fb}
 </style>
 </head>
 <body>
@@ -2615,13 +2644,24 @@ let spin = 1, spinTarget = 1;
 /* (the old starfield is gone: the Sunbeam background is plain CSS) */
 (() => { const cv = document.getElementById("sky"); if (cv) cv.hidden = true; })();
 
-/* the Prism mark (logo + welcome screen): a single outlined triangle. Nothing moves.
-   (Still called swirl() because the rest of the page starts it by that name.) */
+/* the Prism mark (logo + welcome screen): a cut-glass prism. Three facets meet at a point inside the triangle, each catching a
+   different amount of light, with a bright rim. Nothing moves. (Still called swirl() because the rest of the page starts it by that name.) */
 function swirl(cv) {
   const ctx = cv.getContext("2d"), u = cv.width / 64;
   ctx.clearRect(0, 0, cv.width, cv.height);
-  ctx.lineJoin = "round"; ctx.strokeStyle = "#ecebe7"; ctx.lineWidth = 3 * u;
-  ctx.beginPath(); ctx.moveTo(32 * u, 12 * u); ctx.lineTo(53 * u, 50 * u); ctx.lineTo(11 * u, 50 * u); ctx.closePath(); ctx.stroke();
+  const T = [32, 9], L = [8, 52], R = [56, 52], M = [29, 37]; // top, left, right corners and the point where the facets meet
+  const face = (a, b, c, c0, c1, g0, g1) => { const g = ctx.createLinearGradient(g0[0] * u, g0[1] * u, g1[0] * u, g1[1] * u); g.addColorStop(0, c0); g.addColorStop(1, c1);
+    ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(a[0] * u, a[1] * u); ctx.lineTo(b[0] * u, b[1] * u); ctx.lineTo(c[0] * u, c[1] * u); ctx.closePath(); ctx.fill(); };
+  ctx.lineJoin = "round";
+  ctx.save(); ctx.shadowColor = "rgba(150,165,255,.55)"; ctx.shadowBlur = 9 * u; // a soft glow behind the glass
+  face(T, L, R, "rgba(140,150,255,.25)", "rgba(190,140,255,.25)", T, R); ctx.restore();
+  face(T, L, M, "rgba(255,255,255,.98)", "rgba(196,206,255,.78)", T, L);          // left facet: the bright one
+  face(T, M, R, "rgba(168,180,255,.72)", "rgba(120,112,214,.62)", T, R);          // right facet: in shade
+  face(L, R, M, "rgba(214,190,255,.66)", "rgba(132,150,255,.40)", L, R);          // bottom facet
+  ctx.strokeStyle = "rgba(255,255,255,.55)"; ctx.lineWidth = 1 * u;               // the inner edges
+  ctx.beginPath(); for (const c of [T, L, R]) { ctx.moveTo(M[0] * u, M[1] * u); ctx.lineTo(c[0] * u, c[1] * u); } ctx.stroke();
+  ctx.strokeStyle = "rgba(255,255,255,.95)"; ctx.lineWidth = 1.6 * u;             // the rim
+  ctx.beginPath(); ctx.moveTo(T[0] * u, T[1] * u); ctx.lineTo(R[0] * u, R[1] * u); ctx.lineTo(L[0] * u, L[1] * u); ctx.closePath(); ctx.stroke();
 }
 
 const $ = id => document.getElementById(id);
