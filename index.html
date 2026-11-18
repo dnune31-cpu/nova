@@ -2626,12 +2626,12 @@ function swirl(cv) {
 
 const $ = id => document.getElementById(id);
 const MODELS = [
-  {key: "haiku", label: "Spark (fastest)"},
-  {key: "sonnet", label: "Ray (smarter)"},
-  {key: "opus", label: "Sunbeam (smartest)"},
+  {key: "haiku", label: "Sonnet (faster)"},
+  {key: "sonnet", label: "Opus (smartest)"},
 ];
-// what people see for each level. (REAL is the model behind it, shown only in the admin panel.)
-const NAMES = {haiku: "Spark", sonnet: "Ray", opus: "Sunbeam"}, REAL = {haiku: "Haiku", sonnet: "Sonnet", opus: "Opus"};
+// what people see for each level: each is named one step above the model really behind it. (REAL is that model, shown only in the admin panel.)
+// The old third level ("opus") is no longer offered; it runs on Sonnet too, so old chats that used it still work.
+const NAMES = {haiku: "Sonnet", sonnet: "Opus", opus: "Opus"}, REAL = {haiku: "Haiku", sonnet: "Sonnet", opus: "Sonnet"};
 const MAX_ATTACH = 6, MAX_PDF = 3 * 1024 * 1024;
 let me = null, chatId = null, chats = [], busy = false, pending = {attachments: [], links: []};
 let authMode = "login", swirlsStarted = {};
@@ -2724,13 +2724,17 @@ function fillModels() {
   const sel = $("model"); sel.innerHTML = "";
   for (const m of MODELS) {
     const o = document.createElement("option");
-    const ok = me.models.includes(m.key);
-    o.value = m.key; o.disabled = !ok;
+    // someone who was only ever given the old third level still gets the top one
+    const old = m.key === "sonnet" && !me.models.includes("sonnet") && me.models.includes("opus");
+    const ok = me.models.includes(m.key) || old;
+    o.value = old ? "opus" : m.key; o.disabled = !ok;
     o.textContent = ok ? m.label : `${NAMES[m.key]} (locked)`;
     sel.appendChild(o);
   }
   let saved = null; try { saved = localStorage.getItem("nova-model"); } catch {}
+  if (saved === "opus" && me.models.includes("sonnet")) saved = "sonnet";
   sel.value = saved && me.models.includes(saved) ? saved : me.models[0] || "haiku";
+  if (!sel.value) sel.selectedIndex = 0;
 }
 $("model").onchange = () => { try { localStorage.setItem("nova-model", $("model").value); } catch {} };
 
