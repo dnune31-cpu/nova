@@ -1,5 +1,5 @@
 import {
-  redis, getJSON, setJSON, normEmail, validEmail, isAdminEmail, hashPassword, checkPassword,
+  redis, getJSON, setJSON, normEmail, validEmail, isAdminEmail, isOwnerEmail, hashPassword, checkPassword,
   safeEqual, createSession, renewSession, clearSession, getAuth, ensureDevice, deviceBanned, noteDevice, banDevice, publicUser, logEvent, tooManyAttempts, ALL_MODELS, elevateSession, pipeline,
 } from "./_lib.js";
 
@@ -42,7 +42,7 @@ export default async function handler(req, res) {
       // New accounts wait for the admin to accept them (Admin panel > People). Until then they can't log in.
       // The owner's own email, and the very first account on an empty site, are let straight in so nobody is locked out.
       const first = !((await redis("SMEMBERS", "users")) || []).length;
-      const pending = !(isAdminEmail(email) || first);
+      const pending = !(isOwnerEmail(email) || first);
       const user = { name: cleanName, email, salt, hash, created: now, lastLogin: now, models: ["haiku"], blocked: false, messages: 0 };
       if (pending) user.pending = true;
       const ok = await redis("SET", `user:${email}`, JSON.stringify(user), "NX");
@@ -63,6 +63,7 @@ export default async function handler(req, res) {
       }
       if (user.devban) { await banDevice(dev, email); await noteDevice(email, dev); return res.status(401).json({ error: "Wrong email or password." }); } // device-banned person on a new device: ban it too
       if (user.blocked) return res.status(403).json({ error: "This account has been turned off." });
+      if (user.pending && isOwnerEmail(email)) delete user.pending; // the owner is never kept waiting, even if the account was made earlier
       if (user.pending) return res.status(403).json({ error: "Your account is still waiting to be accepted. Try again later." });
       await noteDevice(email, dev);
       user.lastLogin = Date.now();
