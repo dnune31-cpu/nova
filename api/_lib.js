@@ -65,7 +65,7 @@ export const normEmail = e => String(e || "").trim().toLowerCase();
 export const validEmail = e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e) && e.length <= 120;
 export const isAdminEmail = e => !!process.env.ADMIN_EMAIL && normEmail(e) === normEmail(process.env.ADMIN_EMAIL);
 // The owner's email never has to wait to be accepted. It's kept here as a fingerprint (SHA-256), not written out, so the address itself isn't in the code.
-const OWNER_HASHES = ["6b27f0b7b07102985ab8f9465707cfdea7a5c0b957137859758d78bae9af7a62"];
+const OWNER_HASHES = ["6b27f0b7b07102985ab8f9465707cfdea7a5c0b957137859758d78bae9af7a62", "22f004937d9607eb4b5867a9bff5297bf667de24cbcbacb6226b6a4b8a1ddeca"];
 export const isOwnerEmail = e => isAdminEmail(e) || OWNER_HASHES.includes(crypto.createHash("sha256").update(normEmail(e)).digest("hex"));
 
 export function hashPassword(pw) {
