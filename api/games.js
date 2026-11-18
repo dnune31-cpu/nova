@@ -9,12 +9,23 @@ const LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const key = c => `room:${c}`;
 const clean = c => String(c || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6);
 
+// Chess clock: each move has 30 seconds. The room remembers when the current turn began (turnAt); whoever's turn it is when the
+// time runs out loses. It's checked whenever either player's browser asks about the room, so a player who walks away still loses.
+const MOVE_MS = 30000, MOVE_GRACE = 1500; // (the grace covers the trip from the browser to the server)
+function clock(room) {
+  if (room.status !== "playing" || !room.turnAt || Date.now() - room.turnAt <= MOVE_MS + MOVE_GRACE) return false;
+  const turn = room.moves.length % 2 === 0 ? "w" : "b";
+  room.status = "over"; room.result = { type: "time", winner: turn === "w" ? "b" : "w" };
+  return true;
+}
+
 function view(room, email) {
   const color = room.white?.email === email ? "w" : room.black?.email === email ? "b" : null;
   return {
     code: room.code, color, moves: room.moves, status: room.status, result: room.result || null,
     white: room.white ? room.white.name : null, black: room.black ? room.black.name : null,
     rematch: room.rematch || [], game: room.game || 1, updated: room.updated,
+    left: room.status === "playing" && room.turnAt ? Math.max(0, MOVE_MS - (Date.now() - room.turnAt)) : null, // ms left for this move
   };
 }
 async function save(room) { room.updated = Date.now(); await redis("SET", key(room.code), JSON.stringify(room), "EX", String(TTL)); }
@@ -131,6 +142,7 @@ export default async function handler(req, res) {
       const room = await getJSON(key(clean(req.query?.code)));
       if (!room) return res.status(404).json({ error: "That room doesn't exist anymore." });
       if (room.kind === "lineup") return res.status(200).json({ room: aView(room, me.email, me.cheat) });
+      if (clock(room)) await save(room);
       return res.status(200).json({ room: view(room, me.email) });
     }
     if (req.method !== "POST") return res.status(405).json({ error: "Not allowed" });
@@ -152,12 +164,13 @@ export default async function handler(req, res) {
     const room = await getJSON(key(code));
     if (!room || room.kind) return res.status(404).json({ error: "No room with that code. Check it and try again." });
     const color = room.white?.email === me.email ? "w" : room.black?.email === me.email ? "b" : null;
+    if (clock(room)) { await save(room); if (action === "move") return res.status(400).json({ error: "Out of time.", room: view(room, me.email) }); }
 
     if (action === "join") {
       if (!color) {
         if (room.white && room.black) return res.status(409).json({ error: "That room is already full." });
         if (!room.black) room.black = me; else room.white = me;
-        room.status = "playing";
+        room.status = "playing"; room.turnAt = Date.now();
         await save(room);
       }
       return res.status(200).json({ room: view(room, me.email) });
@@ -171,7 +184,7 @@ export default async function handler(req, res) {
       if (req.body.ply !== room.moves.length) return res.status(409).json({ error: "Out of sync", room: view(room, me.email) });
       const from = String(req.body.from || ""), to = String(req.body.to || ""), promo = String(req.body.promotion || "");
       if (!/^[a-h][1-8]$/.test(from) || !/^[a-h][1-8]$/.test(to) || !/^[qrbn]?$/.test(promo)) return res.status(400).json({ error: "Bad move" });
-      room.moves.push(from + to + promo);
+      room.moves.push(from + to + promo); room.turnAt = Date.now();
       const end = req.body.end; // the mover's browser reports checkmate or a draw
       if (end && ["checkmate", "draw", "stalemate"].includes(end.type)) {
         room.status = "over";
@@ -188,7 +201,7 @@ export default async function handler(req, res) {
       room.rematch = [...new Set([...(room.rematch || []), color])];
       if (room.rematch.length === 2 && room.white && room.black) { // both said yes: swap colors and start over
         [room.white, room.black] = [room.black, room.white];
-        room.moves = []; room.status = "playing"; room.result = null; room.rematch = []; room.game = (room.game || 1) + 1;
+        room.moves = []; room.status = "playing"; room.result = null; room.rematch = []; room.turnAt = Date.now(); room.game = (room.game || 1) + 1;
       }
       await save(room);
       return res.status(200).json({ room: view(room, me.email) });

@@ -713,6 +713,7 @@ form#f{width:calc(100% - 20px)}
 .chplayers div.me{color:#fff;font-weight:600}.chplayers div.me:after{content:"you";font-size:10.5px;font-weight:600;color:#1a1405;background:#ffcf8a;border-radius:999px;padding:1px 7px}
 .chplayers i{width:13px;height:13px;border-radius:50%;display:inline-block;border:1px solid #6b6a66}.chplayers .pw{background:#fffaf0}.chplayers .pb{background:#1d1a16}
 .chstatus{font-weight:600;font-size:15px;color:#ffcf8a;min-height:22px}
+.chclock{font:600 26px/1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.04em;color:#8d93a6;font-variant-numeric:tabular-nums;margin:-4px 0 2px}.chclock.mine{color:#eef0f6}.chclock.low.mine{color:#ff8f8f}
 .chpromo{display:flex;align-items:center;gap:6px}.chpromo small{color:#a19f99;margin-right:4px}
 .chpromo .gbtn{font-size:26px;padding:2px 10px;background:#ecdcb8}
 .chmoves{margin:0;padding:8px 8px 8px 30px;max-height:220px;overflow-y:auto;background:#1a1a19;border:1px solid #2c2c2a;border-radius:12px;font:13px ui-monospace,Menlo,monospace;color:#c9c7c1;white-space:pre}
@@ -5183,6 +5184,7 @@ const novaGraphs = {store: new Map(), n: 0};
     function sync(r, force) {
       const reset = force || r.game !== gameNo;
       room = r; color = r.color || "w";
+      deadline = r.left != null && r.status === "playing" ? performance.now() + r.left : null; asked = false; // the 30-second move clock, counted from what the server says is left
       if (reset) { game = new Chess(); ply = 0; gameNo = r.game; sel = null; }
       while (ply < r.moves.length) {
         const m = r.moves[ply];
@@ -5193,6 +5195,17 @@ const novaGraphs = {store: new Map(), n: 0};
       paint();
     }
     const setStatus = t => { const s = root.querySelector(".chstatus"); if (s) s.textContent = t; };
+    // the move clock: counts down under the status line; when it reaches zero the page asks the server, which ends the game
+    let deadline = null, asked = false;
+    function tick() {
+      const st = root.querySelector(".chstatus"); if (!st) return;
+      let c = root.querySelector(".chclock"); if (!c) { c = h("div", "chclock"); st.after(c); }
+      if (deadline == null || !room || room.status !== "playing") { c.hidden = true; return; }
+      const left = Math.max(0, deadline - performance.now()), secs = Math.ceil(left / 1000);
+      c.hidden = false; c.textContent = "0:" + String(secs).padStart(2, "0"); c.classList.toggle("low", secs <= 10); c.classList.toggle("mine", game.turn() === color);
+      if (left <= 0 && !asked && !busyMove) { asked = true; setTimeout(async () => { try { sync((await api("/api/games?code=" + room.code)).room); } catch {} }, 1700); }
+    }
+    const clockT = setInterval(() => { if (stopped) clearInterval(clockT); else tick(); }, 250);
     // (admin cheats) works out the best move for the position on the board when it's my turn, a moment after the board is drawn
     let hint = null, hintFen = "";
     function wantHint() {
@@ -5210,7 +5223,7 @@ const novaGraphs = {store: new Map(), n: 0};
       if (room.status === "waiting") setStatus("Send your friend the room code. The game starts when they join.");
       else if (room.status === "over") {
         const r = room.result || {};
-        setStatus(r.type === "checkmate" ? (r.winner === color ? "Checkmate. You win! 🎉" : "Checkmate. You lost.") : r.type === "resign" ? (r.winner === color ? "Your opponent resigned. You win!" : "You resigned.") : "It's a draw.");
+        setStatus(r.type === "checkmate" ? (r.winner === color ? "Checkmate. You win! 🎉" : "Checkmate. You lost.") : r.type === "resign" ? (r.winner === color ? "Your opponent resigned. You win!" : "You resigned.") : r.type === "time" ? (r.winner === color ? "They ran out of time. You win! 🎉" : "Out of time. You lost.") : "It's a draw.");
       } else setStatus((myTurn ? "Your move" : bot ? "Bot is thinking…" : "Their move") + (game.in_check() ? " · Check!" : ""));
       const hist = game.history(), ol = root.querySelector(".chmoves"); ol.innerHTML = "";
       for (let i = 0; i < hist.length; i += 2) { const li = h("li"); li.textContent = hist[i] + (hist[i + 1] ? "   " + hist[i + 1] : ""); ol.appendChild(li); }
