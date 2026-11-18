@@ -39,11 +39,17 @@ export default async function handler(req, res) {
 
       const { salt, hash } = hashPassword(password);
       const now = Date.now();
+      // New accounts wait for the admin to accept them (Admin panel > People). Until then they can't log in.
+      // The owner's own email, and the very first account on an empty site, are let straight in so nobody is locked out.
+      const first = !((await redis("SMEMBERS", "users")) || []).length;
+      const pending = !(isAdminEmail(email) || first);
       const user = { name: cleanName, email, salt, hash, created: now, lastLogin: now, models: ["haiku"], blocked: false, messages: 0 };
+      if (pending) user.pending = true;
       const ok = await redis("SET", `user:${email}`, JSON.stringify(user), "NX");
       if (!ok) return res.status(409).json({ error: "That email is already registered. Try logging in." });
       await redis("SADD", "users", email);
       await noteDevice(email, dev);
+      if (pending) { await logEvent("asked to join", email); return res.status(200).json({ pending: true }); }
       await createSession(res, email);
       await logEvent("signup", email);
       return res.status(200).json({ user: publicUser(user, false) });
@@ -57,6 +63,7 @@ export default async function handler(req, res) {
       }
       if (user.devban) { await banDevice(dev, email); await noteDevice(email, dev); return res.status(401).json({ error: "Wrong email or password." }); } // device-banned person on a new device: ban it too
       if (user.blocked) return res.status(403).json({ error: "This account has been turned off." });
+      if (user.pending) return res.status(403).json({ error: "Your account is still waiting to be accepted. Try again later." });
       await noteDevice(email, dev);
       user.lastLogin = Date.now();
       await setJSON(`user:${email}`, user);

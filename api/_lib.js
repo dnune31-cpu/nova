@@ -144,7 +144,7 @@ export async function getAuth(req) {
   if (banned || !sv) return null; // a banned device is treated as logged out everywhere
   const s = JSON.parse(sv);
   const user = await getJSON(`user:${s.email}`);
-  if (!user || user.blocked) return null;
+  if (!user || user.blocked || user.pending) return null; // (pending: signed up but not accepted by the admin yet)
   return { user, admin: !!s.admin && !!user.admin };
 }
 

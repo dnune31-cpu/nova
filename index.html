@@ -1163,6 +1163,7 @@ form#f:focus-within{border-color:rgba(255,255,255,.3)}
 :root{--gold:#cfd3ff;--glass-bg:radial-gradient(1200px 700px at 84% -14%,#46548a 0,transparent 62%),radial-gradient(1000px 720px at -8% 110%,#5c3670 0,transparent 60%),radial-gradient(800px 560px at 58% 122%,#234a66 0,transparent 60%),#101116}
 .stat,.twrap,.loglist,.nwrap{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px)}
 .gtile{border-color:rgba(255,255,255,.12)}
+tr.waiting td{background:rgba(207,211,255,.07)}.pill.wait{background:rgba(207,211,255,.18);color:#dfe2ff;font-size:11px;padding:2px 8px;cursor:default}
 /* Document mode keeps its own plain white-page look */
 body.docmode{background:#f8f9fb}
 </style>
@@ -2749,6 +2750,7 @@ $("authForm").addEventListener("submit", async e => {
   try {
     const d = await api("/api/auth", {method: "POST", body: JSON.stringify({action: authMode, name, email, password})});
     $("aPass").value = "";
+    if (d.pending) { setMode("login"); $("aErr").textContent = "Account created. You can log in once it has been accepted."; return; }
     enterApp(d.user);
   } catch (err) { $("aErr").textContent = err.message; }
   finally { $("aSubmit").disabled = false; }
@@ -3225,6 +3227,7 @@ if (window.novaAnnounce) novaAnnounce.show(d.announce);
 $("annPost").onclick = () => { if (ai.value.trim()) postAnn(ai.value); };
 ai.addEventListener("keydown", e => { if (e.key === "Enter" && ai.value.trim()) postAnn(ai.value); });
 $("annClear").onclick = () => postAnn("");
+  users.sort((a, b) => (b.pending ? 1 : 0) - (a.pending ? 1 : 0)); // people waiting to be accepted come first
   for (const u of users) {
     const tr = document.createElement("tr");
     const usage = u.usage || {};
@@ -3271,7 +3274,13 @@ lc.append(li, ls);
 
     const acc = tr.querySelector(".acccell");
     if (u.admin) acc.innerHTML = `<span class="saved">Admin</span>`;
-    else {
+    else if (u.pending) { // a new sign-up waiting for you: let them in, or turn them away (which deletes the request)
+      tr.classList.add("waiting"); tr.querySelector(".nm").insertAdjacentHTML("beforeend", ' <span class="pill wait">Waiting</span>');
+      const yes = document.createElement("button"), no = document.createElement("button"); yes.type = no.type = "button"; yes.className = "pill ok"; no.className = "pill no"; yes.textContent = "Accept"; no.textContent = "Reject"; no.style.marginLeft = "6px";
+      yes.onclick = async () => { try { await api("/api/admin", {method: "POST", body: JSON.stringify({email: u.email, approve: true})}); renderAdmin(await api("/api/admin")); } catch (err) { alert(err.message); } };
+      no.onclick = async () => { if (!confirm(`Reject ${u.name}? Their sign-up is removed.`)) return; try { await api("/api/admin", {method: "POST", body: JSON.stringify({email: u.email, remove: true})}); renderAdmin(await api("/api/admin")); } catch (err) { alert(err.message); } };
+      acc.append(yes, no); tr.querySelectorAll(".modcell input,.limcell input").forEach(i => { i.disabled = true; });
+    } else {
       const b = document.createElement("button"); b.type = "button";
       const paint = () => { b.className = "pill " + (u.blocked ? "no" : "ok"); b.textContent = u.blocked ? "Blocked" : "Active"; b.title = u.blocked ? "Click to let them back in" : "Click to block"; };
       paint();
@@ -3351,7 +3360,7 @@ acc.appendChild(tb);
   for (const ev of events) {
     const d = document.createElement("div"); d.className = "logrow";
     d.innerHTML = `<span class="k"></span><span class="w"></span><span class="t"></span>`;
-    d.querySelector(".k").textContent = ev.type === "signup" ? "Signed up" : ev.type === "admin login" ? "Admin login" : "Logged in";
+    d.querySelector(".k").textContent = ev.type === "signup" ? "Signed up" : ev.type === "admin login" ? "Admin login" : ev.type === "asked to join" ? "Asked to join" : ev.type === "accepted by admin" ? "Accepted" : "Logged in";
     d.querySelector(".w").textContent = byEmail[ev.email] ? `${byEmail[ev.email]} (${ev.email})` : ev.email;
     d.querySelector(".t").textContent = ago(ev.time);
     lr.appendChild(d);

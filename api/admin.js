@@ -1,4 +1,4 @@
-import { redis, pipeline, getJSON, setJSON, getAuth, normEmail, isAdminEmail, ALL_MODELS, setDeviceBan } from "./_lib.js";
+import { redis, pipeline, getJSON, setJSON, getAuth, normEmail, isAdminEmail, ALL_MODELS, setDeviceBan, logEvent } from "./_lib.js";
 
 const TRASH_DAYS = 30; // how long a deleted account can still be restored
 const today = () => new Date().toLocaleDateString("en-CA", { timeZone: "America/New_York" });
@@ -13,7 +13,7 @@ export default async function handler(req, res) {
       const raw = await pipeline(emails.map(e => ["GET", `user:${e}`]));
       const users = raw.filter(Boolean).map(v => JSON.parse(v)).map(u => ({
         name: u.name, email: u.email, created: u.created, lastLogin: u.lastLogin, lastActive: u.lastActive || null,
-        models: u.models || ["haiku"], blocked: !!u.blocked, devban: !!u.devban, troll: !!u.troll, cost: u.cost || 0, dailyLimit: u.dailyLimit || 0, todayMsgs: u.day === today() ? u.dayMsgs || 0 : 0, todayCost: u.day === today() ? u.dayCost || 0 : 0, messages: u.messages || 0, usage: u.usage || {}, admin: !!u.admin,
+        models: u.models || ["haiku"], blocked: !!u.blocked, pending: !!u.pending, devban: !!u.devban, troll: !!u.troll, cost: u.cost || 0, dailyLimit: u.dailyLimit || 0, todayMsgs: u.day === today() ? u.dayMsgs || 0 : 0, todayCost: u.day === today() ? u.dayCost || 0 : 0, messages: u.messages || 0, usage: u.usage || {}, admin: !!u.admin,
       })).sort((a, b) => (b.lastLogin || 0) - (a.lastLogin || 0));
       const log = ((await redis("LRANGE", "loginlog", 0, 99)) || []).map(x => JSON.parse(x));
       // device bans left behind by accounts that no longer exist (deleted while banned), so they can still be lifted
@@ -113,6 +113,7 @@ export default async function handler(req, res) {
         user.models = models.length ? models : ["haiku"];
       }
       if (typeof req.body.blocked === "boolean") user.blocked = req.body.blocked;
+      if (req.body.approve === true && user.pending) { delete user.pending; await logEvent("accepted by admin", email); } // lets a new sign-up in
       // Device ban: the cover stops opening on every device this person has used, and on any device they log in from later
       let devices;
       if (typeof req.body.devban === "boolean") { user.devban = req.body.devban; devices = await setDeviceBan(email, user.devban); }
